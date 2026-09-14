@@ -18,6 +18,7 @@ function AdminManageUsers() {
   const [formData, setFormData] = useState({
     name: "",
     credential: "",
+    password: "",
     role: "enforcer" as Role,
     unit: "",
   });
@@ -43,6 +44,7 @@ function AdminManageUsers() {
       {
         name: formData.name,
         credential: formData.credential,
+        password: formData.password,
         role: formData.role,
         unit: formData.unit,
       },
@@ -54,7 +56,7 @@ function AdminManageUsers() {
       setError(insertError.message);
     } else {
       setIsModalOpen(false);
-      setFormData({ name: "", credential: "", role: "enforcer", unit: "" });
+      setFormData({ name: "", credential: "", password: "", role: "enforcer", unit: "" });
       fetchUsers();
     }
   };
@@ -165,6 +167,17 @@ function AdminManageUsers() {
                     onChange={(e) => setFormData({ ...formData, credential: e.target.value.toLowerCase() })}
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                     placeholder="e.g. badge123@mail.com"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
+                  <input
+                    required
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    placeholder="••••••••"
                   />
                 </div>
                 <div>

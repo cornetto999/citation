@@ -156,10 +156,16 @@ function LoginPage() {
       return;
     }
 
-    // Demo accounts remain available when the seed data has not been loaded yet.
-    if (account && account.password !== password) {
-      setError("Invalid password for demo account.");
-      return;
+    if (user) {
+      if (user.password !== password) {
+        setError("Invalid password.");
+        return;
+      }
+    } else if (account) {
+      if (account.password !== password) {
+        setError("Invalid password for demo account.");
+        return;
+      }
     }
 
     const sessionUser = user ?? account;
