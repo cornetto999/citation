@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 
 import appCss from "../styles.css?url";
 function NotFoundComponent() {
@@ -70,6 +71,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+function PendingComponent() {
+  return (
+    <div className="flex h-screen w-full items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="size-10 animate-spin text-primary" />
+        <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   {
     head: () => ({
@@ -95,6 +107,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     component: RootComponent,
     notFoundComponent: NotFoundComponent,
     errorComponent: ErrorComponent,
+    pendingComponent: PendingComponent,
   },
 );
 
