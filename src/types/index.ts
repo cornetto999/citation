@@ -4,6 +4,7 @@ export interface User {
   id: string;
   name: string;
   badgeNo?: string;
+  password?: string;
   role: Role;
   unit: string;
 }

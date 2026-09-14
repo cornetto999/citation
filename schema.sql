@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     credential TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL DEFAULT 'password123',
     role TEXT NOT NULL CHECK (role IN ('enforcer', 'pnp', 'treasury', 'violator', 'admin')),
     unit TEXT NOT NULL
 );
