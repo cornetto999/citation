@@ -105,6 +105,7 @@ function AdminDashboard() {
                 <th className="px-4 py-3 font-medium">Violator</th>
                 <th className="px-4 py-3 font-medium">Vehicle</th>
                 <th className="px-4 py-3 font-medium">Fine</th>
+                <th className="px-4 py-3 font-medium">Issued By</th>
                 <th className="px-4 py-3 font-medium">Status</th>
               </tr>
             </thead>
@@ -118,6 +119,7 @@ function AdminDashboard() {
                   <td className="px-4 py-3 text-slate-900">{ticket.violatorName}</td>
                   <td className="px-4 py-3 text-slate-500">{ticket.vehicleType}</td>
                   <td className="px-4 py-3 font-medium">₱{ticket.totalFine}</td>
+                  <td className="px-4 py-3 text-slate-500">{ticket.issuedBy}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                       ticket.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' :
@@ -132,7 +134,7 @@ function AdminDashboard() {
               ))}
               {tickets.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                     No citations found in the database.
                   </td>
                 </tr>
