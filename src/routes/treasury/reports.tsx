@@ -97,10 +97,7 @@ function TreasuryReportsPage() {
           <ToggleGroupItem value="week" className="rounded-md px-3 text-xs">
             Week
           </ToggleGroupItem>
-          <ToggleGroupItem
-            value="month"
-            className="rounded-md px-3 text-xs"
-          >
+          <ToggleGroupItem value="month" className="rounded-md px-3 text-xs">
             Month
           </ToggleGroupItem>
           <ToggleGroupItem value="year" className="rounded-md px-3 text-xs">
@@ -155,9 +152,7 @@ function TreasuryReportsPage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold tabular">
-                    {peso(t.totalFine)}
-                  </p>
+                  <p className="font-semibold tabular">{peso(t.totalFine)}</p>
                   <p className="text-xs text-muted-foreground">
                     {t.payment!.channel}
                   </p>

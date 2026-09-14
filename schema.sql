@@ -60,8 +60,8 @@ CREATE POLICY "Allow anon delete payments" ON public.payments FOR DELETE USING (
 
 -- Insert Initial Mock Users
 INSERT INTO public.users (name, credential, role, unit) VALUES
-('Sgt. M. Santos', 'TE-2291', 'enforcer', 'Gitagum Traffic Management Office'),
-('PO2 J. Dela Cruz', 'PNP-4471', 'pnp', 'Gitagum Municipal Police Station'),
-('A. Reyes', 'CASHIER-03', 'treasury', 'Municipal Treasurer''s Office'),
+('Jake Roaya', 'jakeroaya@gmail.com', 'enforcer', 'Gitagum Traffic Management Office'),
+('Roaya Jake', 'roayajake@gmail.com', 'pnp', 'Gitagum Municipal Police Station'),
+('Francis Jake', 'francisjake@gmail.com', 'treasury', 'Municipal Treasurer''s Office'),
 ('Juan Reyes', 'juan.reyes@mail.com', 'violator', 'Public Citizen')
 ON CONFLICT (credential) DO NOTHING;

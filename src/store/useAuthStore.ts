@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { Role } from "@/types";
 
 export interface SessionUser {
@@ -16,13 +15,8 @@ interface AuthState {
   signOut: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      signIn: (user) => set({ user }),
-      signOut: () => set({ user: null }),
-    }),
-    { name: "citation-system-auth", version: 1 },
-  ),
-);
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  signIn: (user) => set({ user }),
+  signOut: () => set({ user: null }),
+}));

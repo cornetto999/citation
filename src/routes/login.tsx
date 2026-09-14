@@ -105,30 +105,36 @@ function LoginPage() {
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const account = ACCOUNTS.find(
-      (a) => a.credential.toLowerCase() === credential.trim().toLowerCase(),
-    );
-    if (!account || account.password !== password) {
-      setError("Invalid credentials. Use one of the demo accounts below.");
+
+    const { data: user, error: dbError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("credential", credential.trim())
+      .maybeSingle();
+
+    if (dbError) {
+      setError("Error connecting to database.");
+      console.error(dbError);
       return;
     }
 
-    const mockUsers = [
-      { name: 'Jake Roaya', credential: 'jakeroaya@gmail.com', role: 'enforcer', unit: 'Gitagum Traffic Management Office' },
-      { name: 'Roaya Jake', credential: 'roayajake@gmail.com', role: 'pnp', unit: 'Gitagum Municipal Police Station' },
-      { name: 'Francis Jake', credential: 'francisjake@gmail.com', role: 'treasury', unit: 'Municipal Treasurer\'s Office' },
-      { name: 'Juan Reyes', credential: 'juan.reyes@mail.com', role: 'violator', unit: 'Public Citizen' }
-    ];
-
-    const user = mockUsers.find(u => u.credential.toLowerCase() === account.credential.toLowerCase());
-
     if (!user) {
-      setError("User not found in mock database.");
+      setError("User not found in database.");
+      return;
+    }
+
+    const account = ACCOUNTS.find(
+      (a) => a.credential.toLowerCase() === credential.trim().toLowerCase(),
+    );
+    
+    // Check password if it is a known demo account, otherwise allow passwordless for new DB entries in this prototype
+    if (account && account.password !== password) {
+      setError("Invalid password for demo account.");
       return;
     }
 
     signIn({
-      key: account.key,
+      key: user.role,
       name: user.name,
       role: user.role as Role,
       unit: user.unit,

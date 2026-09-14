@@ -1,5 +1,12 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Activity, Banknote, LineChart, Wallet, LogOut, List } from "lucide-react";
+import {
+  Activity,
+  Banknote,
+  LineChart,
+  Wallet,
+  LogOut,
+  List,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -58,7 +65,7 @@ export function TreasurySidebar() {
           </Link>
         ))}
       </div>
-      
+
       <div className="mt-4 border-t border-sidebar-border/30 pt-2">
         <button
           onClick={handleSignOut}

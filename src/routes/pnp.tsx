@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, memo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/useAuthStore";
 import { AlertTriangle, Eye, Search } from "lucide-react";
@@ -39,6 +39,73 @@ export const Route = createFileRoute("/pnp")({
 });
 
 const filters = ["All", "Unpaid", "Paid", "Overdue", "Contested"] as const;
+
+const TicketRow = memo(({ t }: { t: any }) => {
+  const left = daysUntil(t.dueDate);
+  const late = t.status !== "Paid" && left < 0;
+  return (
+    <tr
+      className="border-b border-border/60 last:border-0 hover:bg-muted/50"
+    >
+      <td className="px-4 py-3 font-mono text-xs font-semibold">{t.id}</td>
+      <td className="px-4 py-3">
+        <p className="font-semibold">{t.plateNo}</p>
+        <p className="text-xs text-muted-foreground">{t.vehicleType}</p>
+      </td>
+      <td className="px-4 py-3">
+        <p>{t.violatorName}</p>
+        <p className="font-mono text-xs text-muted-foreground">{t.licenseNo}</p>
+      </td>
+      <td className="max-w-64 px-4 py-3 text-xs text-muted-foreground">
+        {t.violations.map((v: any) => v.label).join(", ")}
+      </td>
+      <td className="px-4 py-3 text-xs">{shortDate(t.issuedAt)}</td>
+      <td className="px-4 py-3 text-xs">
+        <span className={cn(late && "font-semibold text-destructive")}>
+          {shortDate(t.dueDate)}
+        </span>
+        {t.status !== "Paid" && (
+          <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+            {late ? (
+              <>
+                <AlertTriangle className="size-3 text-destructive" />
+                {Math.abs(left)}d late
+              </>
+            ) : (
+              `${left}d left`
+            )}
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-3 text-right font-semibold tabular">
+        {peso(t.totalFine)}
+      </td>
+      <td className="px-4 py-3">
+        <StatusBadge status={t.status} />
+      </td>
+      <td className="px-4 py-3 text-center">
+        {t.photoData ? (
+          <Dialog>
+            <DialogTrigger asChild>
+              <button className="inline-flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground hover:bg-muted active:scale-95 transition-all">
+                <Eye className="size-4" />
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-xl p-0 overflow-hidden border-none bg-black/90">
+              <img
+                src={t.photoData}
+                alt="Evidence"
+                className="w-full object-contain"
+              />
+            </DialogContent>
+          </Dialog>
+        ) : (
+          <span className="text-xs text-muted-foreground">-</span>
+        )}
+      </td>
+    </tr>
+  );
+});
 
 function PnpPage() {
   const user = useAuthStore((s) => s.user);
@@ -163,79 +230,9 @@ function PnpPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((t) => {
-                  const left = daysUntil(t.dueDate);
-                  const late = t.status !== "Paid" && left < 0;
-                  return (
-                    <tr
-                      key={t.id}
-                      className="border-b border-border/60 last:border-0 hover:bg-muted/50"
-                    >
-                      <td className="px-4 py-3 font-mono text-xs font-semibold">
-                        {t.id}
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="font-semibold">{t.plateNo}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {t.vehicleType}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <p>{t.violatorName}</p>
-                        <p className="font-mono text-xs text-muted-foreground">
-                          {t.licenseNo}
-                        </p>
-                      </td>
-                      <td className="max-w-64 px-4 py-3 text-xs text-muted-foreground">
-                        {t.violations.map((v) => v.label).join(", ")}
-                      </td>
-                      <td className="px-4 py-3 text-xs">
-                        {shortDate(t.issuedAt)}
-                      </td>
-                      <td className="px-4 py-3 text-xs">
-                        <span
-                          className={cn(late && "font-semibold text-destructive")}
-                        >
-                          {shortDate(t.dueDate)}
-                        </span>
-                        {t.status !== "Paid" && (
-                          <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-                            {late ? (
-                              <>
-                                <AlertTriangle className="size-3 text-destructive" />
-                                {Math.abs(left)}d late
-                              </>
-                            ) : (
-                              `${left}d left`
-                            )}
-                          </span>
-                        )}
-                      </td>
-                        <td className="px-4 py-3 text-right font-semibold tabular">
-                          {peso(t.totalFine)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <StatusBadge status={t.status} />
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {t.photoData ? (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <button className="inline-flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground hover:bg-muted active:scale-95 transition-all">
-                                  <Eye className="size-4" />
-                                </button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-xl p-0 overflow-hidden border-none bg-black/90">
-                                <img src={t.photoData} alt="Evidence" className="w-full object-contain" />
-                              </DialogContent>
-                            </Dialog>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">-</span>
-                          )}
-                        </td>
-                      </tr>
-                  );
-                })}
+                {rows.map((t) => (
+                  <TicketRow key={t.id} t={t} />
+                ))}
                 {rows.length === 0 && (
                   <tr>
                     <td

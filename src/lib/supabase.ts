@@ -16,7 +16,7 @@ class DummyWebSocket {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   realtime: {
-    transport: typeof window === 'undefined' ? DummyWebSocket as any : undefined
-  }
+    transport:
+      typeof window === "undefined" ? (DummyWebSocket as any) : undefined,
+  },
 });
-

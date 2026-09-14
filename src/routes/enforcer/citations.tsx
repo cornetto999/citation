@@ -16,8 +16,6 @@ const statusAccent: Record<TicketStatus, string> = {
   Contested: "border-l-contested-foreground",
 };
 
-
-
 export const Route = createFileRoute("/enforcer/citations")({
   head: () => ({
     meta: [{ title: "My Citations | Traffic Enforcer" }],
@@ -57,7 +55,8 @@ function EnforcerCitationsPage() {
 
       const ticketDate = new Date(ticket.issuedAt);
       const ticketMonthStr = `${ticketDate.getFullYear()}-${String(ticketDate.getMonth() + 1).padStart(2, "0")}`;
-      const ticketDateStr = ticketMonthStr + `-${String(ticketDate.getDate()).padStart(2, "0")}`;
+      const ticketDateStr =
+        ticketMonthStr + `-${String(ticketDate.getDate()).padStart(2, "0")}`;
 
       if (filterDate && ticketDateStr !== filterDate) return false;
       if (filterMonth && ticketMonthStr !== filterMonth) return false;
@@ -65,8 +64,6 @@ function EnforcerCitationsPage() {
       return true;
     });
   }, [allMyTickets, query, filterDate, filterMonth]);
-
-
 
   if (!user || user.role !== "enforcer") return null;
 
@@ -81,8 +78,6 @@ function EnforcerCitationsPage() {
       className="max-w-3xl pb-10"
     >
       <div className="space-y-6">
-
-
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-display text-lg font-bold">

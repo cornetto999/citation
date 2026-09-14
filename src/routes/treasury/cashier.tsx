@@ -11,7 +11,14 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useTicketStore } from "@/store/useTicketStore";
 import { dateTime, peso, shortDate } from "@/lib/format";
@@ -64,7 +71,7 @@ function TreasuryCashierPage() {
         current.id,
         "Cash (Over-the-counter)",
         user!.name,
-        manualOrNumber.trim() || undefined
+        manualOrNumber.trim() || undefined,
       );
       if (payment) {
         setReceipt(payment);
@@ -122,16 +129,12 @@ function TreasuryCashierPage() {
                 setManualOrNumber("");
               }}
               className={`w-full rounded-xl border border-border bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md ${
-                current?.id === t.id
-                  ? "ring-2 ring-primary border-primary"
-                  : ""
+                current?.id === t.id ? "ring-2 ring-primary border-primary" : ""
               }`}
             >
               <div className="flex items-center justify-between">
                 <p className="font-bold text-sm">{t.id}</p>
-                <p className="font-bold tabular text-sm">
-                  {peso(t.totalFine)}
-                </p>
+                <p className="font-bold tabular text-sm">{peso(t.totalFine)}</p>
               </div>
               <div className="mt-3 flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">
@@ -201,9 +204,7 @@ function TreasuryCashierPage() {
                       {v.code}
                     </span>
                   </span>
-                  <span className="font-semibold tabular">
-                    {peso(v.fine)}
-                  </span>
+                  <span className="font-semibold tabular">{peso(v.fine)}</span>
                 </div>
               ))}
               <div className="flex items-center justify-between bg-secondary px-4 py-3">
@@ -229,13 +230,9 @@ function TreasuryCashierPage() {
                     </span>
                   </p>
                   <p>Channel: {(receipt ?? current.payment)?.channel}</p>
+                  <p>Received by: {(receipt ?? current.payment)?.receivedBy}</p>
                   <p>
-                    Received by:{" "}
-                    {(receipt ?? current.payment)?.receivedBy}
-                  </p>
-                  <p>
-                    Posted:{" "}
-                    {dateTime((receipt ?? current.payment)!.paidAt)}
+                    Posted: {dateTime((receipt ?? current.payment)!.paidAt)}
                   </p>
                 </div>
                 <div className="mt-4 flex gap-2">
@@ -256,9 +253,7 @@ function TreasuryCashierPage() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-sm font-semibold">
-                    Cash tendered
-                  </label>
+                  <label className="text-sm font-semibold">Cash tendered</label>
                   <input
                     value={tendered}
                     onChange={(e) =>
@@ -269,23 +264,19 @@ function TreasuryCashierPage() {
                     className="mt-1.5 h-14 w-full rounded-lg border-2 border-input bg-background px-4 text-right font-display text-2xl font-bold tabular outline-none focus:border-ring"
                   />
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {[current.totalFine, 1000, 2000, 5000].map(
-                      (amt, i) => (
-                        <button
-                          key={`${amt}-${i}`}
-                          onClick={() => setTendered(String(amt))}
-                          className="h-9 rounded-lg bg-secondary px-3 text-xs font-semibold text-secondary-foreground hover:bg-muted"
-                        >
-                          {i === 0 ? "Exact" : peso(amt)}
-                        </button>
-                      ),
-                    )}
+                    {[current.totalFine, 1000, 2000, 5000].map((amt, i) => (
+                      <button
+                        key={`${amt}-${i}`}
+                        onClick={() => setTendered(String(amt))}
+                        className="h-9 rounded-lg bg-secondary px-3 text-xs font-semibold text-secondary-foreground hover:bg-muted"
+                      >
+                        {i === 0 ? "Exact" : peso(amt)}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <div className="rounded-lg bg-muted p-4">
-                  <p className="text-sm text-muted-foreground">
-                    Change due
-                  </p>
+                  <p className="text-sm text-muted-foreground">Change due</p>
                   <p className="font-display text-3xl font-bold tabular">
                     {peso(Math.max(change, 0))}
                   </p>
@@ -314,12 +305,16 @@ function TreasuryCashierPage() {
             <DialogHeader>
               <DialogTitle>Confirm Payment</DialogTitle>
               <DialogDescription>
-                You are about to post a payment of {peso(current.totalFine)} for Ticket {current.id}.
+                You are about to post a payment of {peso(current.totalFine)} for
+                Ticket {current.id}.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <label className="text-sm font-semibold">
-                Manual OR Number <span className="text-muted-foreground font-normal">(Optional)</span>
+                Manual OR Number{" "}
+                <span className="text-muted-foreground font-normal">
+                  (Optional)
+                </span>
               </label>
               <input
                 value={manualOrNumber}

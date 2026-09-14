@@ -43,24 +43,57 @@ export const Route = createFileRoute("/enforcer/new")({
   component: EnforcerPage,
 });
 
-const WHEELS = ["2 Wheels", "3 Wheels", "4 Wheels", "6 Wheels", "10 Wheels", "18 Wheels"] as const;
+const WHEELS = [
+  "2 Wheels",
+  "3 Wheels",
+  "4 Wheels",
+  "6 Wheels",
+  "10 Wheels",
+  "18 Wheels",
+] as const;
 const VEHICLE_TYPES_BY_WHEELS: Record<string, string[]> = {
   "2 Wheels": ["Motorcycle", "E-Bike"],
   "3 Wheels": ["Tricycle", "E-Trike"],
-  "4 Wheels": ["Sedan", "Hatchback", "SUV", "MPV/AUV", "Pick-up", "Van", "Jeepney"],
+  "4 Wheels": [
+    "Sedan",
+    "Hatchback",
+    "SUV",
+    "MPV/AUV",
+    "Pick-up",
+    "Van",
+    "Jeepney",
+  ],
   "6 Wheels": ["Light Truck", "Medium Bus", "Forward Truck"],
   "10 Wheels": ["Dump Truck", "Wing Van", "Transit Mixer", "Large Bus"],
-  "18 Wheels": ["Tractor Head (Semi-Trailer)", "Flatbed", "Tanker"]
+  "18 Wheels": ["Tractor Head (Semi-Trailer)", "Flatbed", "Tanker"],
 };
 const BRANDS_BY_WHEELS: Record<string, string[]> = {
   "2 Wheels": ["Honda", "Yamaha", "Kawasaki", "Suzuki", "Bajaj"],
   "3 Wheels": ["Honda", "Yamaha", "Kawasaki", "Suzuki", "Bajaj"],
-  "4 Wheels": ["Toyota", "Mitsubishi", "Nissan", "Honda", "Ford", "Hyundai", "Suzuki"],
+  "4 Wheels": [
+    "Toyota",
+    "Mitsubishi",
+    "Nissan",
+    "Honda",
+    "Ford",
+    "Hyundai",
+    "Suzuki",
+  ],
   "6 Wheels": ["Isuzu", "Fuso", "Hino", "MAN", "Volvo", "Scania"],
   "10 Wheels": ["Isuzu", "Fuso", "Hino", "MAN", "Volvo", "Scania"],
   "18 Wheels": ["Isuzu", "Fuso", "Hino", "MAN", "Volvo", "Scania"],
 };
-const COLORS = ["White", "Black", "Silver", "Gray", "Red", "Blue", "Yellow", "Green", "Other"];
+const COLORS = [
+  "White",
+  "Black",
+  "Silver",
+  "Gray",
+  "Red",
+  "Blue",
+  "Yellow",
+  "Green",
+  "Other",
+];
 
 const emptyForm = {
   plateNo: "",
@@ -142,8 +175,11 @@ function EnforcerPage() {
         photoData,
         issuedBy: user!.name,
       };
-      
-      console.log("Submitting citation payload:", JSON.stringify(payload, null, 2));
+
+      console.log(
+        "Submitting citation payload:",
+        JSON.stringify(payload, null, 2),
+      );
 
       const ticket = await addTicket({
         plateNo: payload.plateNo,
@@ -235,18 +271,31 @@ function EnforcerPage() {
         </Field>
 
         <div className="rounded-xl border border-border bg-card p-4 space-y-4 shadow-panel">
-          <h3 className="font-semibold text-sm border-b border-border pb-2 mb-2">Vehicle Information</h3>
-          
+          <h3 className="font-semibold text-sm border-b border-border pb-2 mb-2">
+            Vehicle Information
+          </h3>
+
           <Field label="Wheel count" hint="Required">
             <select
               value={form.wheels}
               onChange={(e) => {
-                setForm(f => ({ ...f, wheels: e.target.value, vehicleType: "", brand: "" }));
+                setForm((f) => ({
+                  ...f,
+                  wheels: e.target.value,
+                  vehicleType: "",
+                  brand: "",
+                }));
               }}
               className="h-14 w-full rounded-lg border-2 border-input bg-card px-4 text-base outline-none focus:border-ring"
             >
-              <option value="" disabled>Select wheels...</option>
-              {WHEELS.map(w => <option key={w} value={w}>{w}</option>)}
+              <option value="" disabled>
+                Select wheels...
+              </option>
+              {WHEELS.map((w) => (
+                <option key={w} value={w}>
+                  {w}
+                </option>
+              ))}
             </select>
           </Field>
 
@@ -254,13 +303,24 @@ function EnforcerPage() {
             <select
               value={form.vehicleType}
               onChange={(e) => {
-                setForm(f => ({ ...f, vehicleType: e.target.value, brand: "" }));
+                setForm((f) => ({
+                  ...f,
+                  vehicleType: e.target.value,
+                  brand: "",
+                }));
               }}
               disabled={!form.wheels}
               className="h-14 w-full rounded-lg border-2 border-input bg-card px-4 text-base outline-none focus:border-ring disabled:opacity-50 disabled:bg-muted"
             >
-              <option value="" disabled>Select type...</option>
-              {form.wheels && VEHICLE_TYPES_BY_WHEELS[form.wheels]?.map(t => <option key={t} value={t}>{t}</option>)}
+              <option value="" disabled>
+                Select type...
+              </option>
+              {form.wheels &&
+                VEHICLE_TYPES_BY_WHEELS[form.wheels]?.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
             </select>
           </Field>
 
@@ -271,8 +331,15 @@ function EnforcerPage() {
               disabled={!form.vehicleType}
               className="h-14 w-full rounded-lg border-2 border-input bg-card px-4 text-base outline-none focus:border-ring disabled:opacity-50 disabled:bg-muted"
             >
-              <option value="" disabled>Select brand...</option>
-              {form.wheels && BRANDS_BY_WHEELS[form.wheels]?.map(b => <option key={b} value={b}>{b}</option>)}
+              <option value="" disabled>
+                Select brand...
+              </option>
+              {form.wheels &&
+                BRANDS_BY_WHEELS[form.wheels]?.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
             </select>
           </Field>
 
@@ -282,20 +349,33 @@ function EnforcerPage() {
               onChange={(e) => set("color", e.target.value)}
               className="h-14 w-full rounded-lg border-2 border-input bg-card px-4 text-base outline-none focus:border-ring"
             >
-              <option value="" disabled>Select color...</option>
-              {COLORS.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value="" disabled>
+                Select color...
+              </option>
+              {COLORS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
           </Field>
         </div>
 
-        {(form.wheels || form.vehicleType || form.brand || form.color || form.plateNo) && (
+        {(form.wheels ||
+          form.vehicleType ||
+          form.brand ||
+          form.color ||
+          form.plateNo) && (
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm shadow-sm transition-all">
             <p className="font-semibold text-primary">Vehicle Profile</p>
             {form.plateNo && (
-              <p className="mt-2 font-mono text-xl font-bold tracking-widest text-primary/90 uppercase">{form.plateNo}</p>
+              <p className="mt-2 font-mono text-xl font-bold tracking-widest text-primary/90 uppercase">
+                {form.plateNo}
+              </p>
             )}
             <p className="mt-1 text-primary/80 font-medium">
-              {form.wheels || "—"} • {form.color || "—"} {form.brand || "—"} {form.vehicleType || "—"}
+              {form.wheels || "—"} • {form.color || "—"} {form.brand || "—"}{" "}
+              {form.vehicleType || "—"}
             </p>
           </div>
         )}
@@ -400,10 +480,17 @@ function EnforcerPage() {
           </Field>
         </div>
 
-        <Field label="Evidence photo" hint={photoData ? "Attached" : "Optional"}>
+        <Field
+          label="Evidence photo"
+          hint={photoData ? "Attached" : "Optional"}
+        >
           {photoData ? (
             <div className="relative flex h-48 w-full flex-col items-center justify-center overflow-hidden rounded-lg border border-border bg-black">
-              <img src={photoData} alt="Evidence" className="h-full w-full object-contain" />
+              <img
+                src={photoData}
+                alt="Evidence"
+                className="h-full w-full object-contain"
+              />
               <div className="absolute inset-x-0 bottom-0 flex justify-center bg-black/60 p-2 backdrop-blur-sm">
                 <button
                   onClick={() => setPhotoData(undefined)}

@@ -1,11 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  ShieldCheck,
-  Radio,
-  Landmark,
-  QrCode,
-  ArrowRight,
-} from "lucide-react";
+import { ShieldCheck, Radio, Landmark, QrCode, ArrowRight } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export const Route = createFileRoute("/")({

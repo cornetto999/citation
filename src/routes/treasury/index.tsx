@@ -5,7 +5,12 @@ import { useTicketStore } from "@/store/useTicketStore";
 import { peso, shortDate } from "@/lib/format";
 import { CreditCard, History, Search } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/treasury/")({
   head: () => ({
@@ -72,7 +77,7 @@ function TreasuryDashboardPage() {
             {settledTodayCount}
           </p>
         </div>
-        <button 
+        <button
           onClick={() => setPendingModalOpen(true)}
           className="rounded-xl border border-border bg-card p-6 shadow-panel text-left hover:border-primary hover:shadow-md transition-all cursor-pointer"
         >
@@ -160,11 +165,16 @@ function TreasuryDashboardPage() {
           </DialogHeader>
           <div className="overflow-y-auto flex-1 pr-2">
             {pendingTickets.length === 0 ? (
-              <p className="py-8 text-center text-muted-foreground">No pending citations.</p>
+              <p className="py-8 text-center text-muted-foreground">
+                No pending citations.
+              </p>
             ) : (
               <div className="divide-y divide-border">
                 {pendingTickets.map((t) => (
-                  <div key={t.id} className="py-4 flex items-center justify-between">
+                  <div
+                    key={t.id}
+                    className="py-4 flex items-center justify-between"
+                  >
                     <div>
                       <p className="font-semibold">{t.violatorName}</p>
                       <p className="text-sm text-muted-foreground mt-0.5">
