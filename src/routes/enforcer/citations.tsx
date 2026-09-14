@@ -166,6 +166,15 @@ function EnforcerCitationsPage() {
                     {peso(ticket.totalFine)}
                   </span>
                 </div>
+                {ticket.photoData && (
+                  <div className="mt-4 overflow-hidden rounded-lg border border-border bg-black/5">
+                    <img
+                      src={ticket.photoData}
+                      alt="Evidence"
+                      className="h-40 w-full object-contain"
+                    />
+                  </div>
+                )}
               </div>
             </article>
           ))}

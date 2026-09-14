@@ -43,9 +43,31 @@ export const Route = createFileRoute("/enforcer/new")({
   component: EnforcerPage,
 });
 
+const WHEELS = ["2 Wheels", "3 Wheels", "4 Wheels", "6 Wheels", "10 Wheels", "18 Wheels"] as const;
+const VEHICLE_TYPES_BY_WHEELS: Record<string, string[]> = {
+  "2 Wheels": ["Motorcycle", "E-Bike"],
+  "3 Wheels": ["Tricycle", "E-Trike"],
+  "4 Wheels": ["Sedan", "Hatchback", "SUV", "MPV/AUV", "Pick-up", "Van", "Jeepney"],
+  "6 Wheels": ["Light Truck", "Medium Bus", "Forward Truck"],
+  "10 Wheels": ["Dump Truck", "Wing Van", "Transit Mixer", "Large Bus"],
+  "18 Wheels": ["Tractor Head (Semi-Trailer)", "Flatbed", "Tanker"]
+};
+const BRANDS_BY_WHEELS: Record<string, string[]> = {
+  "2 Wheels": ["Honda", "Yamaha", "Kawasaki", "Suzuki", "Bajaj"],
+  "3 Wheels": ["Honda", "Yamaha", "Kawasaki", "Suzuki", "Bajaj"],
+  "4 Wheels": ["Toyota", "Mitsubishi", "Nissan", "Honda", "Ford", "Hyundai", "Suzuki"],
+  "6 Wheels": ["Isuzu", "Fuso", "Hino", "MAN", "Volvo", "Scania"],
+  "10 Wheels": ["Isuzu", "Fuso", "Hino", "MAN", "Volvo", "Scania"],
+  "18 Wheels": ["Isuzu", "Fuso", "Hino", "MAN", "Volvo", "Scania"],
+};
+const COLORS = ["White", "Black", "Silver", "Gray", "Red", "Blue", "Yellow", "Green", "Other"];
+
 const emptyForm = {
   plateNo: "",
+  wheels: "",
   vehicleType: "",
+  brand: "",
+  color: "",
   violatorName: "",
   licenseNo: "",
   location: "",
@@ -64,23 +86,14 @@ function EnforcerPage() {
   }, [user, navigate]);
 
   const [form, setForm] = useState(emptyForm);
-  const [vehicleQuery, setVehicleQuery] = useState("");
   const [violationQuery, setViolationQuery] = useState("");
   const [picked, setPicked] = useState<ViolationCode[]>([]);
-  const [photoName, setPhotoName] = useState<string>();
+  const [photoData, setPhotoData] = useState<string>();
   const [issued, setIssued] = useState<Ticket | null>(null);
   const plateRef = useRef<HTMLInputElement>(null);
 
   const set = (key: keyof typeof emptyForm, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
-
-  const vehicleMatches = useMemo(() => {
-    if (!vehicleQuery) return [];
-    const q = vehicleQuery.toLowerCase();
-    return VEHICLE_TYPES.filter(
-      (v) => v.toLowerCase().includes(q) && v.toLowerCase() !== q,
-    ).slice(0, 4);
-  }, [vehicleQuery]);
 
   const violationMatches = useMemo(() => {
     const q = violationQuery.toLowerCase();
@@ -96,14 +109,18 @@ function EnforcerPage() {
 
   const total = picked.reduce((sum, v) => sum + v.fine, 0);
   const canSubmit =
-    form.plateNo.trim() && form.vehicleType.trim() && picked.length > 0;
+    form.plateNo.trim() &&
+    form.wheels &&
+    form.vehicleType &&
+    form.brand &&
+    form.color &&
+    picked.length > 0;
 
   const reset = () => {
     setForm(emptyForm);
-    setVehicleQuery("");
     setViolationQuery("");
     setPicked([]);
-    setPhotoName(undefined);
+    setPhotoData(undefined);
     setIssued(null);
     plateRef.current?.focus();
   };
@@ -111,16 +128,33 @@ function EnforcerPage() {
   const submit = async () => {
     if (!canSubmit) return;
     try {
-      const ticket = await addTicket({
+      const payload = {
         plateNo: form.plateNo.toUpperCase().trim(),
-        vehicleType: form.vehicleType.trim(),
+        wheels: form.wheels,
+        vehicleType: form.vehicleType,
+        brand: form.brand,
+        color: form.color,
         violatorName: form.violatorName.trim() || "Unidentified Driver",
         licenseNo: form.licenseNo.trim().toUpperCase() || "N/A",
         violations: picked,
         location: form.location.trim(),
         remarks: form.remarks.trim() || undefined,
-        photoName,
+        photoData,
         issuedBy: user!.name,
+      };
+      
+      console.log("Submitting citation payload:", JSON.stringify(payload, null, 2));
+
+      const ticket = await addTicket({
+        plateNo: payload.plateNo,
+        vehicleType: `${payload.color} ${payload.brand} ${payload.vehicleType}`,
+        violatorName: payload.violatorName,
+        licenseNo: payload.licenseNo,
+        violations: payload.violations,
+        location: payload.location,
+        remarks: payload.remarks,
+        photoData: payload.photoData,
+        issuedBy: payload.issuedBy,
       });
       setIssued(ticket);
       toast.success(`Citation ${ticket.id} issued successfully.`);
@@ -200,39 +234,71 @@ function EnforcerPage() {
           />
         </Field>
 
-        <Field label="Vehicle type" hint="Required">
-          <input
-            value={form.vehicleType}
-            onChange={(e) => {
-              set("vehicleType", e.target.value);
-              setVehicleQuery(e.target.value);
-            }}
-            placeholder="Start typing…"
-            className="h-14 w-full rounded-lg border-2 border-input bg-card px-4 text-base outline-none focus:border-ring"
-          />
-          <div className="mt-2 flex flex-wrap gap-2">
-            {(vehicleMatches.length
-              ? vehicleMatches
-              : VEHICLE_TYPES.slice(0, 4)
-            ).map((v) => (
-              <button
-                key={v}
-                onClick={() => {
-                  set("vehicleType", v);
-                  setVehicleQuery("");
-                }}
-                className={cn(
-                  "h-11 rounded-full border border-border px-4 text-sm font-medium active:scale-95",
-                  form.vehicleType === v
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card text-card-foreground",
-                )}
-              >
-                {v}
-              </button>
-            ))}
+        <div className="rounded-xl border border-border bg-card p-4 space-y-4 shadow-panel">
+          <h3 className="font-semibold text-sm border-b border-border pb-2 mb-2">Vehicle Information</h3>
+          
+          <Field label="Wheel count" hint="Required">
+            <select
+              value={form.wheels}
+              onChange={(e) => {
+                setForm(f => ({ ...f, wheels: e.target.value, vehicleType: "", brand: "" }));
+              }}
+              className="h-14 w-full rounded-lg border-2 border-input bg-card px-4 text-base outline-none focus:border-ring"
+            >
+              <option value="" disabled>Select wheels...</option>
+              {WHEELS.map(w => <option key={w} value={w}>{w}</option>)}
+            </select>
+          </Field>
+
+          <Field label="Vehicle type" hint="Required">
+            <select
+              value={form.vehicleType}
+              onChange={(e) => {
+                setForm(f => ({ ...f, vehicleType: e.target.value, brand: "" }));
+              }}
+              disabled={!form.wheels}
+              className="h-14 w-full rounded-lg border-2 border-input bg-card px-4 text-base outline-none focus:border-ring disabled:opacity-50 disabled:bg-muted"
+            >
+              <option value="" disabled>Select type...</option>
+              {form.wheels && VEHICLE_TYPES_BY_WHEELS[form.wheels]?.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </Field>
+
+          <Field label="Brand" hint="Required">
+            <select
+              value={form.brand}
+              onChange={(e) => set("brand", e.target.value)}
+              disabled={!form.vehicleType}
+              className="h-14 w-full rounded-lg border-2 border-input bg-card px-4 text-base outline-none focus:border-ring disabled:opacity-50 disabled:bg-muted"
+            >
+              <option value="" disabled>Select brand...</option>
+              {form.wheels && BRANDS_BY_WHEELS[form.wheels]?.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </Field>
+
+          <Field label="Color" hint="Required">
+            <select
+              value={form.color}
+              onChange={(e) => set("color", e.target.value)}
+              className="h-14 w-full rounded-lg border-2 border-input bg-card px-4 text-base outline-none focus:border-ring"
+            >
+              <option value="" disabled>Select color...</option>
+              {COLORS.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </Field>
+        </div>
+
+        {(form.wheels || form.vehicleType || form.brand || form.color || form.plateNo) && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm shadow-sm transition-all">
+            <p className="font-semibold text-primary">Vehicle Profile</p>
+            {form.plateNo && (
+              <p className="mt-2 font-mono text-xl font-bold tracking-widest text-primary/90 uppercase">{form.plateNo}</p>
+            )}
+            <p className="mt-1 text-primary/80 font-medium">
+              {form.wheels || "—"} • {form.color || "—"} {form.brand || "—"} {form.vehicleType || "—"}
+            </p>
           </div>
-        </Field>
+        )}
 
         <Field label="Violations" hint={`${picked.length} selected`}>
           {picked.length > 0 && (
@@ -334,17 +400,18 @@ function EnforcerPage() {
           </Field>
         </div>
 
-        <Field label="Evidence photo" hint={photoName ? "Attached" : "Optional"}>
-          {photoName ? (
-            <div className="flex h-28 w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-paid-foreground/40 bg-paid text-paid-foreground text-sm font-medium">
-              <Camera className="size-6" />
-              <span className="max-w-[90%] truncate px-2">Attached · {photoName}</span>
-              <button
-                onClick={() => setPhotoName(undefined)}
-                className="mt-1 text-xs underline underline-offset-2 opacity-80 hover:opacity-100"
-              >
-                Remove photo
-              </button>
+        <Field label="Evidence photo" hint={photoData ? "Attached" : "Optional"}>
+          {photoData ? (
+            <div className="relative flex h-48 w-full flex-col items-center justify-center overflow-hidden rounded-lg border border-border bg-black">
+              <img src={photoData} alt="Evidence" className="h-full w-full object-contain" />
+              <div className="absolute inset-x-0 bottom-0 flex justify-center bg-black/60 p-2 backdrop-blur-sm">
+                <button
+                  onClick={() => setPhotoData(undefined)}
+                  className="text-xs font-semibold text-white underline underline-offset-2 opacity-80 hover:opacity-100"
+                >
+                  Remove photo
+                </button>
+              </div>
             </div>
           ) : (
             <label className="flex h-28 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-input bg-card text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-[0.99]">
@@ -358,7 +425,38 @@ function EnforcerPage() {
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    setPhotoName(file.name);
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                      if (e.target?.result) {
+                        const img = new Image();
+                        img.onload = () => {
+                          const canvas = document.createElement("canvas");
+                          const MAX_WIDTH = 800;
+                          const MAX_HEIGHT = 800;
+                          let width = img.width;
+                          let height = img.height;
+
+                          if (width > height) {
+                            if (width > MAX_WIDTH) {
+                              height *= MAX_WIDTH / width;
+                              width = MAX_WIDTH;
+                            }
+                          } else {
+                            if (height > MAX_HEIGHT) {
+                              width *= MAX_HEIGHT / height;
+                              height = MAX_HEIGHT;
+                            }
+                          }
+                          canvas.width = width;
+                          canvas.height = height;
+                          const ctx = canvas.getContext("2d");
+                          ctx?.drawImage(img, 0, 0, width, height);
+                          setPhotoData(canvas.toDataURL("image/jpeg", 0.7));
+                        };
+                        img.src = e.target.result.toString();
+                      }
+                    };
+                    reader.readAsDataURL(file);
                   }
                 }}
               />
