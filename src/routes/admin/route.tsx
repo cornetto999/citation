@@ -1,6 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { AdminSidebar } from "@/components/AdminSidebar";
-import { AppShell } from "@/components/AppShell";
+import { AdminAppShell } from "@/components/AdminAppShell";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export const Route = createFileRoute("/admin")({
@@ -17,8 +16,8 @@ export const Route = createFileRoute("/admin")({
 
 function AdminLayout() {
   return (
-    <AppShell sidebar={<AdminSidebar />}>
+    <AdminAppShell>
       <Outlet />
-    </AppShell>
+    </AdminAppShell>
   );
 }
