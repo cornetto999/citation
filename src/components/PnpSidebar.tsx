@@ -1,7 +1,18 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Activity, ShieldAlert, LogOut } from "lucide-react";
+import { Activity, ShieldAlert, LogOut, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const navigation = [
   { to: "/pnp", label: "Monitoring", icon: Activity },
@@ -57,13 +68,26 @@ export function PnpSidebar() {
       </div>
 
       <div className="mt-4 border-t border-sidebar-border/30 pt-2">
-        <button
-          onClick={handleSignOut}
-          className="flex w-full min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-primary-foreground/70 hover:bg-white/10 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary"
-        >
-          <LogOut className="size-4" />
-          Sign out
-        </button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button className="flex w-full min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-primary-foreground/70 hover:bg-white/10 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary">
+              <LogOut className="size-4" />
+              Sign out
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure you want to sign out?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You will need to log in again to access the PNP portal.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleSignOut}>Sign out</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </nav>
   );
