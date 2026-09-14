@@ -217,6 +217,9 @@ export const useTicketStore = create<TicketState>((set, get) => ({
     ),
 
   subscribeToRealtime: () => {
+    const existingChannel = supabase.getChannels().find(c => c.topic === 'realtime:schema-db-changes');
+    if (existingChannel) return;
+
     supabase
       .channel('schema-db-changes')
       .on(
