@@ -1,23 +1,15 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import {
-  Activity,
-  Banknote,
-  LineChart,
-  Wallet,
-  LogOut,
-  List,
-} from "lucide-react";
+import { Activity, ShieldCheck, LogOut, Users, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 
 const navigation = [
-  { to: "/treasury", label: "Dashboard", icon: Activity },
-  { to: "/treasury/cashier", label: "Cashier Window", icon: Banknote },
-  { to: "/treasury/transactions", label: "Transactions", icon: List },
-  { to: "/treasury/reports", label: "Reports", icon: LineChart },
+  { to: "/admin", label: "Monitoring", icon: Activity },
+  { to: "/admin/manage", label: "Manage Users", icon: Users },
+  { to: "/admin/reports", label: "Reports", icon: BarChart3 },
 ] as const;
 
-export function TreasurySidebar() {
+export function AdminSidebar() {
   const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
 
@@ -28,19 +20,19 @@ export function TreasurySidebar() {
 
   return (
     <nav
-      aria-label="Treasury navigation"
+      aria-label="Admin navigation"
       className="sticky top-6 flex min-h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-2xl border border-sidebar-border/60 bg-authority p-2 shadow-lift md:min-h-[calc(100vh-8rem)]"
     >
       <div className="flex items-center gap-2 px-2.5 py-3 text-primary-foreground">
         <span className="flex size-7 items-center justify-center rounded-lg bg-sidebar-primary/15 text-sidebar-primary">
-          <Wallet className="size-4" />
+          <ShieldCheck className="size-4" />
         </span>
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-sidebar-primary">
-            Revenue Desk
+            Admin Portal
           </p>
           <p className="text-xs font-medium text-primary-foreground/80">
-            Treasury workspace
+            System Administration
           </p>
         </div>
       </div>
@@ -49,7 +41,6 @@ export function TreasurySidebar() {
           <Link
             key={to}
             to={to}
-            activeOptions={{ exact: true }}
             activeProps={{
               className: "bg-white text-surface-strong shadow-sm",
             }}

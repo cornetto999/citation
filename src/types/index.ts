@@ -1,4 +1,4 @@
-export type Role = "enforcer" | "pnp" | "treasury" | "violator";
+export type Role = "enforcer" | "pnp" | "treasury" | "violator" | "admin";
 
 export interface User {
   id: string;

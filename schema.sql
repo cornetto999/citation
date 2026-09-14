@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     credential TEXT UNIQUE NOT NULL,
-    role TEXT NOT NULL CHECK (role IN ('enforcer', 'pnp', 'treasury', 'violator')),
+    role TEXT NOT NULL CHECK (role IN ('enforcer', 'pnp', 'treasury', 'violator', 'admin')),
     unit TEXT NOT NULL
 );
 
@@ -63,5 +63,6 @@ INSERT INTO public.users (name, credential, role, unit) VALUES
 ('Jake Roaya', 'jakeroaya@gmail.com', 'enforcer', 'Gitagum Traffic Management Office'),
 ('Roaya Jake', 'roayajake@gmail.com', 'pnp', 'Gitagum Municipal Police Station'),
 ('Francis Jake', 'francisjake@gmail.com', 'treasury', 'Municipal Treasurer''s Office'),
-('Juan Reyes', 'juan.reyes@mail.com', 'violator', 'Public Citizen')
+('Juan Reyes', 'juan.reyes@mail.com', 'violator', 'Public Citizen'),
+('Admin User', 'admin@gitagum.gov.ph', 'admin', 'LGU Administrator')
 ON CONFLICT (credential) DO NOTHING;
