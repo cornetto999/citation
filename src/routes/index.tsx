@@ -57,6 +57,14 @@ const roles = [
     blurb:
       "Look up your ticket, pay online via QRPh, and download your e-receipt.",
   },
+  {
+    to: "/admin",
+    icon: ShieldCheck,
+    name: "System Admin",
+    access: "Private",
+    blurb:
+      "Monitor all citations, manage users, and generate system reports.",
+  },
 ] as const;
 
 function RoleSelect() {

@@ -45,6 +45,9 @@ interface DemoAccount {
   label: string;
   icon: typeof Radio;
   destination: string;
+  name: string;
+  role: Role;
+  unit: string;
 }
 
 const ACCOUNTS: DemoAccount[] = [
@@ -55,6 +58,9 @@ const ACCOUNTS: DemoAccount[] = [
     label: "Traffic Enforcer",
     icon: Radio,
     destination: "/enforcer",
+    name: "Jake Roaya",
+    role: "enforcer",
+    unit: "Gitagum Traffic Management Office",
   },
   {
     key: "pnp",
@@ -63,6 +69,9 @@ const ACCOUNTS: DemoAccount[] = [
     label: "PNP / Police",
     icon: ShieldCheck,
     destination: "/pnp",
+    name: "Roaya Jake",
+    role: "pnp",
+    unit: "Gitagum Municipal Police Station",
   },
   {
     key: "treasury",
@@ -71,6 +80,9 @@ const ACCOUNTS: DemoAccount[] = [
     label: "Municipal Treasury",
     icon: Landmark,
     destination: "/treasury",
+    name: "Francis Jake",
+    role: "treasury",
+    unit: "Municipal Treasurer's Office",
   },
   {
     key: "violator",
@@ -79,6 +91,20 @@ const ACCOUNTS: DemoAccount[] = [
     label: "Violator (Public)",
     icon: UserRound,
     destination: "/portal",
+    name: "Juan Reyes",
+    role: "violator",
+    unit: "Public Citizen",
+  },
+  {
+    key: "admin",
+    credential: "admin@gitagum.gov.ph",
+    password: "admin",
+    label: "System Admin",
+    icon: ShieldCheck,
+    destination: "/admin",
+    name: "System Admin",
+    role: "admin",
+    unit: "System Administration",
   },
 ];
 
@@ -86,6 +112,7 @@ function roleDestination(role: Role): string {
   if (role === "enforcer") return "/enforcer";
   if (role === "pnp") return "/pnp";
   if (role === "treasury") return "/treasury";
+  if (role === "admin") return "/admin";
   return "/portal";
 }
 
@@ -106,10 +133,16 @@ function LoginPage() {
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    const normalizedCredential = credential.trim().toLowerCase();
+    const account = ACCOUNTS.find(
+      (candidate) =>
+        candidate.credential.toLowerCase() === normalizedCredential,
+    );
+
     const { data: user, error: dbError } = await supabase
       .from("users")
       .select("*")
-      .eq("credential", credential.trim())
+      .eq("credential", normalizedCredential)
       .maybeSingle();
 
     if (dbError) {
@@ -118,29 +151,27 @@ function LoginPage() {
       return;
     }
 
-    if (!user) {
+    if (!user && !account) {
       setError("User not found in database.");
       return;
     }
 
-    const account = ACCOUNTS.find(
-      (a) => a.credential.toLowerCase() === credential.trim().toLowerCase(),
-    );
-    
-    // Check password if it is a known demo account, otherwise allow passwordless for new DB entries in this prototype
+    // Demo accounts remain available when the seed data has not been loaded yet.
     if (account && account.password !== password) {
       setError("Invalid password for demo account.");
       return;
     }
 
+    const sessionUser = user ?? account;
+
     signIn({
-      key: user.role,
-      name: user.name,
-      role: user.role as Role,
-      unit: user.unit,
-      credential: user.credential,
+      key: sessionUser.role,
+      name: sessionUser.name,
+      role: sessionUser.role,
+      unit: sessionUser.unit,
+      credential: sessionUser.credential,
     });
-    await router.navigate({ to: roleDestination(user.role as Role) });
+    await router.navigate({ to: roleDestination(sessionUser.role) });
   };
 
   return (

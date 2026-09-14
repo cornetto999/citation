@@ -49,6 +49,7 @@ export function TreasurySidebar() {
           <Link
             key={to}
             to={to}
+            activeOptions={{ exact: true }}
             activeProps={{
               className: "bg-white text-surface-strong shadow-sm",
             }}

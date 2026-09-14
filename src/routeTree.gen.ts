@@ -10,11 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as EnforcerRouteImport } from './routes/enforcer'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PnpRouteImport } from './routes/pnp'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as TreasuryRouteImport } from './routes/treasury'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminManageRouteImport } from './routes/admin/manage'
+import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as EnforcerIndexRouteImport } from './routes/enforcer/index'
 import { Route as EnforcerCitationsRouteImport } from './routes/enforcer/citations'
 import { Route as EnforcerNewRouteImport } from './routes/enforcer/new'
@@ -26,6 +30,11 @@ import { Route as TreasuryTransactionsRouteImport } from './routes/treasury/tran
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EnforcerRoute = EnforcerRouteImport.update({
@@ -52,6 +61,21 @@ const TreasuryRoute = TreasuryRouteImport.update({
   id: '/treasury',
   path: '/treasury',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminManageRoute = AdminManageRouteImport.update({
+  id: '/manage',
+  path: '/manage',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminReportsRoute = AdminReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const EnforcerIndexRoute = EnforcerIndexRouteImport.update({
   id: '/',
@@ -91,16 +115,20 @@ const TreasuryTransactionsRoute = TreasuryTransactionsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/enforcer': typeof EnforcerRouteWithChildren
   '/login': typeof LoginRoute
   '/pnp': typeof PnpRoute
   '/portal': typeof PortalRoute
   '/treasury': typeof TreasuryRouteWithChildren
+  '/admin/manage': typeof AdminManageRoute
+  '/admin/reports': typeof AdminReportsRoute
   '/enforcer/citations': typeof EnforcerCitationsRoute
   '/enforcer/new': typeof EnforcerNewRoute
   '/treasury/cashier': typeof TreasuryCashierRoute
   '/treasury/reports': typeof TreasuryReportsRoute
   '/treasury/transactions': typeof TreasuryTransactionsRoute
+  '/admin/': typeof AdminIndexRoute
   '/enforcer/': typeof EnforcerIndexRoute
   '/treasury/': typeof TreasuryIndexRoute
 }
@@ -109,27 +137,34 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/pnp': typeof PnpRoute
   '/portal': typeof PortalRoute
+  '/admin/manage': typeof AdminManageRoute
+  '/admin/reports': typeof AdminReportsRoute
   '/enforcer/citations': typeof EnforcerCitationsRoute
   '/enforcer/new': typeof EnforcerNewRoute
   '/treasury/cashier': typeof TreasuryCashierRoute
   '/treasury/reports': typeof TreasuryReportsRoute
   '/treasury/transactions': typeof TreasuryTransactionsRoute
+  '/admin': typeof AdminIndexRoute
   '/enforcer': typeof EnforcerIndexRoute
   '/treasury': typeof TreasuryIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/enforcer': typeof EnforcerRouteWithChildren
   '/login': typeof LoginRoute
   '/pnp': typeof PnpRoute
   '/portal': typeof PortalRoute
   '/treasury': typeof TreasuryRouteWithChildren
+  '/admin/manage': typeof AdminManageRoute
+  '/admin/reports': typeof AdminReportsRoute
   '/enforcer/citations': typeof EnforcerCitationsRoute
   '/enforcer/new': typeof EnforcerNewRoute
   '/treasury/cashier': typeof TreasuryCashierRoute
   '/treasury/reports': typeof TreasuryReportsRoute
   '/treasury/transactions': typeof TreasuryTransactionsRoute
+  '/admin/': typeof AdminIndexRoute
   '/enforcer/': typeof EnforcerIndexRoute
   '/treasury/': typeof TreasuryIndexRoute
 }
@@ -137,16 +172,20 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/enforcer'
     | '/login'
     | '/pnp'
     | '/portal'
     | '/treasury'
+    | '/admin/manage'
+    | '/admin/reports'
     | '/enforcer/citations'
     | '/enforcer/new'
     | '/treasury/cashier'
     | '/treasury/reports'
     | '/treasury/transactions'
+    | '/admin/'
     | '/enforcer/'
     | '/treasury/'
   fileRoutesByTo: FileRoutesByTo
@@ -155,32 +194,40 @@ export interface FileRouteTypes {
     | '/login'
     | '/pnp'
     | '/portal'
+    | '/admin/manage'
+    | '/admin/reports'
     | '/enforcer/citations'
     | '/enforcer/new'
     | '/treasury/cashier'
     | '/treasury/reports'
     | '/treasury/transactions'
+    | '/admin'
     | '/enforcer'
     | '/treasury'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/enforcer'
     | '/login'
     | '/pnp'
     | '/portal'
     | '/treasury'
+    | '/admin/manage'
+    | '/admin/reports'
     | '/enforcer/citations'
     | '/enforcer/new'
     | '/treasury/cashier'
     | '/treasury/reports'
     | '/treasury/transactions'
+    | '/admin/'
     | '/enforcer/'
     | '/treasury/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   EnforcerRoute: typeof EnforcerRouteWithChildren
   LoginRoute: typeof LoginRoute
   PnpRoute: typeof PnpRoute
@@ -195,6 +242,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/enforcer': {
@@ -231,6 +285,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/treasury'
       preLoaderRoute: typeof TreasuryRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/manage': {
+      id: '/admin/manage'
+      path: '/manage'
+      fullPath: '/admin/manage'
+      preLoaderRoute: typeof AdminManageRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/reports': {
+      id: '/admin/reports'
+      path: '/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AdminReportsRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/enforcer/': {
       id: '/enforcer/'
@@ -284,6 +359,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteRouteChildren {
+  AdminManageRoute: typeof AdminManageRoute
+  AdminReportsRoute: typeof AdminReportsRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminManageRoute: AdminManageRoute,
+  AdminReportsRoute: AdminReportsRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
+
 interface EnforcerRouteChildren {
   EnforcerCitationsRoute: typeof EnforcerCitationsRoute
   EnforcerNewRoute: typeof EnforcerNewRoute
@@ -320,6 +411,7 @@ const TreasuryRouteWithChildren = TreasuryRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   EnforcerRoute: EnforcerRouteWithChildren,
   LoginRoute: LoginRoute,
   PnpRoute: PnpRoute,
