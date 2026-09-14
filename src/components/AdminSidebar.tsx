@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Activity, ShieldCheck, LogOut, Users, BarChart3 } from "lucide-react";
+import { Activity, ShieldCheck, LogOut, Users, BarChart3, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -7,6 +7,7 @@ const navigation = [
   { to: "/admin", label: "Monitoring", icon: Activity },
   { to: "/admin/manage", label: "Manage Users", icon: Users },
   { to: "/admin/reports", label: "Reports", icon: BarChart3 },
+  { to: "/admin", label: "Citations", icon: FileText },
 ] as const;
 
 export function AdminSidebar() {
