@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { Payment, Ticket, TicketStatus, ViolationCode } from "@/types";
 import { VIOLATION_CODES } from "@/lib/mockData";
 
@@ -10,7 +11,7 @@ export interface NewTicketInput {
   violations: ViolationCode[];
   location: string;
   remarks?: string | undefined;
-  photoName?: string | undefined;
+  photoData?: string | undefined;
   issuedBy: string;
 }
 
@@ -42,71 +43,79 @@ const nextTicketId = (tickets: Ticket[]) => {
 // Initial Mock Data to populate the store so dashboards aren't empty
 const MOCK_INITIAL_TICKETS: Ticket[] = [];
 
-export const useTicketStore = create<TicketState>()((set, get) => ({
-  tickets: MOCK_INITIAL_TICKETS,
+export const useTicketStore = create<TicketState>()(
+  persist(
+    (set, get) => ({
+      tickets: MOCK_INITIAL_TICKETS,
 
-  fetchTickets: async () => {
-    // Bypassed Supabase 404s
-    console.log("Mock data initialized.");
-    return Promise.resolve();
-  },
+      fetchTickets: async () => {
+        // Bypassed Supabase 404s
+        console.log("Mock data initialized.");
+        return Promise.resolve();
+      },
 
-  addTicket: async (input) => {
-    const tickets = get().tickets;
-    const issuedAt = new Date();
-    const due = new Date(issuedAt);
-    due.setDate(due.getDate() + 7);
+      addTicket: async (input) => {
+        const tickets = get().tickets;
+        const issuedAt = new Date();
+        const due = new Date(issuedAt);
+        due.setDate(due.getDate() + 7);
 
-    const ticket: Ticket = {
-      ...input,
-      id: nextTicketId(tickets),
-      totalFine: input.violations.reduce((sum, v) => sum + v.fine, 0),
-      status: "Unpaid",
-      issuedAt: issuedAt.toISOString(),
-      dueDate: due.toISOString(),
-    };
+        const ticket: Ticket = {
+          ...input,
+          id: nextTicketId(tickets),
+          totalFine: input.violations.reduce((sum, v) => sum + v.fine, 0),
+          status: "Unpaid",
+          issuedAt: issuedAt.toISOString(),
+          dueDate: due.toISOString(),
+        };
 
-    set({ tickets: [ticket, ...get().tickets] });
-    return Promise.resolve(ticket);
-  },
+        set({ tickets: [ticket, ...get().tickets] });
+        return Promise.resolve(ticket);
+      },
 
-  payTicket: async (ticketId, channel, receivedBy, manualOrNumber) => {
-    const ticket = get().tickets.find((t) => t.id === ticketId);
-    if (!ticket || ticket.status === "Paid") return Promise.resolve(undefined);
+      payTicket: async (ticketId, channel, receivedBy, manualOrNumber) => {
+        const ticket = get().tickets.find((t) => t.id === ticketId);
+        if (!ticket || ticket.status === "Paid") return Promise.resolve(undefined);
 
-    const payment: Payment = {
-      id: `PMT-${Date.now().toString().slice(-6)}`,
-      ticketId,
-      amount: ticket.totalFine,
-      channel,
-      paidAt: new Date().toISOString(),
-      receivedBy,
-      orNumber: manualOrNumber || `OR-${new Date().getFullYear()}-${pad(
-        Math.floor(Math.random() * 9000) + 1000,
-      )}`,
-    };
+        const payment: Payment = {
+          id: `PMT-${Date.now().toString().slice(-6)}`,
+          ticketId,
+          amount: ticket.totalFine,
+          channel,
+          paidAt: new Date().toISOString(),
+          receivedBy,
+          orNumber: manualOrNumber || `OR-${new Date().getFullYear()}-${pad(
+            Math.floor(Math.random() * 9000) + 1000,
+          )}`,
+        };
 
-    set({
-      tickets: get().tickets.map((t) =>
-        t.id === ticketId
-          ? { ...t, status: "Paid" as TicketStatus, payment }
-          : t,
-      ),
-    });
-    return Promise.resolve(payment);
-  },
+        set({
+          tickets: get().tickets.map((t) =>
+            t.id === ticketId
+              ? { ...t, status: "Paid" as TicketStatus, payment }
+              : t,
+          ),
+        });
+        return Promise.resolve(payment);
+      },
 
-  setStatus: async (ticketId, status) => {
-    set({
-      tickets: get().tickets.map((t) =>
-        t.id === ticketId ? { ...t, status } : t,
-      ),
-    });
-    return Promise.resolve();
-  },
+      setStatus: async (ticketId, status) => {
+        set({
+          tickets: get().tickets.map((t) =>
+            t.id === ticketId ? { ...t, status } : t,
+          ),
+        });
+        return Promise.resolve();
+      },
 
-  getTicket: (ticketId) =>
-    get().tickets.find(
-      (t) => t.id.toLowerCase() === ticketId.trim().toLowerCase(),
-    ),
-}));
+      getTicket: (ticketId) =>
+        get().tickets.find(
+          (t) => t.id.toLowerCase() === ticketId.trim().toLowerCase(),
+        ),
+    }),
+    {
+      name: "citation-system-tickets",
+      version: 1,
+    }
+  )
+);

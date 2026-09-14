@@ -6,6 +6,8 @@ import { TreasurySidebar } from "@/components/TreasurySidebar";
 import { useTicketStore } from "@/store/useTicketStore";
 import { peso } from "@/lib/format";
 
+import { ClientOnly } from "@/components/ClientOnly";
+
 export const Route = createFileRoute("/treasury")({
   head: () => ({
     meta: [
@@ -29,6 +31,14 @@ export const Route = createFileRoute("/treasury")({
 });
 
 function TreasuryLayout() {
+  return (
+    <ClientOnly>
+      <ProtectedTreasury />
+    </ClientOnly>
+  );
+}
+
+function ProtectedTreasury() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const tickets = useTicketStore((s) => s.tickets);

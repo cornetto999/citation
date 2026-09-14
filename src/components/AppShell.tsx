@@ -110,7 +110,7 @@ export function AppShell({
       <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7">
         <div className="flex gap-6 lg:gap-8">
           {sidebar && (
-            <aside className="hidden w-52 shrink-0 md:block">{sidebar}</aside>
+            <aside className="hidden w-52 shrink-0 self-start md:sticky md:top-24 md:block">{sidebar}</aside>
           )}
           <main className={cn("min-w-0 flex-1", className)}>{children}</main>
         </div>

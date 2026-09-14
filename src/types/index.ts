@@ -39,7 +39,7 @@ export interface Ticket {
   totalFine: number;
   location: string;
   remarks?: string | undefined;
-  photoName?: string | undefined;
+  photoData?: string | undefined;
   status: TicketStatus;
   issuedAt: string;
   dueDate: string;

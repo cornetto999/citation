@@ -216,6 +216,21 @@ function TicketCard({ ticket, onPay }: { ticket: Ticket; onPay: () => void }) {
         </div>
       </div>
 
+      {ticket.photoData && (
+        <div className="mt-5">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Evidence Photo
+          </p>
+          <div className="overflow-hidden rounded-lg border border-border bg-black/5">
+            <img
+              src={ticket.photoData}
+              alt="Evidence"
+              className="max-h-64 w-full object-contain"
+            />
+          </div>
+        </div>
+      )}
+
       {ticket.status === "Paid" ? (
         <p className="mt-4 flex items-center gap-2 rounded-lg bg-paid/15 px-4 py-3 text-sm font-medium text-paid">
           <CheckCircle2 className="size-4" />
