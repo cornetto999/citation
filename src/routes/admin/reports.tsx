@@ -38,10 +38,10 @@ function AdminReports() {
   }, [tickets]);
 
   const handleExportCSV = () => {
-    const headers = ["Ticket ID", "Issued At", "Violator", "Vehicle", "Fine", "Status"];
+    const headers = ["Ticket ID", "Issued At", "Violator", "Vehicle", "Fine", "Issued By", "Status"];
     const csvContent = "data:text/csv;charset=utf-8," 
       + headers.join(",") + "\n"
-      + tickets.map(t => `${t.id},${t.issuedAt},"${t.violatorName}","${t.vehicleType}",${t.totalFine},${t.status}`).join("\n");
+      + tickets.map(t => `${t.id},${t.issuedAt},"${t.violatorName}","${t.vehicleType}",${t.totalFine},"${t.issuedBy}",${t.status}`).join("\n");
     
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
