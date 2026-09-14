@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
+import { useTicketStore } from "@/store/useTicketStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { 
   Activity, 
   PhilippinePeso, 
@@ -8,7 +11,10 @@ import {
   TrendingUp,
   TrendingDown,
   Trophy,
-  Clock
+  Clock,
+  Search,
+  X,
+  CreditCard
 } from "lucide-react";
 import { 
   BarChart, 
@@ -25,6 +31,15 @@ import {
   Cell,
   Legend
 } from "recharts";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { peso, shortDate } from "@/lib/format";
+import type { Ticket, PaymentChannel } from "@/types";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
@@ -34,6 +49,41 @@ const PIE_COLORS = ['#6366f1', '#10b981'];
 
 function AdminDashboard() {
   const metrics = useDashboardMetrics();
+  const { tickets, payTicket } = useTicketStore();
+  const { user } = useAuthStore();
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [settleModalOpen, setSettleModalOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentChannel>("Cash (Over-the-counter)");
+  const [orNumber, setOrNumber] = useState("");
+
+  const searchResults = searchQuery.trim()
+    ? tickets.filter(
+        (t) =>
+          t.id.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+          t.plateNo.toLowerCase().includes(searchQuery.trim().toLowerCase()),
+      )
+    : tickets.slice(0, 5); // Default show 5 recent
+
+  const handleSettleClick = (ticket: Ticket) => {
+    setSelectedTicket(ticket);
+    setPaymentMethod("Cash (Over-the-counter)");
+    setOrNumber("");
+    setSettleModalOpen(true);
+  };
+
+  const handleConfirmSettle = async () => {
+    if (!selectedTicket || !user) return;
+    try {
+      await payTicket(selectedTicket.id, paymentMethod as Exclude<PaymentChannel, "Unpaid">, user.name, orNumber || undefined);
+      toast.success("Citation settled successfully!");
+      setSettleModalOpen(false);
+      setSelectedTicket(null);
+    } catch (e) {
+      toast.error("Failed to settle citation");
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -170,6 +220,90 @@ function AdminDashboard() {
         </div>
       </div>
 
+      {/* Search & Settle Citations */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">Search & Settle Citations</h2>
+        
+        <div className="relative mb-6 max-w-xl">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4.5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by Ticket ID or Plate Number"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-10 py-2.5 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 font-medium">Ticket ID</th>
+                <th className="px-4 py-3 font-medium">Date</th>
+                <th className="px-4 py-3 font-medium">Driver</th>
+                <th className="px-4 py-3 font-medium">Violation</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium text-right">Amount Due</th>
+                <th className="px-4 py-3 font-medium text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {searchResults.map((ticket) => (
+                <tr key={ticket.id} className="hover:bg-slate-50/50">
+                  <td className="px-4 py-3 font-medium text-slate-900">{ticket.id.slice(0, 8)}...</td>
+                  <td className="px-4 py-3 text-slate-500">{shortDate(ticket.issuedAt)}</td>
+                  <td className="px-4 py-3 text-slate-900">{ticket.plateNo}</td>
+                  <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate" title={ticket.violations.map(v => v.label).join(", ")}>
+                    {ticket.violations[0]?.label || 'Unknown'} {ticket.violations.length > 1 && `(+${ticket.violations.length - 1})`}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      ticket.status === 'Paid' ? 'bg-green-100 text-green-700' :
+                      ticket.status === 'Overdue' ? 'bg-red-100 text-red-700' :
+                      ticket.status === 'Contested' ? 'bg-orange-100 text-orange-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {ticket.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-medium text-right tabular-nums">
+                    {ticket.status === 'Paid' ? '—' : peso(ticket.totalFine)}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {ticket.status !== 'Paid' ? (
+                      <button 
+                        onClick={() => handleSettleClick(ticket)}
+                        className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 transition-colors shadow-sm"
+                      >
+                        Settle
+                      </button>
+                    ) : (
+                      <span className="text-slate-400 text-xl font-bold leading-none">...</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {searchResults.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                    No citations found matching your search.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* C. Operational Feeds (Bottom Row - 2 columns) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Live Command Feed */}
@@ -261,6 +395,99 @@ function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Settlement Modal / Slide-out */}
+      <Dialog open={settleModalOpen} onOpenChange={setSettleModalOpen}>
+        <DialogContent className="sm:max-w-md gap-0 p-0 overflow-hidden">
+          {selectedTicket && (
+            <div className="flex flex-col h-full max-h-[85vh]">
+              <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+                <h2 className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-1">Process Settlement:</h2>
+                <p className="text-sm font-medium text-slate-900">
+                  Ticket #{selectedTicket.id.slice(0, 8).toUpperCase()} (Plate: {selectedTicket.plateNo})
+                </p>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3">Violation Summary</h3>
+                  <div className="space-y-2">
+                    {selectedTicket.violations.map(v => (
+                      <div key={v.code} className="flex justify-between text-sm">
+                        <span className="text-slate-600">{v.label}</span>
+                        <span className="font-medium text-slate-900">{peso(v.fine)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between text-sm font-bold pt-2 border-t border-slate-200">
+                      <span>Subtotal</span>
+                      <span>{peso(selectedTicket.violations.reduce((s, v) => s + v.fine, 0))}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedTicket.status === 'Overdue' && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900 mb-3">Penalties & Surcharges</h3>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Overdue Surcharge</span>
+                      <span className="font-medium text-slate-900">{peso(selectedTicket.totalFine - selectedTicket.violations.reduce((s, v) => s + v.fine, 0))}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <span className="font-bold text-slate-900">Total Amount Due:</span>
+                  <span className="text-xl font-bold text-indigo-600 tabular-nums">{peso(selectedTicket.totalFine)}</span>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3">Select Payment Method</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['Cash (Over-the-counter)', 'QRPh', 'Online'] as const).map(method => (
+                      <button
+                        key={method}
+                        onClick={() => setPaymentMethod(method)}
+                        className={`py-2 text-xs font-medium rounded-lg border transition-all ${
+                          paymentMethod === method 
+                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        {method.split(' ')[0]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-slate-900 mb-1.5 block">
+                    Enter Official Receipt (OR) Number
+                  </label>
+                  <input
+                    type="text"
+                    value={orNumber}
+                    onChange={(e) => setOrNumber(e.target.value)}
+                    placeholder="Leave blank to auto-generate"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-200 bg-white space-y-3">
+                <button 
+                  onClick={handleConfirmSettle}
+                  className="w-full flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors shadow-sm"
+                >
+                  <CreditCard className="size-4 mr-2" /> Confirm & Mark as Paid
+                </button>
+                <button className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+                  Generate Statement
+                </button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
