@@ -55,7 +55,7 @@ export function PnpSidebar() {
           </Link>
         ))}
       </div>
-      
+
       <div className="mt-4 border-t border-sidebar-border/30 pt-2">
         <button
           onClick={handleSignOut}

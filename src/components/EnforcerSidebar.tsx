@@ -1,5 +1,11 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ClipboardList, PlusCircle, ShieldCheck, LayoutDashboard, LogOut } from "lucide-react";
+import {
+  ClipboardList,
+  PlusCircle,
+  ShieldCheck,
+  LayoutDashboard,
+  LogOut,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -57,7 +63,7 @@ export function EnforcerSidebar() {
           </Link>
         ))}
       </div>
-      
+
       <div className="mt-4 border-t border-sidebar-border/30 pt-2">
         <button
           onClick={handleSignOut}

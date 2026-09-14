@@ -48,7 +48,7 @@ export function AppShell({
             to="/"
             className={cn(
               "flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 shadow-sm transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary",
-              sidebar && "hidden sm:flex"
+              sidebar && "hidden sm:flex",
             )}
             aria-label="Back to role selection"
           >
@@ -76,7 +76,7 @@ export function AppShell({
           </div>
         </div>
       </header>
-      
+
       {/* Mobile Drawer */}
       {sidebar && (
         <>
@@ -89,7 +89,7 @@ export function AppShell({
           <div
             className={cn(
               "fixed inset-y-0 left-0 z-50 w-72 max-w-[80vw] transform bg-background shadow-2xl transition-transform duration-300 ease-in-out md:hidden",
-              mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+              mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
             )}
           >
             <div className="flex h-16 items-center justify-between border-b border-border px-4">
@@ -110,7 +110,9 @@ export function AppShell({
       <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7">
         <div className="flex gap-6 lg:gap-8">
           {sidebar && (
-            <aside className="hidden w-52 shrink-0 self-start md:sticky md:top-24 md:block">{sidebar}</aside>
+            <aside className="hidden w-52 shrink-0 self-start md:sticky md:top-24 md:block">
+              {sidebar}
+            </aside>
           )}
           <main className={cn("min-w-0 flex-1", className)}>{children}</main>
         </div>

@@ -265,4 +265,3 @@ export const VEHICLE_TYPES = [
   "Bus",
   "E-bike",
 ];
-

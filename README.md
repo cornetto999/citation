@@ -48,16 +48,6 @@ Zustand Specified: Recommending Zustand over React Context prevents the AI from 
 
 UX Directives: Translating "make it fast" into specific frontend patterns (mobile-first, large tap targets, autocomplete) ensures the AI writes tailored Tailwind CSS classes rather than a generic HTML form.
 
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/a3c5e313-4771-430e-a5c9-0b64ec4e948f).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
 ## Development
 
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
