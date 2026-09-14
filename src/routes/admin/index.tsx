@@ -6,15 +6,16 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { 
   Activity, 
   PhilippinePeso, 
-  CheckCircle2, 
-  AlertTriangle,
+  CheckCircle2,
+  AlertTriangle, 
   TrendingUp,
   TrendingDown,
   Trophy,
   Clock,
   Search,
   X,
-  CreditCard
+  CreditCard,
+  FileText
 } from "lucide-react";
 import { 
   BarChart, 
@@ -32,11 +33,9 @@ import {
   Legend
 } from "recharts";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+} from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { peso, shortDate } from "@/lib/format";
 import type { Ticket, PaymentChannel } from "@/types";
@@ -107,18 +106,10 @@ function AdminDashboard() {
           <div>
             <p className="text-2xl font-bold text-slate-900">{metrics.todayCount}</p>
             <div className="flex items-center gap-1.5 mt-2">
-              {metrics.apprehensionsTrend >= 0 ? (
-                <span className="flex items-center text-xs font-medium text-emerald-600">
-                  <TrendingUp className="size-3.5 mr-1" />
-                  +{metrics.apprehensionsTrend}%
-                </span>
-              ) : (
-                <span className="flex items-center text-xs font-medium text-rose-600">
-                  <TrendingDown className="size-3.5 mr-1" />
-                  {metrics.apprehensionsTrend}%
-                </span>
-              )}
-              <span className="text-xs text-slate-400">vs yesterday</span>
+              <span className="flex items-center text-xs font-medium text-emerald-600">
+                <TrendingUp className="size-3.5 mr-1" />
+                +{metrics.apprehensionsTrend >= 0 ? metrics.apprehensionsTrend : 0}% vs yesterday
+              </span>
             </div>
           </div>
         </div>
@@ -151,19 +142,19 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* Most Frequent Violation */}
+        {/* Pending Payments */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-slate-500">Top Violation</h3>
-            <div className="bg-amber-50 p-2 rounded-lg text-amber-600">
-              <AlertTriangle className="size-5" />
+            <h3 className="text-sm font-medium text-slate-500">Pending Payments</h3>
+            <div className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-md text-xs font-bold">
+              {tickets.filter(t => t.status !== "Paid").length}
             </div>
           </div>
           <div>
-            <p className="text-lg font-bold text-slate-900 leading-tight line-clamp-1" title={metrics.mostFrequentViolation.name}>
-              {metrics.mostFrequentViolation.name}
+            <p className="text-2xl font-bold text-slate-900">
+              ₱{tickets.filter(t => t.status !== "Paid").reduce((s,t) => s+t.totalFine, 0).toLocaleString()}
             </p>
-            <p className="text-xs text-slate-400 mt-2">{metrics.mostFrequentViolation.count} occurrences</p>
+            <p className="text-xs text-slate-400 mt-2">Total Pending</p>
           </div>
         </div>
       </div>
@@ -224,23 +215,27 @@ function AdminDashboard() {
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900 mb-4">Search & Settle Citations</h2>
         
-        <div className="relative mb-6 max-w-xl">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4.5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by Ticket ID or Plate Number"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-10 py-2.5 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-            >
-              <X className="size-4" />
-            </button>
-          )}
+        <div className="flex items-center gap-2 mb-6">
+          <div className="relative flex-1 max-w-xl">
+            <input
+              type="text"
+              placeholder="Search by Ticket ID or Plate Number"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 bg-white pl-4 pr-10 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+          <button className="h-9 px-6 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors">
+            Search
+          </button>
         </div>
 
         <div className="overflow-x-auto border border-slate-200 rounded-xl">
@@ -258,31 +253,38 @@ function AdminDashboard() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {searchResults.map((ticket) => (
-                <tr key={ticket.id} className="hover:bg-slate-50/50">
-                  <td className="px-4 py-3 font-medium text-slate-900">{ticket.id.slice(0, 8)}...</td>
+                <tr 
+                  key={ticket.id} 
+                  className={`hover:bg-slate-50/50 transition-colors ${selectedTicket?.id === ticket.id ? 'bg-indigo-50/50 border-l-4 border-indigo-600' : 'border-l-4 border-transparent'}`}
+                >
+                  <td className="px-4 py-3 font-medium text-slate-900">{ticket.id.slice(0, 8).toUpperCase()}...</td>
                   <td className="px-4 py-3 text-slate-500">{shortDate(ticket.issuedAt)}</td>
                   <td className="px-4 py-3 text-slate-900">{ticket.plateNo}</td>
                   <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate" title={ticket.violations.map(v => v.label).join(", ")}>
                     {ticket.violations[0]?.label || 'Unknown'} {ticket.violations.length > 1 && `(+${ticket.violations.length - 1})`}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                      ticket.status === 'Paid' ? 'bg-green-100 text-green-700' :
-                      ticket.status === 'Overdue' ? 'bg-red-100 text-red-700' :
-                      ticket.status === 'Contested' ? 'bg-orange-100 text-orange-700' :
-                      'bg-yellow-100 text-yellow-700'
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      ticket.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' :
+                      ticket.status === 'Overdue' ? 'bg-rose-100 text-rose-700' :
+                      ticket.status === 'Contested' ? 'bg-amber-100 text-amber-700' :
+                      'bg-slate-100 text-slate-700'
                     }`}>
                       {ticket.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 font-medium text-right tabular-nums">
-                    {ticket.status === 'Paid' ? '—' : peso(ticket.totalFine)}
+                    {ticket.status === 'Paid' ? 'P0' : ticket.totalFine.toString()}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {ticket.status !== 'Paid' ? (
                       <button 
                         onClick={() => handleSettleClick(ticket)}
-                        className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 transition-colors shadow-sm"
+                        className={`inline-flex items-center justify-center rounded-lg px-4 py-1.5 text-xs font-bold transition-colors ${
+                          selectedTicket?.id === ticket.id 
+                            ? 'bg-slate-900 text-white hover:bg-slate-800' 
+                            : 'border border-slate-300 text-slate-700 hover:bg-slate-100 bg-white'
+                        }`}
                       >
                         Settle
                       </button>
@@ -396,79 +398,93 @@ function AdminDashboard() {
         </div>
       </div>
 
-      {/* Settlement Modal / Slide-out */}
-      <Dialog open={settleModalOpen} onOpenChange={setSettleModalOpen}>
-        <DialogContent className="sm:max-w-md gap-0 p-0 overflow-hidden">
+      {/* Settlement Slide-out Panel */}
+      <Sheet open={settleModalOpen} onOpenChange={setSettleModalOpen}>
+        <SheetContent side="right" className="w-[400px] sm:max-w-md p-0 flex flex-col h-full bg-white border-l border-slate-200">
           {selectedTicket && (
-            <div className="flex flex-col h-full max-h-[85vh]">
-              <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-                <h2 className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-1">Process Settlement:</h2>
-                <p className="text-sm font-medium text-slate-900">
+            <div className="flex flex-col h-full">
+              <div className="px-6 py-5 border-b border-slate-200 bg-white">
+                <h2 className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-2">PROCESS SETTLEMENT:</h2>
+                <p className="text-sm font-semibold text-slate-900">
                   Ticket #{selectedTicket.id.slice(0, 8).toUpperCase()} (Plate: {selectedTicket.plateNo})
                 </p>
               </div>
               
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900 mb-3">Violation Summary</h3>
-                  <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-slate-900 mb-4">Violation Summary</h3>
+                  <div className="space-y-3">
                     {selectedTicket.violations.map(v => (
                       <div key={v.code} className="flex justify-between text-sm">
-                        <span className="text-slate-600">{v.label}</span>
-                        <span className="font-medium text-slate-900">{peso(v.fine)}</span>
+                        <span className="text-slate-700">{v.label}</span>
+                        <span className="font-medium text-slate-900">{v.fine}</span>
                       </div>
                     ))}
-                    <div className="flex justify-between text-sm font-bold pt-2 border-t border-slate-200">
+                    <div className="flex justify-between text-sm font-bold pt-3 border-t border-slate-200">
                       <span>Subtotal</span>
-                      <span>{peso(selectedTicket.violations.reduce((s, v) => s + v.fine, 0))}</span>
+                      <span>{selectedTicket.violations.reduce((s, v) => s + v.fine, 0)}</span>
                     </div>
                   </div>
                 </div>
 
                 {selectedTicket.status === 'Overdue' && (
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900 mb-3">Penalties & Surcharges</h3>
+                    <h3 className="text-sm font-semibold text-slate-900 mb-4">Penalties & Surcharges</h3>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-600">Overdue Surcharge</span>
-                      <span className="font-medium text-slate-900">{peso(selectedTicket.totalFine - selectedTicket.violations.reduce((s, v) => s + v.fine, 0))}</span>
+                      <span className="text-slate-700">Overdue Surcharge (15 days)</span>
+                      <span className="font-medium text-slate-900">{selectedTicket.totalFine - selectedTicket.violations.reduce((s, v) => s + v.fine, 0)}</span>
                     </div>
                   </div>
                 )}
 
                 <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
                   <span className="font-bold text-slate-900">Total Amount Due:</span>
-                  <span className="text-xl font-bold text-indigo-600 tabular-nums">{peso(selectedTicket.totalFine)}</span>
+                  <span className="text-2xl font-bold text-slate-900 tabular-nums">PHP {selectedTicket.totalFine.toLocaleString()}</span>
                 </div>
 
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900 mb-3">Select Payment Method</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['Cash (Over-the-counter)', 'QRPh', 'Online'] as const).map(method => (
-                      <button
-                        key={method}
-                        onClick={() => setPaymentMethod(method)}
-                        className={`py-2 text-xs font-medium rounded-lg border transition-all ${
-                          paymentMethod === method 
-                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        {method.split(' ')[0]}
-                      </button>
-                    ))}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setPaymentMethod('Cash (Over-the-counter)')}
+                      className={`flex-1 py-2 text-sm font-semibold rounded-lg border transition-all ${
+                        paymentMethod === 'Cash (Over-the-counter)'
+                          ? 'bg-slate-100 border-slate-300 text-slate-900' 
+                          : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                      }`}
+                    >
+                      Cash (OTC)
+                    </button>
+                    <button
+                      onClick={() => setPaymentMethod('Online')} // GCash as fallback channel
+                      className={`flex-1 py-2 text-sm font-semibold rounded-lg border transition-all ${
+                        paymentMethod === 'Online'
+                          ? 'bg-slate-100 border-slate-300 text-slate-900' 
+                          : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                      }`}
+                    >
+                      GCash
+                    </button>
+                    <button
+                      onClick={() => setPaymentMethod('QRPh')}
+                      className={`flex-1 py-2 text-sm font-semibold rounded-lg border transition-all ${
+                        paymentMethod === 'QRPh'
+                          ? 'bg-slate-100 border-slate-300 text-slate-900' 
+                          : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                      }`}
+                    >
+                      Maya
+                    </button>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-slate-900 mb-1.5 block">
-                    Enter Official Receipt (OR) Number
-                  </label>
                   <input
                     type="text"
                     value={orNumber}
                     onChange={(e) => setOrNumber(e.target.value)}
-                    placeholder="Leave blank to auto-generate"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    placeholder="Enter Official Receipt (OR) Number"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -476,18 +492,18 @@ function AdminDashboard() {
               <div className="p-6 border-t border-slate-200 bg-white space-y-3">
                 <button 
                   onClick={handleConfirmSettle}
-                  className="w-full flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors shadow-sm"
+                  className="w-full flex items-center justify-center rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-sm"
                 >
-                  <CreditCard className="size-4 mr-2" /> Confirm & Mark as Paid
+                  Confirm & Mark as Paid
                 </button>
-                <button className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+                <button className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors">
                   Generate Statement
                 </button>
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
