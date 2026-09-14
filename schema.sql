@@ -43,16 +43,28 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow anon select users" ON public.users;
+DROP POLICY IF EXISTS "Allow anon insert users" ON public.users;
+DROP POLICY IF EXISTS "Allow anon update users" ON public.users;
+DROP POLICY IF EXISTS "Allow anon delete users" ON public.users;
 CREATE POLICY "Allow anon select users" ON public.users FOR SELECT USING (true);
 CREATE POLICY "Allow anon insert users" ON public.users FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow anon update users" ON public.users FOR UPDATE USING (true);
 CREATE POLICY "Allow anon delete users" ON public.users FOR DELETE USING (true);
 
+DROP POLICY IF EXISTS "Allow anon select tickets" ON public.tickets;
+DROP POLICY IF EXISTS "Allow anon insert tickets" ON public.tickets;
+DROP POLICY IF EXISTS "Allow anon update tickets" ON public.tickets;
+DROP POLICY IF EXISTS "Allow anon delete tickets" ON public.tickets;
 CREATE POLICY "Allow anon select tickets" ON public.tickets FOR SELECT USING (true);
 CREATE POLICY "Allow anon insert tickets" ON public.tickets FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow anon update tickets" ON public.tickets FOR UPDATE USING (true);
 CREATE POLICY "Allow anon delete tickets" ON public.tickets FOR DELETE USING (true);
 
+DROP POLICY IF EXISTS "Allow anon select payments" ON public.payments;
+DROP POLICY IF EXISTS "Allow anon insert payments" ON public.payments;
+DROP POLICY IF EXISTS "Allow anon update payments" ON public.payments;
+DROP POLICY IF EXISTS "Allow anon delete payments" ON public.payments;
 CREATE POLICY "Allow anon select payments" ON public.payments FOR SELECT USING (true);
 CREATE POLICY "Allow anon insert payments" ON public.payments FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow anon update payments" ON public.payments FOR UPDATE USING (true);

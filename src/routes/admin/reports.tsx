@@ -17,7 +17,7 @@ export const Route = createFileRoute("/admin/reports")({
 });
 
 function AdminReports() {
-  const { tickets, payments } = useTicketStore();
+  const { tickets } = useTicketStore();
 
   const statusData = useMemo(() => {
     const counts = { Unpaid: 0, Paid: 0, Contested: 0, Overdue: 0 };
