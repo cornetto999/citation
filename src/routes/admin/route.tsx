@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 export const Route = createFileRoute("/admin")({
   beforeLoad: () => {
     const auth = useAuthStore.getState();
-    if (!auth.isAuthenticated || auth.user?.role !== "admin") {
+    if (!auth.user || auth.user.role !== "admin") {
       throw redirect({
         to: "/login",
       });
