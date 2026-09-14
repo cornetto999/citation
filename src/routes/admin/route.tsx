@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { AdminAppShell } from "@/components/AdminAppShell";
+import { AdminSidebar } from "@/components/AdminSidebar";
+import { AppShell } from "@/components/AppShell";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export const Route = createFileRoute("/admin")({
@@ -15,9 +16,17 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminLayout() {
+    const { user } = useAuthStore();
   return (
-    <AdminAppShell>
+    <AppShell
+      title="Admin Portal"
+      subtitle="System Administration"
+      operator={user?.name || "Administrator"}
+      unit={user?.unit || "LGU"}
+      accessLabel="ADMIN ACCESS"
+      sidebar={<AdminSidebar />}
+    >
       <Outlet />
-    </AdminAppShell>
+    </AppShell>
   );
 }
