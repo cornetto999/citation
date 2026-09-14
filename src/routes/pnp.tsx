@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/useAuthStore";
 import { AlertTriangle, Eye, Search } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { PnpSidebar } from "@/components/PnpSidebar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useTicketStore } from "@/store/useTicketStore";
 
@@ -81,7 +82,7 @@ function PnpPage() {
       value: peso(
         tickets
           .filter((t) => t.status === "Paid")
-          .reduce((s, t) => s + t.totalFine, 0),
+          .reduce((s, t) => s + t.payment!.amount, 0),
       ),
     },
   ];
@@ -96,6 +97,7 @@ function PnpPage() {
       operator={officer.name}
       unit={officer.unit}
       accessLabel="PNP"
+      sidebar={<PnpSidebar />}
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (

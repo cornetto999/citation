@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowUpRight, ClipboardList, Search, WalletCards } from "lucide-react";
+import { ClipboardList, Search, WalletCards } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { EnforcerSidebar } from "@/components/EnforcerSidebar";
@@ -16,25 +16,7 @@ const statusAccent: Record<TicketStatus, string> = {
   Contested: "border-l-contested-foreground",
 };
 
-function Metric({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <div className="rounded-xl border border-border bg-card p-3.5 shadow-panel">
-      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 font-display text-xl font-bold tabular">{value}</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>
-    </div>
-  );
-}
+
 
 export const Route = createFileRoute("/enforcer/citations")({
   head: () => ({
@@ -48,6 +30,8 @@ function EnforcerCitationsPage() {
   const tickets = useTicketStore((s) => s.tickets);
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
+  const [filterDate, setFilterDate] = useState("");
 
   useEffect(() => {
     if (!user || user.role !== "enforcer") {
@@ -62,22 +46,27 @@ function EnforcerCitationsPage() {
 
   const myTickets = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return allMyTickets.filter(
-      (ticket) =>
+    return allMyTickets.filter((ticket) => {
+      const matchesQuery =
         !normalizedQuery ||
         ticket.id.toLowerCase().includes(normalizedQuery) ||
         ticket.plateNo.toLowerCase().includes(normalizedQuery) ||
-        ticket.violatorName.toLowerCase().includes(normalizedQuery),
-    );
-  }, [allMyTickets, query]);
+        ticket.violatorName.toLowerCase().includes(normalizedQuery);
 
-  const outstandingCount = allMyTickets.filter(
-    (ticket) => ticket.status === "Unpaid" || ticket.status === "Overdue",
-  ).length;
-  const totalAssessed = allMyTickets.reduce(
-    (sum, ticket) => sum + ticket.totalFine,
-    0,
-  );
+      if (!matchesQuery) return false;
+
+      const ticketDate = new Date(ticket.issuedAt);
+      const ticketMonthStr = `${ticketDate.getFullYear()}-${String(ticketDate.getMonth() + 1).padStart(2, "0")}`;
+      const ticketDateStr = ticketMonthStr + `-${String(ticketDate.getDate()).padStart(2, "0")}`;
+
+      if (filterDate && ticketDateStr !== filterDate) return false;
+      if (filterMonth && ticketMonthStr !== filterMonth) return false;
+
+      return true;
+    });
+  }, [allMyTickets, query, filterDate, filterMonth]);
+
+
 
   if (!user || user.role !== "enforcer") return null;
 
@@ -92,49 +81,7 @@ function EnforcerCitationsPage() {
       className="max-w-3xl pb-10"
     >
       <div className="space-y-6">
-        <section className="rounded-2xl border border-border bg-card p-5 shadow-panel sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
-                <ClipboardList className="size-5" />
-              </span>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                  Citation register
-                </p>
-                <h1 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-                  My citations
-                </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Review citations issued from your field desk.
-                </p>
-              </div>
-            </div>
-            <Link
-              to="/enforcer"
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              New citation <ArrowUpRight className="size-4" />
-            </Link>
-          </div>
-          <div className="mt-5 grid grid-cols-3 gap-2.5 sm:gap-3">
-            <Metric
-              label="Issued"
-              value={String(allMyTickets.length)}
-              detail="all time"
-            />
-            <Metric
-              label="Open"
-              value={String(outstandingCount)}
-              detail="needs settlement"
-            />
-            <Metric
-              label="Assessed"
-              value={peso(totalAssessed)}
-              detail="total fines"
-            />
-          </div>
-        </section>
+
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -150,15 +97,39 @@ function EnforcerCitationsPage() {
           </span>
         </div>
 
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search ticket, plate, or driver…"
-            aria-label="Search my citations"
-            className="h-12 w-full rounded-xl border border-input bg-card pl-10 pr-4 text-base shadow-sm outline-none transition-shadow placeholder:text-muted-foreground/80 focus:border-ring focus:ring-2 focus:ring-ring/15"
-          />
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search ticket, plate, or driver…"
+              aria-label="Search my citations"
+              className="h-12 w-full rounded-xl border border-input bg-card pl-10 pr-4 text-base shadow-sm outline-none transition-shadow placeholder:text-muted-foreground/80 focus:border-ring focus:ring-2 focus:ring-ring/15"
+            />
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="month"
+              value={filterMonth}
+              onChange={(e) => {
+                setFilterMonth(e.target.value);
+                if (e.target.value) setFilterDate("");
+              }}
+              aria-label="Filter by month"
+              className="h-12 rounded-xl border border-input bg-card px-3 text-sm shadow-sm outline-none transition-shadow focus:border-ring focus:ring-2 focus:ring-ring/15"
+            />
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => {
+                setFilterDate(e.target.value);
+                if (e.target.value) setFilterMonth("");
+              }}
+              aria-label="Filter by day"
+              className="h-12 rounded-xl border border-input bg-card px-3 text-sm shadow-sm outline-none transition-shadow focus:border-ring focus:ring-2 focus:ring-ring/15"
+            />
+          </div>
         </div>
 
         <div className="space-y-3">

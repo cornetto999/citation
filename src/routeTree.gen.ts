@@ -15,7 +15,13 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PnpRouteImport } from './routes/pnp'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as TreasuryRouteImport } from './routes/treasury'
+import { Route as EnforcerIndexRouteImport } from './routes/enforcer/index'
 import { Route as EnforcerCitationsRouteImport } from './routes/enforcer/citations'
+import { Route as EnforcerNewRouteImport } from './routes/enforcer/new'
+import { Route as TreasuryIndexRouteImport } from './routes/treasury/index'
+import { Route as TreasuryCashierRouteImport } from './routes/treasury/cashier'
+import { Route as TreasuryReportsRouteImport } from './routes/treasury/reports'
+import { Route as TreasuryTransactionsRouteImport } from './routes/treasury/transactions'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -47,10 +53,40 @@ const TreasuryRoute = TreasuryRouteImport.update({
   path: '/treasury',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EnforcerIndexRoute = EnforcerIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => EnforcerRoute,
+} as any)
 const EnforcerCitationsRoute = EnforcerCitationsRouteImport.update({
   id: '/citations',
   path: '/citations',
   getParentRoute: () => EnforcerRoute,
+} as any)
+const EnforcerNewRoute = EnforcerNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => EnforcerRoute,
+} as any)
+const TreasuryIndexRoute = TreasuryIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TreasuryRoute,
+} as any)
+const TreasuryCashierRoute = TreasuryCashierRouteImport.update({
+  id: '/cashier',
+  path: '/cashier',
+  getParentRoute: () => TreasuryRoute,
+} as any)
+const TreasuryReportsRoute = TreasuryReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => TreasuryRoute,
+} as any)
+const TreasuryTransactionsRoute = TreasuryTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => TreasuryRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -59,17 +95,27 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/pnp': typeof PnpRoute
   '/portal': typeof PortalRoute
-  '/treasury': typeof TreasuryRoute
+  '/treasury': typeof TreasuryRouteWithChildren
   '/enforcer/citations': typeof EnforcerCitationsRoute
+  '/enforcer/new': typeof EnforcerNewRoute
+  '/treasury/cashier': typeof TreasuryCashierRoute
+  '/treasury/reports': typeof TreasuryReportsRoute
+  '/treasury/transactions': typeof TreasuryTransactionsRoute
+  '/enforcer/': typeof EnforcerIndexRoute
+  '/treasury/': typeof TreasuryIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/enforcer': typeof EnforcerRouteWithChildren
   '/login': typeof LoginRoute
   '/pnp': typeof PnpRoute
   '/portal': typeof PortalRoute
-  '/treasury': typeof TreasuryRoute
   '/enforcer/citations': typeof EnforcerCitationsRoute
+  '/enforcer/new': typeof EnforcerNewRoute
+  '/treasury/cashier': typeof TreasuryCashierRoute
+  '/treasury/reports': typeof TreasuryReportsRoute
+  '/treasury/transactions': typeof TreasuryTransactionsRoute
+  '/enforcer': typeof EnforcerIndexRoute
+  '/treasury': typeof TreasuryIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -78,8 +124,14 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/pnp': typeof PnpRoute
   '/portal': typeof PortalRoute
-  '/treasury': typeof TreasuryRoute
+  '/treasury': typeof TreasuryRouteWithChildren
   '/enforcer/citations': typeof EnforcerCitationsRoute
+  '/enforcer/new': typeof EnforcerNewRoute
+  '/treasury/cashier': typeof TreasuryCashierRoute
+  '/treasury/reports': typeof TreasuryReportsRoute
+  '/treasury/transactions': typeof TreasuryTransactionsRoute
+  '/enforcer/': typeof EnforcerIndexRoute
+  '/treasury/': typeof TreasuryIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,15 +143,25 @@ export interface FileRouteTypes {
     | '/portal'
     | '/treasury'
     | '/enforcer/citations'
+    | '/enforcer/new'
+    | '/treasury/cashier'
+    | '/treasury/reports'
+    | '/treasury/transactions'
+    | '/enforcer/'
+    | '/treasury/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/enforcer'
     | '/login'
     | '/pnp'
     | '/portal'
-    | '/treasury'
     | '/enforcer/citations'
+    | '/enforcer/new'
+    | '/treasury/cashier'
+    | '/treasury/reports'
+    | '/treasury/transactions'
+    | '/enforcer'
+    | '/treasury'
   id:
     | '__root__'
     | '/'
@@ -109,6 +171,12 @@ export interface FileRouteTypes {
     | '/portal'
     | '/treasury'
     | '/enforcer/citations'
+    | '/enforcer/new'
+    | '/treasury/cashier'
+    | '/treasury/reports'
+    | '/treasury/transactions'
+    | '/enforcer/'
+    | '/treasury/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -117,7 +185,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PnpRoute: typeof PnpRoute
   PortalRoute: typeof PortalRoute
-  TreasuryRoute: typeof TreasuryRoute
+  TreasuryRoute: typeof TreasuryRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -164,6 +232,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TreasuryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/enforcer/': {
+      id: '/enforcer/'
+      path: '/'
+      fullPath: '/enforcer/'
+      preLoaderRoute: typeof EnforcerIndexRouteImport
+      parentRoute: typeof EnforcerRoute
+    }
     '/enforcer/citations': {
       id: '/enforcer/citations'
       path: '/citations'
@@ -171,19 +246,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EnforcerCitationsRouteImport
       parentRoute: typeof EnforcerRoute
     }
+    '/enforcer/new': {
+      id: '/enforcer/new'
+      path: '/new'
+      fullPath: '/enforcer/new'
+      preLoaderRoute: typeof EnforcerNewRouteImport
+      parentRoute: typeof EnforcerRoute
+    }
+    '/treasury/': {
+      id: '/treasury/'
+      path: '/'
+      fullPath: '/treasury/'
+      preLoaderRoute: typeof TreasuryIndexRouteImport
+      parentRoute: typeof TreasuryRoute
+    }
+    '/treasury/cashier': {
+      id: '/treasury/cashier'
+      path: '/cashier'
+      fullPath: '/treasury/cashier'
+      preLoaderRoute: typeof TreasuryCashierRouteImport
+      parentRoute: typeof TreasuryRoute
+    }
+    '/treasury/reports': {
+      id: '/treasury/reports'
+      path: '/reports'
+      fullPath: '/treasury/reports'
+      preLoaderRoute: typeof TreasuryReportsRouteImport
+      parentRoute: typeof TreasuryRoute
+    }
+    '/treasury/transactions': {
+      id: '/treasury/transactions'
+      path: '/transactions'
+      fullPath: '/treasury/transactions'
+      preLoaderRoute: typeof TreasuryTransactionsRouteImport
+      parentRoute: typeof TreasuryRoute
+    }
   }
 }
 
 interface EnforcerRouteChildren {
   EnforcerCitationsRoute: typeof EnforcerCitationsRoute
+  EnforcerNewRoute: typeof EnforcerNewRoute
+  EnforcerIndexRoute: typeof EnforcerIndexRoute
 }
 
 const EnforcerRouteChildren: EnforcerRouteChildren = {
   EnforcerCitationsRoute: EnforcerCitationsRoute,
+  EnforcerNewRoute: EnforcerNewRoute,
+  EnforcerIndexRoute: EnforcerIndexRoute,
 }
 
 const EnforcerRouteWithChildren = EnforcerRoute._addFileChildren(
   EnforcerRouteChildren,
+)
+
+interface TreasuryRouteChildren {
+  TreasuryCashierRoute: typeof TreasuryCashierRoute
+  TreasuryReportsRoute: typeof TreasuryReportsRoute
+  TreasuryTransactionsRoute: typeof TreasuryTransactionsRoute
+  TreasuryIndexRoute: typeof TreasuryIndexRoute
+}
+
+const TreasuryRouteChildren: TreasuryRouteChildren = {
+  TreasuryCashierRoute: TreasuryCashierRoute,
+  TreasuryReportsRoute: TreasuryReportsRoute,
+  TreasuryTransactionsRoute: TreasuryTransactionsRoute,
+  TreasuryIndexRoute: TreasuryIndexRoute,
+}
+
+const TreasuryRouteWithChildren = TreasuryRoute._addFileChildren(
+  TreasuryRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
@@ -192,7 +324,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PnpRoute: PnpRoute,
   PortalRoute: PortalRoute,
-  TreasuryRoute: TreasuryRoute,
+  TreasuryRoute: TreasuryRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
