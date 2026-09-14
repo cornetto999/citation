@@ -8,7 +8,7 @@ export const Route = createFileRoute("/admin/")({
 });
 
 function AdminDashboard() {
-  const { tickets, payments } = useTicketStore();
+  const { tickets } = useTicketStore();
 
   const metrics = useMemo(() => {
     const totalTickets = tickets.length;
@@ -16,7 +16,7 @@ function AdminDashboard() {
       (t) => t.status === "Unpaid" || t.status === "Overdue"
     ).length;
     
-    const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
+    const totalRevenue = tickets.reduce((sum, t) => sum + (t.payment?.amount || 0), 0);
 
     const vehicleTypeCounts = tickets.reduce((acc, t) => {
       acc[t.vehicleType] = (acc[t.vehicleType] || 0) + 1;
@@ -24,7 +24,7 @@ function AdminDashboard() {
     }, {} as Record<string, number>);
 
     return { totalTickets, unpaidTickets, totalRevenue, vehicleTypeCounts };
-  }, [tickets, payments]);
+  }, [tickets]);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-6">
