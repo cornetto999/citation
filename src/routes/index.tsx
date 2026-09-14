@@ -3,7 +3,7 @@ import {
   ShieldCheck,
   Radio,
   Landmark,
-  UserRound,
+  QrCode,
   ArrowRight,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -57,8 +57,8 @@ const roles = [
   },
   {
     to: "/portal",
-    icon: UserRound,
-    name: "Violator Portal",
+    icon: QrCode,
+    name: "Online Pay",
     access: "Public",
     blurb:
       "Look up your ticket, pay online via QRPh, and download your e-receipt.",

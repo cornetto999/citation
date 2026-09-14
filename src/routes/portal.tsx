@@ -17,7 +17,7 @@ import type { Ticket } from "@/types";
 export const Route = createFileRoute("/portal")({
   head: () => ({
     meta: [
-      { title: "Violator Portal | Citation Ticket & Payment System" },
+      { title: "Online Pay | Citation Ticket & Payment System" },
       {
         name: "description",
         content:
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/portal")({
       },
       {
         property: "og:title",
-        content: "Violator Portal — Pay Your Citation Online",
+        content: "Online Pay — Pay Your Citation Online",
       },
       {
         property: "og:description",
@@ -77,7 +77,7 @@ function PortalPage() {
           </Link>
           <div>
             <p className="font-display text-base font-semibold leading-tight">
-              Violator Portal
+              Online Pay
             </p>
             <p className="text-xs text-primary-foreground/70">
               Public access — look up and settle your citation

@@ -50,24 +50,24 @@ interface DemoAccount {
 const ACCOUNTS: DemoAccount[] = [
   {
     key: "enforcer",
-    credential: "TE-2291",
-    password: "enforcer123",
+    credential: "jakeroaya@gmail.com",
+    password: "jake123",
     label: "Traffic Enforcer",
     icon: Radio,
     destination: "/enforcer",
   },
   {
     key: "pnp",
-    credential: "PNP-4471",
-    password: "pnp123",
+    credential: "roayajake@gmail.com",
+    password: "roaya123",
     label: "PNP / Police",
     icon: ShieldCheck,
     destination: "/pnp",
   },
   {
     key: "treasury",
-    credential: "CASHIER-03",
-    password: "treasury123",
+    credential: "francisjake@gmail.com",
+    password: "koy123@",
     label: "Municipal Treasury",
     icon: Landmark,
     destination: "/treasury",
@@ -113,14 +113,17 @@ function LoginPage() {
       return;
     }
 
-    const { data: user, error: dbError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("credential", account.credential)
-      .single();
+    const mockUsers = [
+      { name: 'Jake Roaya', credential: 'jakeroaya@gmail.com', role: 'enforcer', unit: 'Gitagum Traffic Management Office' },
+      { name: 'Roaya Jake', credential: 'roayajake@gmail.com', role: 'pnp', unit: 'Gitagum Municipal Police Station' },
+      { name: 'Francis Jake', credential: 'francisjake@gmail.com', role: 'treasury', unit: 'Municipal Treasurer\'s Office' },
+      { name: 'Juan Reyes', credential: 'juan.reyes@mail.com', role: 'violator', unit: 'Public Citizen' }
+    ];
 
-    if (dbError || !user) {
-      setError("User not found in Supabase database.");
+    const user = mockUsers.find(u => u.credential.toLowerCase() === account.credential.toLowerCase());
+
+    if (!user) {
+      setError("User not found in mock database.");
       return;
     }
 

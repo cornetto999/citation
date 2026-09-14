@@ -1,15 +1,16 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ClipboardList, PlusCircle, ShieldCheck, LayoutDashboard, LogOut } from "lucide-react";
+import { Activity, Banknote, LineChart, Wallet, LogOut, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 
 const navigation = [
-  { to: "/enforcer", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/enforcer/new", label: "New citation", icon: PlusCircle },
-  { to: "/enforcer/citations", label: "My citations", icon: ClipboardList },
+  { to: "/treasury", label: "Dashboard", icon: Activity },
+  { to: "/treasury/cashier", label: "Cashier Window", icon: Banknote },
+  { to: "/treasury/transactions", label: "Transactions", icon: List },
+  { to: "/treasury/reports", label: "Reports", icon: LineChart },
 ] as const;
 
-export function EnforcerSidebar() {
+export function TreasurySidebar() {
   const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
 
@@ -20,19 +21,19 @@ export function EnforcerSidebar() {
 
   return (
     <nav
-      aria-label="Enforcer navigation"
+      aria-label="Treasury navigation"
       className="sticky top-6 flex min-h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-2xl border border-sidebar-border/60 bg-authority p-2 shadow-lift md:min-h-[calc(100vh-8rem)]"
     >
       <div className="flex items-center gap-2 px-2.5 py-3 text-primary-foreground">
         <span className="flex size-7 items-center justify-center rounded-lg bg-sidebar-primary/15 text-sidebar-primary">
-          <ShieldCheck className="size-4" />
+          <Wallet className="size-4" />
         </span>
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-sidebar-primary">
-            Field desk
+            Revenue Desk
           </p>
           <p className="text-xs font-medium text-primary-foreground/80">
-            Enforcer workspace
+            Treasury workspace
           </p>
         </div>
       </div>
