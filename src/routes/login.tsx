@@ -1,14 +1,6 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import {
-  ShieldCheck,
-  Radio,
-  Landmark,
-  UserRound,
-  LogIn,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { ShieldCheck, Radio, Landmark, LogIn, Eye, EyeOff } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { supabase } from "@/lib/supabase";
 import type { Role } from "@/types";
@@ -83,17 +75,6 @@ const ACCOUNTS: DemoAccount[] = [
     name: "Francis Jake",
     role: "treasury",
     unit: "Municipal Treasurer's Office",
-  },
-  {
-    key: "violator",
-    credential: "juan.reyes@mail.com",
-    password: "citizen123",
-    label: "Violator (Public)",
-    icon: UserRound,
-    destination: "/portal",
-    name: "Juan Reyes",
-    role: "violator",
-    unit: "Public Citizen",
   },
   {
     key: "admin",
@@ -284,6 +265,27 @@ function LoginPage() {
                 </span>
               </button>
             ))}
+          </div>
+          <div className="mt-4">
+            <p className="text-center text-xs font-semibold uppercase tracking-widest text-primary-foreground/60">
+              Public access
+            </p>
+            <Link
+              to="/portal"
+              className="mt-3 flex items-center gap-3 rounded-lg border border-sidebar-border bg-surface px-3 py-2.5 text-left transition-transform hover:-translate-y-0.5 hover:shadow-lift"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
+                <ShieldCheck className="size-4" />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold text-card-foreground">
+                  Violator (Public)
+                </span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  No sign-in required
+                </span>
+              </span>
+            </Link>
           </div>
         </div>
       </div>

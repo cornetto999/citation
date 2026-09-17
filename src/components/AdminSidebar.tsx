@@ -1,5 +1,12 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Activity, ShieldCheck, LogOut, Users, BarChart3, FileText } from "lucide-react";
+import {
+  Activity,
+  ShieldCheck,
+  LogOut,
+  Users,
+  BarChart3,
+  FileText,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
@@ -18,7 +25,6 @@ const navigation = [
   { to: "/admin", label: "Monitoring", icon: Activity },
   { to: "/admin/manage", label: "Manage Users", icon: Users },
   { to: "/admin/reports", label: "Reports", icon: BarChart3 },
-  { to: "/admin", label: "Citations", icon: FileText },
 ] as const;
 
 export function AdminSidebar() {
@@ -68,6 +74,13 @@ export function AdminSidebar() {
             {label}
           </Link>
         ))}
+        <a
+          href="#citations"
+          className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-primary-foreground/70 transition-colors hover:bg-white/10 hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary"
+        >
+          <FileText className="size-4" />
+          Citations
+        </a>
       </div>
 
       <div className="mt-4 border-t border-sidebar-border/30 pt-2">
@@ -80,14 +93,18 @@ export function AdminSidebar() {
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure you want to sign out?</AlertDialogTitle>
+              <AlertDialogTitle>
+                Are you sure you want to sign out?
+              </AlertDialogTitle>
               <AlertDialogDescription>
                 You will need to log in again to access the admin portal.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleSignOut}>Sign out</AlertDialogAction>
+              <AlertDialogAction onClick={handleSignOut}>
+                Sign out
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

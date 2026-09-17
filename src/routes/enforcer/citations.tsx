@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ClipboardList, Search, WalletCards } from "lucide-react";
+import { CalendarDays, ClipboardList, Search, WalletCards } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { EnforcerSidebar } from "@/components/EnforcerSidebar";
@@ -28,8 +28,7 @@ function EnforcerCitationsPage() {
   const tickets = useTicketStore((s) => s.tickets);
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [filterMonth, setFilterMonth] = useState("");
-  const [filterDate, setFilterDate] = useState("");
+  const [dateRange, setDateRange] = useState("all");
 
   useEffect(() => {
     if (!user || user.role !== "enforcer") {
@@ -53,17 +52,20 @@ function EnforcerCitationsPage() {
 
       if (!matchesQuery) return false;
 
-      const ticketDate = new Date(ticket.issuedAt);
-      const ticketMonthStr = `${ticketDate.getFullYear()}-${String(ticketDate.getMonth() + 1).padStart(2, "0")}`;
-      const ticketDateStr =
-        ticketMonthStr + `-${String(ticketDate.getDate()).padStart(2, "0")}`;
+      if (dateRange !== "all") {
+        const startDate = new Date();
+        if (dateRange === "7-days") startDate.setDate(startDate.getDate() - 7);
+        if (dateRange === "1-month")
+          startDate.setMonth(startDate.getMonth() - 1);
+        if (dateRange === "1-year")
+          startDate.setFullYear(startDate.getFullYear() - 1);
 
-      if (filterDate && ticketDateStr !== filterDate) return false;
-      if (filterMonth && ticketMonthStr !== filterMonth) return false;
+        if (new Date(ticket.issuedAt) < startDate) return false;
+      }
 
       return true;
     });
-  }, [allMyTickets, query, filterDate, filterMonth]);
+  }, [allMyTickets, dateRange, query]);
 
   if (!user || user.role !== "enforcer") return null;
 
@@ -103,27 +105,19 @@ function EnforcerCitationsPage() {
               className="h-12 w-full rounded-xl border border-input bg-card pl-10 pr-4 text-base shadow-sm outline-none transition-shadow placeholder:text-muted-foreground/80 focus:border-ring focus:ring-2 focus:ring-ring/15"
             />
           </div>
-          <div className="flex gap-2">
-            <input
-              type="month"
-              value={filterMonth}
-              onChange={(e) => {
-                setFilterMonth(e.target.value);
-                if (e.target.value) setFilterDate("");
-              }}
-              aria-label="Filter by month"
-              className="h-12 rounded-xl border border-input bg-card px-3 text-sm shadow-sm outline-none transition-shadow focus:border-ring focus:ring-2 focus:ring-ring/15"
-            />
-            <input
-              type="date"
-              value={filterDate}
-              onChange={(e) => {
-                setFilterDate(e.target.value);
-                if (e.target.value) setFilterMonth("");
-              }}
-              aria-label="Filter by day"
-              className="h-12 rounded-xl border border-input bg-card px-3 text-sm shadow-sm outline-none transition-shadow focus:border-ring focus:ring-2 focus:ring-ring/15"
-            />
+          <div className="relative">
+            <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <select
+              value={dateRange}
+              onChange={(event) => setDateRange(event.target.value)}
+              aria-label="Filter by date range"
+              className="h-12 appearance-none rounded-xl border border-input bg-card py-0 pl-10 pr-9 text-sm font-medium shadow-sm outline-none transition-shadow focus:border-ring focus:ring-2 focus:ring-ring/15"
+            >
+              <option value="all">All time</option>
+              <option value="7-days">Last 7 days</option>
+              <option value="1-month">Last 1 month</option>
+              <option value="1-year">Last 1 year</option>
+            </select>
           </div>
         </div>
 
