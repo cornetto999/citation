@@ -173,6 +173,7 @@ function TicketCard({ ticket, onPay }: { ticket: Ticket; onPay: () => void }) {
         <Field label="License No." value={ticket.licenseNo} />
         <Field label="Plate No." value={ticket.plateNo} />
         <Field label="Vehicle" value={ticket.vehicleType} />
+        <Field label="Issued By" value={ticket.issuedBy} />
         <Field label="Location" value={ticket.location} />
         <Field
           label="Due date"

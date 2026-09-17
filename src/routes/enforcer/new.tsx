@@ -99,6 +99,9 @@ const emptyForm = {
   plateNo: "",
   wheels: "",
   vehicleType: "",
+  model: "",
+  unitNo: "",
+  year: "",
   brand: "",
   color: "",
   violatorName: "",
@@ -181,9 +184,18 @@ function EnforcerPage() {
         JSON.stringify(payload, null, 2),
       );
 
+      const vehicleDesc = [
+        `${payload.color} ${payload.brand} ${payload.vehicleType}`.trim(),
+        form.model.trim() && `Model: ${form.model.trim()}`,
+        form.unitNo.trim() && `Unit: ${form.unitNo.trim()}`,
+        form.year.trim() && form.year.trim(),
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
       const ticket = await addTicket({
         plateNo: payload.plateNo,
-        vehicleType: `${payload.color} ${payload.brand} ${payload.vehicleType}`,
+        vehicleType: vehicleDesc,
         violatorName: payload.violatorName,
         licenseNo: payload.licenseNo,
         violations: payload.violations,
@@ -324,6 +336,39 @@ function EnforcerPage() {
             </select>
           </Field>
 
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Model" hint="Optional">
+              <input
+                value={form.model}
+                onChange={(e) => set("model", e.target.value)}
+                disabled={!form.vehicleType}
+                placeholder="e.g. Vios, Beat"
+                className="h-14 w-full rounded-lg border-2 border-input bg-card px-4 text-base outline-none focus:border-ring disabled:opacity-50 disabled:bg-muted"
+              />
+            </Field>
+            <Field label="Year" hint="Optional">
+              <input
+                value={form.year}
+                onChange={(e) => set("year", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                disabled={!form.vehicleType}
+                placeholder="e.g. 2019"
+                inputMode="numeric"
+                maxLength={4}
+                className="h-14 w-full rounded-lg border-2 border-input bg-card px-4 text-base outline-none focus:border-ring disabled:opacity-50 disabled:bg-muted"
+              />
+            </Field>
+          </div>
+
+          <Field label="Unit No." hint="Optional">
+            <input
+              value={form.unitNo}
+              onChange={(e) => set("unitNo", e.target.value)}
+              disabled={!form.vehicleType}
+              placeholder="e.g. Unit 7, Body No. 1234"
+              className="h-14 w-full rounded-lg border-2 border-input bg-card px-4 text-base outline-none focus:border-ring disabled:opacity-50 disabled:bg-muted"
+            />
+          </Field>
+
           <Field label="Brand" hint="Required">
             <select
               value={form.brand}
@@ -376,7 +421,12 @@ function EnforcerPage() {
             <p className="mt-1 text-primary/80 font-medium">
               {form.wheels || "—"} • {form.color || "—"} {form.brand || "—"}{" "}
               {form.vehicleType || "—"}
+              {form.model && ` · ${form.model}`}
+              {form.year && ` · ${form.year}`}
             </p>
+            {form.unitNo && (
+              <p className="mt-0.5 text-sm text-primary/70">{form.unitNo}</p>
+            )}
           </div>
         )}
 

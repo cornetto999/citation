@@ -36,6 +36,12 @@ import {
   Sheet,
   SheetContent,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { peso, shortDate } from "@/lib/format";
 import type { Ticket, PaymentChannel } from "@/types";
@@ -56,6 +62,15 @@ function AdminDashboard() {
   const [settleModalOpen, setSettleModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentChannel>("Cash (Over-the-counter)");
   const [orNumber, setOrNumber] = useState("");
+
+  // Live Command Feed detail modal
+  const [feedTicket, setFeedTicket] = useState<Ticket | null>(null);
+  const [feedModalOpen, setFeedModalOpen] = useState(false);
+
+  const handleFeedRowClick = (ticket: Ticket) => {
+    setFeedTicket(ticket);
+    setFeedModalOpen(true);
+  };
 
   const searchResults = searchQuery.trim()
     ? tickets.filter(
@@ -330,11 +345,15 @@ function AdminDashboard() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {metrics.recentTickets.map((ticket) => (
-                  <tr key={ticket.id} className="hover:bg-slate-50/50 transition-colors">
+                  <tr
+                    key={ticket.id}
+                    onClick={() => handleFeedRowClick(ticket)}
+                    className="hover:bg-slate-50 transition-colors cursor-pointer group"
+                  >
                     <td className="px-4 py-3 text-slate-500">
                       {new Date(ticket.issuedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{ticket.plateNo}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900 group-hover:text-blue-600 transition-colors">{ticket.plateNo}</td>
                     <td className="px-4 py-3 text-slate-500">{ticket.issuedBy}</td>
                     <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate" title={ticket.violations.map(v => v.label).join(", ")}>
                       {ticket.violations[0]?.label || 'Unknown'} {ticket.violations.length > 1 && `(+${ticket.violations.length - 1} more)`}
@@ -344,7 +363,7 @@ function AdminDashboard() {
                         ticket.status === 'Paid' ? 'bg-green-100 text-green-700' :
                         ticket.status === 'Overdue' ? 'bg-red-100 text-red-700' :
                         ticket.status === 'Contested' ? 'bg-orange-100 text-orange-700' :
-                        'bg-yellow-100 text-yellow-700' // Pending/Unpaid default to yellow
+                        'bg-yellow-100 text-yellow-700'
                       }`}>
                         {ticket.status}
                       </span>
@@ -397,6 +416,95 @@ function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Live Command Feed — Ticket Detail Modal */}
+      <Dialog open={feedModalOpen} onOpenChange={setFeedModalOpen}>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="font-mono text-base">
+              {feedTicket?.id}
+            </DialogTitle>
+          </DialogHeader>
+          {feedTicket && (
+            <div className="space-y-4 text-sm">
+              {/* Status badge */}
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                feedTicket.status === 'Paid' ? 'bg-green-100 text-green-700' :
+                feedTicket.status === 'Overdue' ? 'bg-red-100 text-red-700' :
+                feedTicket.status === 'Contested' ? 'bg-orange-100 text-orange-700' :
+                'bg-yellow-100 text-yellow-700'
+              }`}>
+                {feedTicket.status}
+              </span>
+
+              {/* Details grid */}
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">Violator</dt>
+                  <dd className="mt-0.5 font-semibold text-slate-900">{feedTicket.violatorName}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">Plate No.</dt>
+                  <dd className="mt-0.5 font-semibold text-slate-900">{feedTicket.plateNo}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">License No.</dt>
+                  <dd className="mt-0.5 font-semibold text-slate-900">{feedTicket.licenseNo}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">Vehicle</dt>
+                  <dd className="mt-0.5 font-semibold text-slate-900">{feedTicket.vehicleType}</dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">Location</dt>
+                  <dd className="mt-0.5 font-semibold text-slate-900">{feedTicket.location}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">Issued By</dt>
+                  <dd className="mt-0.5 font-semibold text-slate-900">{feedTicket.issuedBy}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">Issued At</dt>
+                  <dd className="mt-0.5 font-semibold text-slate-900">
+                    {new Date(feedTicket.issuedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">Due Date</dt>
+                  <dd className="mt-0.5 font-semibold text-slate-900">{shortDate(feedTicket.dueDate)}</dd>
+                </div>
+              </dl>
+
+              {/* Violations breakdown */}
+              <div className="rounded-lg bg-slate-50 border border-slate-200 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Violations</p>
+                <ul className="space-y-1.5">
+                  {feedTicket.violations.map((v) => (
+                    <li key={v.code} className="flex items-center justify-between">
+                      <span className="text-slate-600">
+                        <span className="font-mono text-xs text-slate-400 mr-1">{v.code}</span>
+                        {v.label}
+                      </span>
+                      <span className="font-semibold text-slate-900 tabular-nums">{peso(v.fine)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3">
+                  <span className="font-bold text-slate-900">Total Fine</span>
+                  <span className="text-lg font-bold text-slate-900 tabular-nums">{peso(feedTicket.totalFine)}</span>
+                </div>
+              </div>
+
+              {feedTicket.remarks && (
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-400 font-medium mb-1">Remarks</p>
+                  <p className="text-slate-700">{feedTicket.remarks}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Settlement Slide-out Panel */}
       <Sheet open={settleModalOpen} onOpenChange={setSettleModalOpen}>
