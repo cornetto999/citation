@@ -31,42 +31,62 @@ export function AppShell({
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
   return (
     <div className="min-h-screen bg-background">
+      {/* ── Header ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 border-b border-sidebar-border/70 bg-authority text-primary-foreground shadow-panel">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3.5 sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-3 sm:gap-3 sm:px-6">
+          {/* Hamburger — mobile only when sidebar exists */}
           {sidebar && (
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 shadow-sm transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary md:hidden"
+              className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 shadow-sm transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary md:hidden"
               aria-label="Open menu"
             >
-              <Menu className="size-5" />
+              <Menu className="size-4" />
             </button>
           )}
+
+          {/* Home icon */}
           <Link
             to="/"
             className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 shadow-sm transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary",
+              "flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 shadow-sm transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary sm:size-10",
               sidebar && "hidden sm:flex",
             )}
             aria-label="Back to role selection"
           >
             <ShieldCheck
-              className="size-5 text-sidebar-primary"
+              className="size-4 text-sidebar-primary sm:size-5"
               strokeWidth={2.25}
             />
           </Link>
+
+          {/* Title block */}
           <div className="min-w-0 flex-1">
-            <p className="truncate font-display text-base font-bold leading-tight tracking-tight">
+            <p className="truncate font-display text-sm font-bold leading-tight tracking-tight sm:text-base">
               {title}
             </p>
-            <p className="truncate text-xs text-primary-foreground/70">
+            <p className="truncate text-[11px] text-primary-foreground/70 sm:text-xs">
               {subtitle}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="rounded-full border border-sidebar-primary/30 bg-sidebar-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-sidebar-primary">
+
+          {/* Right: access badge + operator */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="rounded-full border border-sidebar-primary/30 bg-sidebar-primary/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-sidebar-primary sm:px-2.5 sm:py-1 sm:text-[10px]">
               {accessLabel}
             </span>
             <div className="hidden text-right sm:block">
@@ -77,40 +97,52 @@ export function AppShell({
         </div>
       </header>
 
-      {/* Mobile Drawer */}
+      {/* ── Mobile Drawer ───────────────────────────────────────── */}
       {sidebar && (
         <>
-          {mobileMenuOpen && (
-            <div
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm md:hidden"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-          )}
+          {/* Backdrop */}
           <div
             className={cn(
-              "fixed inset-y-0 left-0 z-50 w-72 max-w-[80vw] transform bg-background shadow-2xl transition-transform duration-300 ease-in-out md:hidden",
+              "fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-300 md:hidden",
+              mobileMenuOpen
+                ? "opacity-100 pointer-events-auto"
+                : "opacity-0 pointer-events-none",
+            )}
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Drawer panel */}
+          <div
+            className={cn(
+              "fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] transform bg-background shadow-2xl transition-transform duration-300 ease-in-out md:hidden",
               mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
             )}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
           >
-            <div className="flex h-16 items-center justify-between border-b border-border px-4">
-              <span className="font-display text-lg font-bold">Menu</span>
+            <div className="flex h-14 items-center justify-between border-b border-border px-4">
+              <span className="font-display text-base font-bold">Menu</span>
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex size-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                className="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 aria-label="Close menu"
               >
                 <X className="size-5" />
               </button>
             </div>
-            <div className="p-4">{sidebar}</div>
+            <div className="overflow-y-auto p-3">{sidebar}</div>
           </div>
         </>
       )}
 
-      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7">
-        <div className="flex gap-6 lg:gap-8">
+      {/* ── Main Content ────────────────────────────────────────── */}
+      <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 lg:py-8">
+        <div className="flex gap-5 lg:gap-8">
+          {/* Desktop sidebar */}
           {sidebar && (
-            <aside className="hidden w-52 shrink-0 self-start md:sticky md:top-24 md:block">
+            <aside className="hidden w-52 shrink-0 self-start md:sticky md:top-[4.5rem] md:block lg:w-56">
               {sidebar}
             </aside>
           )}

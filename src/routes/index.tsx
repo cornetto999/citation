@@ -73,23 +73,23 @@ function RoleSelect() {
 
   return (
     <div className="min-h-screen bg-authority">
-      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-16 lg:py-24">
         <div className="flex items-center gap-2 text-sidebar-primary">
-          <ShieldCheck className="size-5" />
-          <span className="text-xs font-semibold uppercase tracking-[0.25em]">
+          <ShieldCheck className="size-4 sm:size-5" />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.22em] sm:text-xs">
             Gitagum Traffic Management System
           </span>
         </div>
-        <h1 className="mt-5 max-w-3xl font-display text-4xl font-bold text-primary-foreground sm:text-5xl">
+        <h1 className="mt-4 max-w-3xl font-display text-3xl font-bold text-primary-foreground sm:mt-5 sm:text-4xl lg:text-5xl">
           Citation Ticket &amp; Payment System
         </h1>
-        <p className="mt-4 max-w-2xl text-primary-foreground/75">
+        <p className="mt-3 max-w-2xl text-sm text-primary-foreground/75 sm:mt-4 sm:text-base">
           One shared record of every citation — issued on the road, watched by
           the police, settled at the treasury window, and payable online by the
           motorist.
         </p>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2">
+        <div className="mt-8 grid gap-3 sm:mt-10 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
           {roles.map((r) => (
             <Link
               key={r.to}
@@ -116,9 +116,9 @@ function RoleSelect() {
           ))}
         </div>
 
-        <p className="mt-10 text-xs text-primary-foreground/50">
+        <p className="mt-8 text-xs text-primary-foreground/50 sm:mt-10">
           Demo environment — sample records only. Data is shared live across all
-          four dashboards.
+          dashboards.
         </p>
       </div>
     </div>

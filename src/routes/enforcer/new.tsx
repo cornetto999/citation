@@ -602,8 +602,8 @@ function EnforcerPage() {
         </Field>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 border-t border-border bg-card/95 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex max-w-md items-center gap-3">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 px-3 py-3 backdrop-blur sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center gap-3">
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
               Total fine
@@ -615,7 +615,7 @@ function EnforcerPage() {
           <button
             onClick={submit}
             disabled={!canSubmit}
-            className="flex h-14 flex-1 items-center justify-center gap-2 rounded-lg bg-primary text-base font-semibold text-primary-foreground transition-opacity active:scale-[0.99] disabled:opacity-40"
+            className="flex h-14 flex-1 items-center justify-center gap-2 rounded-lg bg-primary text-base font-semibold text-primary-foreground transition-opacity active:scale-[0.99] disabled:opacity-40 sm:max-w-xs sm:flex-none sm:px-8"
           >
             Issue citation <ChevronRight className="size-5" />
           </button>
