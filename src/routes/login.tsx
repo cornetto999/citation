@@ -162,13 +162,13 @@ function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-authority px-4 py-12">
+    <div className="flex min-h-screen items-center justify-center bg-authority px-3 py-10 sm:px-4 sm:py-12">
       <div className="w-full max-w-md">
         <div className="text-center">
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-sidebar-accent/60">
             <ShieldCheck className="size-6 text-sidebar-primary" />
           </div>
-          <h1 className="mt-4 font-display text-2xl font-bold text-primary-foreground">
+          <h1 className="mt-4 font-display text-xl font-bold text-primary-foreground sm:text-2xl">
             Sign in to your dashboard
           </h1>
           <p className="mt-1 text-sm text-primary-foreground/70">

@@ -67,29 +67,29 @@ function PortalPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-authority text-primary-foreground">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2 px-3 py-3 sm:gap-3 sm:px-6 sm:py-4">
           <Link
             to="/"
             className="flex size-9 shrink-0 items-center justify-center rounded-md bg-sidebar-accent/60 transition-colors hover:bg-sidebar-accent"
             aria-label="Back to role selection"
           >
-            <ShieldCheck className="size-5 text-sidebar-primary" />
+            <ShieldCheck className="size-4 text-sidebar-primary sm:size-5" />
           </Link>
-          <div>
-            <p className="font-display text-base font-semibold leading-tight">
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-sm font-semibold leading-tight sm:text-base">
               Online Pay
             </p>
-            <p className="text-xs text-primary-foreground/70">
+            <p className="text-[11px] text-primary-foreground/70 sm:text-xs">
               Public access — look up and settle your citation
             </p>
           </div>
-          <span className="ml-auto rounded-full border border-sidebar-border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-primary">
+          <span className="rounded-full border border-sidebar-border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-sidebar-primary sm:px-2.5 sm:py-1 sm:text-[10px]">
             Public
           </span>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-3xl px-3 py-5 sm:px-6 sm:py-8">
         {/* Lookup */}
         <form
           onSubmit={search}
