@@ -2,9 +2,18 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/useAuthStore";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useTicketStore } from "@/store/useTicketStore";
 import { dateTime, peso } from "@/lib/format";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/treasury/reports")({
   head: () => ({
@@ -13,6 +22,47 @@ export const Route = createFileRoute("/treasury/reports")({
   component: TreasuryReportsPage,
 });
 
+// ─── Reusable DatePicker ───────────────────────────────────────────────────
+function DatePicker({
+  label,
+  date,
+  onSelect,
+  disabled,
+}: {
+  label: string;
+  date: Date | undefined;
+  onSelect: (d: Date | undefined) => void;
+  disabled?: { after?: Date; before?: Date };
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          data-empty={!date}
+          className={cn(
+            "w-[160px] justify-start text-left font-normal",
+            "data-[empty=true]:text-muted-foreground",
+          )}
+        >
+          <CalendarIcon className="mr-2 size-4" />
+          {date ? format(date, "PPP") : <span>{label}</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={onSelect}
+          disabled={disabled}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────
 function TreasuryReportsPage() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
@@ -24,48 +74,33 @@ function TreasuryReportsPage() {
     }
   }, [user, navigate]);
 
-  type ReportPeriod = "day" | "week" | "month" | "year";
-  const [reportPeriod, setReportPeriod] = useState<ReportPeriod>("day");
+  const todayStart = () => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const [fromDate, setFromDate] = useState<Date | undefined>(todayStart());
+  const [toDate, setToDate] = useState<Date | undefined>(new Date());
 
   const reportData = useMemo(() => {
-    const now = new Date();
-    let start: Date;
-    switch (reportPeriod) {
-      case "day":
-        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        break;
-      case "week": {
-        const startOfDay = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate(),
-        );
-        start = new Date(startOfDay);
-        start.setDate(start.getDate() - start.getDay());
-        break;
+    const filtered = tickets.filter((t) => {
+      if (t.status !== "Paid" || !t.payment) return false;
+      const paid = new Date(t.payment.paidAt);
+      if (fromDate) {
+        const from = new Date(fromDate);
+        from.setHours(0, 0, 0, 0);
+        if (paid < from) return false;
       }
-      case "month":
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case "year":
-        start = new Date(now.getFullYear(), 0, 1);
-        break;
-    }
-
-    const filtered = tickets.filter(
-      (t) =>
-        t.status === "Paid" && t.payment && new Date(t.payment.paidAt) >= start,
-    );
+      if (toDate) {
+        const to = new Date(toDate);
+        to.setHours(23, 59, 59, 999);
+        if (paid > to) return false;
+      }
+      return true;
+    });
 
     return {
-      periodLabel:
-        reportPeriod === "day"
-          ? "Today"
-          : reportPeriod === "week"
-            ? "This Week"
-            : reportPeriod === "month"
-              ? "This Month"
-              : "This Year",
       count: filtered.length,
       total: filtered.reduce((sum, t) => sum + t.payment!.amount, 0),
       tickets: filtered.sort(
@@ -74,7 +109,16 @@ function TreasuryReportsPage() {
           new Date(a.payment!.paidAt).getTime(),
       ),
     };
-  }, [tickets, reportPeriod]);
+  }, [tickets, fromDate, toDate]);
+
+  const periodLabel =
+    fromDate && toDate
+      ? `${format(fromDate, "PPP")} – ${format(toDate, "PPP")}`
+      : fromDate
+        ? `From ${format(fromDate, "PPP")}`
+        : toDate
+          ? `Until ${format(toDate, "PPP")}`
+          : "All time";
 
   if (!user || user.role !== "treasury") return null;
 
@@ -82,35 +126,42 @@ function TreasuryReportsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-lg font-semibold">Collection Report</h2>
-        <ToggleGroup
-          type="single"
-          value={reportPeriod}
-          onValueChange={(v) => {
-            if (v) setReportPeriod(v as ReportPeriod);
-          }}
-          size="sm"
-          className="bg-muted p-1 rounded-lg"
-        >
-          <ToggleGroupItem value="day" className="rounded-md px-3 text-xs">
-            Today
-          </ToggleGroupItem>
-          <ToggleGroupItem value="week" className="rounded-md px-3 text-xs">
-            Week
-          </ToggleGroupItem>
-          <ToggleGroupItem value="month" className="rounded-md px-3 text-xs">
-            Month
-          </ToggleGroupItem>
-          <ToggleGroupItem value="year" className="rounded-md px-3 text-xs">
-            Year
-          </ToggleGroupItem>
-        </ToggleGroup>
+
+        {/* Date range pickers */}
+        <div className="flex flex-wrap items-center gap-2">
+          <DatePicker
+            label="From date"
+            date={fromDate}
+            onSelect={setFromDate}
+            disabled={{ after: toDate ?? new Date() }}
+          />
+          <span className="text-sm text-muted-foreground">to</span>
+          <DatePicker
+            label="To date"
+            date={toDate}
+            onSelect={setToDate}
+            disabled={{ before: fromDate, after: new Date() }}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setFromDate(todayStart());
+              setToDate(new Date());
+            }}
+            className="text-xs text-muted-foreground"
+          >
+            Reset
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6 shadow-panel">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            {reportData.periodLabel} Collection
+            Collection
           </h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">{periodLabel}</p>
           <p className="mt-3 font-display text-4xl font-bold tabular text-card-foreground">
             {peso(reportData.total)}
           </p>
@@ -119,6 +170,7 @@ function TreasuryReportsPage() {
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Citations Settled
           </h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">{periodLabel}</p>
           <p className="mt-3 font-display text-4xl font-bold tabular text-card-foreground">
             {reportData.count}
           </p>
