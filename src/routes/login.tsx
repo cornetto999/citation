@@ -162,26 +162,31 @@ function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-authority px-3 py-10 sm:px-4 sm:py-12">
-      <div className="w-full max-w-md">
+    <div className="relative flex min-h-screen items-center justify-center bg-authority px-3 py-10 sm:px-4 sm:py-12 overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMC41IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCBmaWxsPSJ1cmwoI2cpIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIi8+PC9zdmc+')] opacity-60" />
+      <div className="pointer-events-none absolute -top-40 -right-40 size-80 rounded-full bg-sidebar-primary/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -left-40 size-80 rounded-full bg-sidebar-primary/5 blur-3xl" />
+
+      <div className="relative w-full max-w-md animate-fade-in-up">
         <div className="text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-sidebar-accent/60">
-            <ShieldCheck className="size-6 text-sidebar-primary" />
+          <div className="mx-auto flex size-14 items-center justify-center rounded-2xl glass-dark shadow-glow">
+            <ShieldCheck className="size-7 text-sidebar-primary" />
           </div>
-          <h1 className="mt-4 font-display text-xl font-bold text-primary-foreground sm:text-2xl">
+          <h1 className="mt-5 font-display text-xl font-bold tracking-tight text-primary-foreground sm:text-2xl">
             Sign in to your dashboard
           </h1>
-          <p className="mt-1 text-sm text-primary-foreground/70">
-            Citation Ticket &amp; Payment System — demo access
+          <p className="mt-1.5 text-sm text-primary-foreground/60">
+            Citation Ticket &amp; Payment System
           </p>
         </div>
 
         <form
           onSubmit={onSubmit}
-          className="mt-8 rounded-xl border border-sidebar-border bg-surface p-6 shadow-lift"
+          className="mt-8 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06] p-6 shadow-lift backdrop-blur-sm sm:p-7"
         >
           <label
-            className="block text-sm font-medium text-card-foreground"
+            className="block text-sm font-semibold text-primary-foreground/90"
             htmlFor="credential"
           >
             Badge no. / Email
@@ -192,16 +197,16 @@ function LoginPage() {
             onChange={(e) => setCredential(e.target.value)}
             autoComplete="username"
             placeholder="e.g. TE-2291"
-            className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+            className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-primary-foreground placeholder:text-primary-foreground/30 outline-none transition-all focus:border-sidebar-primary/50 focus:bg-white/10 focus:ring-2 focus:ring-sidebar-primary/20"
           />
 
           <label
-            className="mt-4 block text-sm font-medium text-card-foreground"
+            className="mt-5 block text-sm font-semibold text-primary-foreground/90"
             htmlFor="password"
           >
             Password
           </label>
-          <div className="relative mt-1.5">
+          <div className="relative mt-2">
             <input
               id="password"
               type={showPassword ? "text" : "password"}
@@ -209,13 +214,13 @@ function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               placeholder="••••••••"
-              className="w-full rounded-md border border-input bg-background px-3 py-2.5 pr-10 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-11 text-sm text-primary-foreground placeholder:text-primary-foreground/30 outline-none transition-all focus:border-sidebar-primary/50 focus:bg-white/10 focus:ring-2 focus:ring-sidebar-primary/20"
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground"
+              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-primary-foreground/40 hover:text-primary-foreground/70 transition-colors"
             >
               {showPassword ? (
                 <EyeOff className="size-4" />
@@ -226,40 +231,40 @@ function LoginPage() {
           </div>
 
           {error && (
-            <p className="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <p className="mt-4 rounded-xl bg-destructive/15 border border-destructive/20 px-4 py-2.5 text-sm font-medium text-destructive animate-scale-in">
               {error}
             </p>
           )}
 
           <button
             type="submit"
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-sidebar-primary px-4 py-3.5 text-sm font-bold text-sidebar-primary-foreground shadow-glow transition-all hover:brightness-110 hover:shadow-lg active:scale-[0.98]"
           >
             <LogIn className="size-4" />
             Sign in
           </button>
         </form>
 
-        <div className="mt-6">
-          <p className="text-center text-xs font-semibold uppercase tracking-widest text-primary-foreground/60">
+        <div className="mt-7">
+          <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-primary-foreground/40">
             Demo accounts — tap to autofill
           </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 stagger-children">
             {ACCOUNTS.map((a) => (
               <button
                 key={a.key}
                 type="button"
                 onClick={() => fillAccount(a)}
-                className="flex items-center gap-3 rounded-lg border border-sidebar-border bg-surface px-3 py-2.5 text-left transition-transform hover:-translate-y-0.5 hover:shadow-lift"
+                className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-3 text-left backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-white/[0.15] hover:bg-white/[0.08]"
               >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-primary-foreground/70">
                   <a.icon className="size-4" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-card-foreground">
+                  <span className="block truncate text-sm font-semibold text-primary-foreground">
                     {a.label}
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">
+                  <span className="block truncate text-xs text-primary-foreground/40">
                     {a.credential}
                   </span>
                 </span>
@@ -267,21 +272,21 @@ function LoginPage() {
             ))}
           </div>
           <div className="mt-4">
-            <p className="text-center text-xs font-semibold uppercase tracking-widest text-primary-foreground/60">
+            <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-primary-foreground/40">
               Public access
             </p>
             <Link
               to="/portal"
-              className="mt-3 flex items-center gap-3 rounded-lg border border-sidebar-border bg-surface px-3 py-2.5 text-left transition-transform hover:-translate-y-0.5 hover:shadow-lift"
+              className="mt-3 flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-3 text-left backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-white/[0.15] hover:bg-white/[0.08]"
             >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-primary-foreground/70">
                 <ShieldCheck className="size-4" />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold text-card-foreground">
+                <span className="block truncate text-sm font-semibold text-primary-foreground">
                   Violator (Public)
                 </span>
-                <span className="block truncate text-xs text-muted-foreground">
+                <span className="block truncate text-xs text-primary-foreground/40">
                   No sign-in required
                 </span>
               </span>

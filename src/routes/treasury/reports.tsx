@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useTicketStore } from "@/store/useTicketStore";
-import { dateTime, peso } from "@/lib/format";
+import { dateTime, peso, shortDate } from "@/lib/format";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,7 +41,7 @@ function DatePicker({
           variant="outline"
           data-empty={!date}
           className={cn(
-            "w-[160px] justify-start text-left font-normal",
+            "w-[160px] justify-start text-left font-normal rounded-xl",
             "data-[empty=true]:text-muted-foreground",
           )}
         >
@@ -125,7 +125,7 @@ function TreasuryReportsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold">Collection Report</h2>
+        <h2 className="text-lg font-bold tracking-tight">Collection Report</h2>
 
         {/* Date range pickers */}
         <div className="flex flex-wrap items-center gap-2">
@@ -156,9 +156,9 @@ function TreasuryReportsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-border bg-card p-6 shadow-panel">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className="grid gap-3 sm:grid-cols-2 stagger-children">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-panel transition-all hover:shadow-lift hover:-translate-y-0.5">
+          <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
             Collection
           </h3>
           <p className="mt-0.5 text-xs text-muted-foreground">{periodLabel}</p>
@@ -166,8 +166,8 @@ function TreasuryReportsPage() {
             {peso(reportData.total)}
           </p>
         </div>
-        <div className="rounded-xl border border-border bg-card p-6 shadow-panel">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-panel transition-all hover:shadow-lift hover:-translate-y-0.5">
+          <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
             Citations Settled
           </h3>
           <p className="mt-0.5 text-xs text-muted-foreground">{periodLabel}</p>
@@ -177,11 +177,13 @@ function TreasuryReportsPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-panel">
-        <div className="border-b border-border bg-muted/50 px-4 py-3">
-          <h3 className="text-sm font-semibold">Transactions</h3>
+      <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-panel">
+        <div className="border-b border-border bg-muted/30 px-5 py-4">
+          <h3 className="text-sm font-bold">Transactions</h3>
         </div>
-        <div className="divide-y divide-border">
+
+        {/* Desktop list */}
+        <div className="hidden md:block divide-y divide-border">
           {reportData.tickets.length === 0 ? (
             <p className="p-6 text-center text-sm text-muted-foreground">
               No transactions for this period.
@@ -190,7 +192,7 @@ function TreasuryReportsPage() {
             reportData.tickets.map((t) => (
               <div
                 key={t.id}
-                className="flex items-center justify-between p-4 hover:bg-muted/50"
+                className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
               >
                 <div>
                   <p className="font-mono text-xs font-semibold">
@@ -208,6 +210,38 @@ function TreasuryReportsPage() {
                   <p className="text-xs text-muted-foreground">
                     {t.payment!.channel}
                   </p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Mobile list */}
+        <div className="md:hidden p-3 space-y-3">
+          {reportData.tickets.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              No transactions for this period.
+            </p>
+          ) : (
+            reportData.tickets.map((t) => (
+              <div
+                key={t.id}
+                className="rounded-2xl border border-border bg-background p-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs font-bold">
+                      {t.payment!.orNumber}
+                    </p>
+                    <p className="mt-1 font-semibold">{t.violatorName}</p>
+                  </div>
+                  <span className="font-bold tabular text-sm">
+                    {peso(t.totalFine)}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{t.payment!.channel}</span>
+                  <span>{shortDate(t.payment!.paidAt)}</span>
                 </div>
               </div>
             ))

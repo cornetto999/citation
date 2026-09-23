@@ -45,7 +45,7 @@ const TicketRow = memo(({ t }: { t: any }) => {
   const late = t.status !== "Paid" && left < 0;
   return (
     <tr
-      className="border-b border-border/60 last:border-0 hover:bg-muted/50"
+      className="border-b border-border/60 last:border-0 hover:bg-muted/30 transition-colors"
     >
       <td className="px-4 py-3 font-mono text-xs font-semibold">{t.id}</td>
       <td className="px-4 py-3">
@@ -87,7 +87,7 @@ const TicketRow = memo(({ t }: { t: any }) => {
         {t.photoData ? (
           <Dialog>
             <DialogTrigger asChild>
-              <button className="inline-flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground hover:bg-muted active:scale-95 transition-all">
+              <button className="inline-flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20 active:scale-95 transition-all">
                 <Eye className="size-4" />
               </button>
             </DialogTrigger>
@@ -104,6 +104,51 @@ const TicketRow = memo(({ t }: { t: any }) => {
         )}
       </td>
     </tr>
+  );
+});
+
+/* Mobile card variant for small screens */
+const TicketCard = memo(({ t }: { t: any }) => {
+  const left = daysUntil(t.dueDate);
+  const late = t.status !== "Paid" && left < 0;
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-panel transition-all hover:shadow-lift">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-xs font-semibold text-muted-foreground">
+            {t.id}
+          </p>
+          <p className="mt-1 text-base font-bold tracking-tight">
+            {t.plateNo}
+          </p>
+          <p className="text-sm text-muted-foreground">{t.violatorName}</p>
+        </div>
+        <StatusBadge status={t.status} />
+      </div>
+      <div className="mt-3 text-xs text-muted-foreground">
+        {t.violations.map((v: any) => v.label).join(", ")}
+      </div>
+      <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs text-muted-foreground">
+            Due: {shortDate(t.dueDate)}
+          </span>
+          {t.status !== "Paid" && (
+            <span
+              className={cn(
+                "text-[11px]",
+                late
+                  ? "font-semibold text-destructive"
+                  : "text-muted-foreground",
+              )}
+            >
+              {late ? `${Math.abs(left)}d overdue` : `${left}d left`}
+            </span>
+          )}
+        </div>
+        <span className="font-bold tabular">{peso(t.totalFine)}</span>
+      </div>
+    </div>
   );
 });
 
@@ -169,31 +214,31 @@ function PnpPage() {
         accessLabel="PNP"
         sidebar={<PnpSidebar />}
       >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 stagger-children">
           {stats.map((s) => (
             <div
               key={s.label}
-              className="rounded-xl border border-border bg-card p-4 shadow-panel"
+              className="rounded-2xl border border-border bg-card p-4 shadow-panel transition-all hover:shadow-lift hover:-translate-y-0.5"
             >
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 {s.label}
               </p>
-              <p className="mt-1 font-display text-2xl font-bold tabular">
+              <p className="mt-1.5 font-display text-2xl font-bold tabular">
                 {s.value}
               </p>
             </div>
           ))}
         </div>
 
-        <div className="mt-6 rounded-xl border border-border bg-card shadow-panel">
+        <div className="mt-6 rounded-2xl border border-border bg-card shadow-panel">
           <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
-            <div className="relative min-w-56 flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative min-w-0 flex-1 sm:min-w-56">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search ticket no., plate, or name"
-                className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm outline-none focus:border-ring"
+                className="h-10 w-full rounded-xl border border-input bg-background pl-10 pr-3 text-sm outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
               />
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -202,10 +247,10 @@ function PnpPage() {
                   key={f}
                   onClick={() => setFilter(f)}
                   className={cn(
-                    "h-9 rounded-lg px-3 text-sm font-medium transition-colors",
+                    "h-9 rounded-xl px-3.5 text-sm font-semibold transition-all",
                     filter === f
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground hover:bg-muted",
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
                   )}
                 >
                   {f}
@@ -214,19 +259,20 @@ function PnpPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="px-4 py-3 font-semibold">Ticket no.</th>
-                  <th className="px-4 py-3 font-semibold">Plate / Vehicle</th>
-                  <th className="px-4 py-3 font-semibold">Violator</th>
-                  <th className="px-4 py-3 font-semibold">Violations</th>
-                  <th className="px-4 py-3 font-semibold">Issued</th>
-                  <th className="px-4 py-3 font-semibold">Due</th>
-                  <th className="px-4 py-3 text-right font-semibold">Fine</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 text-center font-semibold">Photo</th>
+                <tr className="border-b border-border text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3 font-bold">Ticket no.</th>
+                  <th className="px-4 py-3 font-bold">Plate / Vehicle</th>
+                  <th className="px-4 py-3 font-bold">Violator</th>
+                  <th className="px-4 py-3 font-bold">Violations</th>
+                  <th className="px-4 py-3 font-bold">Issued</th>
+                  <th className="px-4 py-3 font-bold">Due</th>
+                  <th className="px-4 py-3 text-right font-bold">Fine</th>
+                  <th className="px-4 py-3 font-bold">Status</th>
+                  <th className="px-4 py-3 text-center font-bold">Photo</th>
                 </tr>
               </thead>
               <tbody>
@@ -246,6 +292,19 @@ function PnpPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile card list */}
+          <div className="md:hidden p-3 space-y-3">
+            {rows.map((t) => (
+              <TicketCard key={t.id} t={t} />
+            ))}
+            {rows.length === 0 && (
+              <p className="py-12 text-center text-sm text-muted-foreground">
+                No citations match this view.
+              </p>
+            )}
+          </div>
+
           <div className="flex items-center gap-2 border-t border-border px-4 py-3 text-xs text-muted-foreground">
             <Eye className="size-3.5" />
             Monitoring access is read-only. Payment posting is handled by the
