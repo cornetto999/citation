@@ -96,6 +96,7 @@ function TreasuryCashierPage() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
+      {/* Left panel: search + ticket list */}
       <div className="flex flex-col">
         <div className="relative">
           <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -103,12 +104,12 @@ function TreasuryCashierPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search Ticket No. or Plate"
-            className="h-12 w-full rounded-full border border-border bg-white pl-10 pr-10 text-sm outline-none focus:border-ring shadow-sm placeholder:text-muted-foreground/70"
+            className="h-12 w-full rounded-2xl border border-border bg-card pl-10 pr-10 text-sm outline-none shadow-panel transition-all placeholder:text-muted-foreground/70 focus:border-ring focus:ring-2 focus:ring-ring/20"
           />
           {query && (
             <button
               onClick={() => setQuery("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="size-4" />
             </button>
@@ -128,8 +129,10 @@ function TreasuryCashierPage() {
                 setTendered("");
                 setManualOrNumber("");
               }}
-              className={`w-full rounded-xl border border-border bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md ${
-                current?.id === t.id ? "ring-2 ring-primary border-primary" : ""
+              className={`w-full rounded-2xl border bg-card p-4 text-left shadow-panel transition-all hover:shadow-lift hover:-translate-y-0.5 ${
+                current?.id === t.id
+                  ? "ring-2 ring-primary border-primary"
+                  : "border-border"
               }`}
             >
               <div className="flex items-center justify-between">
@@ -155,24 +158,20 @@ function TreasuryCashierPage() {
         </div>
       </div>
 
-      <section className="rounded-3xl border border-border bg-white p-8 shadow-sm">
+      {/* Right panel: payment processing */}
+      <section className="rounded-2xl border border-border bg-card p-6 shadow-panel sm:p-8">
         {!current ? (
-          <div className="flex h-full min-h-[500px] flex-col items-center justify-center text-center">
-            <img
-              src="/empty-state.jpg"
-              alt="Empty State"
-              className="w-48 mb-6 object-contain mix-blend-multiply"
-            />
-            <h2 className="font-display text-2xl font-bold text-foreground">
+          <div className="flex h-full min-h-[400px] flex-col items-center justify-center text-center">
+            <div className="flex size-20 items-center justify-center rounded-2xl bg-muted/50 text-muted-foreground">
+              <Banknote className="size-10" />
+            </div>
+            <h2 className="mt-6 font-display text-xl font-bold text-foreground">
               No Transaction Open
             </h2>
             <p className="mt-2 max-w-sm text-sm text-muted-foreground">
               Search for a ticket number in the left panel to begin an
               over-the-counter payment.
             </p>
-            <button className="mt-6 rounded-full bg-slate-100 px-5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">
-              Open Quick Search Guide
-            </button>
           </div>
         ) : (
           <div className="space-y-6">
@@ -192,7 +191,7 @@ function TreasuryCashierPage() {
               <StatusBadge status={current.status} />
             </div>
 
-            <div className="rounded-lg border border-border">
+            <div className="rounded-2xl border border-border overflow-hidden">
               {current.violations.map((v) => (
                 <div
                   key={v.code}
@@ -207,18 +206,18 @@ function TreasuryCashierPage() {
                   <span className="font-semibold tabular">{peso(v.fine)}</span>
                 </div>
               ))}
-              <div className="flex items-center justify-between bg-secondary px-4 py-3">
-                <span className="text-sm font-semibold uppercase tracking-wide">
+              <div className="flex items-center justify-between bg-primary/5 px-4 py-3">
+                <span className="text-sm font-bold uppercase tracking-wider">
                   Amount due
                 </span>
-                <span className="font-display text-2xl font-bold tabular">
+                <span className="font-display text-2xl font-bold tabular text-primary">
                   {peso(current.totalFine)}
                 </span>
               </div>
             </div>
 
             {current.status === "Paid" ? (
-              <div className="rounded-lg border border-paid-foreground/30 bg-paid p-5 text-paid-foreground">
+              <div className="animate-scale-in rounded-2xl border border-paid-foreground/30 bg-paid p-5 text-paid-foreground">
                 <div className="flex items-center gap-2 font-semibold">
                   <Check className="size-5" /> Settled
                 </div>
@@ -235,16 +234,16 @@ function TreasuryCashierPage() {
                     Posted: {dateTime((receipt ?? current.payment)!.paidAt)}
                   </p>
                 </div>
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     onClick={() => window.print()}
-                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground"
+                    className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
                   >
                     <Printer className="size-4" /> Print e-OR
                   </button>
                   <button
                     onClick={newTransaction}
-                    className="h-11 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-card-foreground"
+                    className="h-11 rounded-xl border border-border bg-card px-4 text-sm font-bold text-card-foreground transition-all hover:bg-muted active:scale-[0.98]"
                   >
                     New transaction
                   </button>
@@ -253,7 +252,7 @@ function TreasuryCashierPage() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-sm font-semibold">Cash tendered</label>
+                  <label className="text-sm font-bold">Cash tendered</label>
                   <input
                     value={tendered}
                     onChange={(e) =>
@@ -261,34 +260,34 @@ function TreasuryCashierPage() {
                     }
                     inputMode="decimal"
                     placeholder="0.00"
-                    className="mt-1.5 h-14 w-full rounded-lg border-2 border-input bg-background px-4 text-right font-display text-2xl font-bold tabular outline-none focus:border-ring"
+                    className="mt-1.5 h-14 w-full rounded-2xl border-2 border-input bg-background px-4 text-right font-display text-2xl font-bold tabular outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
                   />
                   <div className="mt-2 flex flex-wrap gap-2">
                     {[current.totalFine, 1000, 2000, 5000].map((amt, i) => (
                       <button
                         key={`${amt}-${i}`}
                         onClick={() => setTendered(String(amt))}
-                        className="h-9 rounded-lg bg-secondary px-3 text-xs font-semibold text-secondary-foreground hover:bg-muted"
+                        className="h-9 rounded-xl bg-secondary px-3 text-xs font-bold text-secondary-foreground transition-all hover:bg-muted active:scale-[0.97]"
                       >
                         {i === 0 ? "Exact" : peso(amt)}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="rounded-lg bg-muted p-4">
+                <div className="rounded-2xl bg-muted/60 p-4">
                   <p className="text-sm text-muted-foreground">Change due</p>
                   <p className="font-display text-3xl font-bold tabular">
                     {peso(Math.max(change, 0))}
                   </p>
                   {cash > 0 && change < 0 && (
-                    <p className="mt-2 text-sm font-medium text-destructive">
+                    <p className="mt-2 text-sm font-bold text-destructive animate-scale-in">
                       Short by {peso(Math.abs(change))}
                     </p>
                   )}
                   <button
                     onClick={() => setConfirmOpen(true)}
                     disabled={cash < current.totalFine}
-                    className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-primary text-base font-semibold text-primary-foreground disabled:opacity-40"
+                    className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-40 active:scale-[0.98]"
                   >
                     <Banknote className="size-5" /> Post payment
                   </button>
@@ -310,7 +309,7 @@ function TreasuryCashierPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <label className="text-sm font-semibold">
+              <label className="text-sm font-bold">
                 Manual OR Number{" "}
                 <span className="text-muted-foreground font-normal">
                   (Optional)
@@ -320,7 +319,7 @@ function TreasuryCashierPage() {
                 value={manualOrNumber}
                 onChange={(e) => setManualOrNumber(e.target.value)}
                 placeholder="e.g. OR-2026-1234"
-                className="mt-1.5 h-11 w-full rounded-lg border-2 border-input bg-background px-4 font-mono text-sm outline-none focus:border-ring"
+                className="mt-1.5 h-11 w-full rounded-xl border-2 border-input bg-background px-4 font-mono text-sm outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
               />
               <p className="mt-2 text-xs text-muted-foreground">
                 Leave blank to auto-generate an Official Receipt number.
@@ -329,7 +328,7 @@ function TreasuryCashierPage() {
             <DialogFooter>
               <button
                 onClick={() => setConfirmOpen(false)}
-                className="h-10 rounded-lg border border-border px-4 text-sm font-semibold hover:bg-muted"
+                className="h-10 rounded-xl border border-border px-4 text-sm font-bold hover:bg-muted transition-colors"
               >
                 Cancel
               </button>
@@ -338,7 +337,7 @@ function TreasuryCashierPage() {
                   setConfirmOpen(false);
                   process();
                 }}
-                className="h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:opacity-90"
+                className="h-10 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground transition-all hover:brightness-110 active:scale-[0.98]"
               >
                 Settle Transaction
               </button>

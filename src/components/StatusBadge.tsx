@@ -8,6 +8,13 @@ const styles: Record<TicketStatus, string> = {
   Contested: "bg-contested text-contested-foreground",
 };
 
+const dotStyles: Record<TicketStatus, string> = {
+  Paid: "bg-paid-foreground",
+  Unpaid: "bg-unpaid-foreground",
+  Overdue: "bg-overdue-foreground animate-pulse",
+  Contested: "bg-contested-foreground animate-pulse-soft",
+};
+
 export function StatusBadge({
   status,
   className,
@@ -18,12 +25,14 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition-all",
         styles[status],
         className,
       )}
     >
-      <span className="size-1.5 rounded-full bg-current" />
+      <span
+        className={cn("size-1.5 rounded-full", dotStyles[status])}
+      />
       {status}
     </span>
   );

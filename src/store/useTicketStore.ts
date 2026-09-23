@@ -88,7 +88,10 @@ export const useTicketStore = create<TicketState>((set, get) => ({
         location: t.location,
         remarks: t.remarks || undefined,
         photoData: t.photo_name || undefined,
-        status: t.status as TicketStatus,
+        status:
+          t.status === "Unpaid" && new Date(t.due_date) < new Date()
+            ? "Overdue"
+            : (t.status as TicketStatus),
         issuedAt: t.issued_at,
         dueDate: t.due_date,
         issuedBy: t.issued_by,

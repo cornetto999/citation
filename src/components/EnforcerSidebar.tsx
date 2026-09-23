@@ -38,36 +38,37 @@ export function EnforcerSidebar() {
   return (
     <nav
       aria-label="Enforcer navigation"
-      className="sticky top-6 flex min-h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-2xl border border-sidebar-border/60 bg-authority p-2 shadow-lift md:min-h-[calc(100vh-8rem)]"
+      className="sticky top-6 flex min-h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-2xl glass-dark p-2 shadow-lift md:min-h-[calc(100vh-8rem)]"
     >
-      <div className="flex items-center gap-2 px-2.5 py-3 text-primary-foreground">
-        <span className="flex size-7 items-center justify-center rounded-lg bg-sidebar-primary/15 text-sidebar-primary">
+      <div className="flex items-center gap-2.5 px-3 py-3 text-primary-foreground">
+        <span className="flex size-8 items-center justify-center rounded-xl bg-sidebar-primary/15 text-sidebar-primary shadow-sm">
           <ShieldCheck className="size-4" />
         </span>
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-sidebar-primary">
             Field desk
           </p>
-          <p className="text-xs font-medium text-primary-foreground/80">
+          <p className="text-xs font-medium text-primary-foreground/60">
             Enforcer workspace
           </p>
         </div>
       </div>
-      <div className="flex-1 space-y-1">
+      <div className="flex-1 space-y-1 mt-1">
         {navigation.map(({ to, label, icon: Icon }) => (
           <Link
             key={to}
             to={to}
             activeOptions={{ exact: true }}
             activeProps={{
-              className: "bg-white text-surface-strong shadow-sm",
+              className:
+                "bg-white/[0.12] text-primary-foreground shadow-sm border-l-2 border-sidebar-primary",
             }}
             inactiveProps={{
               className:
-                "text-primary-foreground/70 hover:bg-white/10 hover:text-primary-foreground",
+                "text-primary-foreground/50 border-l-2 border-transparent hover:bg-white/[0.06] hover:text-primary-foreground/80",
             }}
             className={cn(
-              "flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary",
+              "flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary",
             )}
           >
             <Icon className="size-4" />
@@ -76,10 +77,10 @@ export function EnforcerSidebar() {
         ))}
       </div>
 
-      <div className="mt-4 border-t border-sidebar-border/30 pt-2">
+      <div className="mt-4 border-t border-white/[0.06] pt-2">
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <button className="flex w-full min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-primary-foreground/70 hover:bg-white/10 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary">
+            <button className="flex w-full min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-semibold text-primary-foreground/40 hover:bg-white/[0.06] hover:text-primary-foreground/70 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary">
               <LogOut className="size-4" />
               Sign out
             </button>

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   ShieldCheck,
@@ -66,24 +66,25 @@ function PortalPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-authority text-primary-foreground">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2 px-3 py-3 sm:gap-3 sm:px-6 sm:py-4">
+      <header className="bg-authority shadow-lift">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMC41IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCBmaWxsPSJ1cmwoI2cpIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIi8+PC9zdmc+')] opacity-60" />
+        <div className="relative mx-auto flex max-w-3xl flex-wrap items-center gap-2 px-3 py-3 sm:gap-3 sm:px-6 sm:py-4">
           <Link
             to="/"
-            className="flex size-9 shrink-0 items-center justify-center rounded-md bg-sidebar-accent/60 transition-colors hover:bg-sidebar-accent"
+            className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10 border border-white/10 backdrop-blur-sm transition-all hover:bg-white/20 hover:shadow-glow"
             aria-label="Back to role selection"
           >
             <ShieldCheck className="size-4 text-sidebar-primary sm:size-5" />
           </Link>
           <div className="min-w-0 flex-1">
-            <p className="font-display text-sm font-semibold leading-tight sm:text-base">
+            <p className="font-display text-sm font-bold leading-tight text-primary-foreground sm:text-base">
               Online Pay
             </p>
-            <p className="text-[11px] text-primary-foreground/70 sm:text-xs">
+            <p className="text-[11px] text-primary-foreground/60 sm:text-xs">
               Public access — look up and settle your citation
             </p>
           </div>
-          <span className="rounded-full border border-sidebar-border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-sidebar-primary sm:px-2.5 sm:py-1 sm:text-[10px]">
+          <span className="rounded-full border border-sidebar-primary/30 bg-sidebar-primary/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-sidebar-primary sm:px-2.5 sm:py-1 sm:text-[10px]">
             Public
           </span>
         </div>
@@ -93,36 +94,36 @@ function PortalPage() {
         {/* Lookup */}
         <form
           onSubmit={search}
-          className="rounded-xl border border-border bg-surface p-5 shadow-lift"
+          className="animate-fade-in-up rounded-2xl border border-border bg-card p-5 shadow-panel sm:p-6"
         >
           <label
             htmlFor="ticket-id"
-            className="text-sm font-semibold text-card-foreground"
+            className="text-sm font-bold text-card-foreground"
           >
             Citation Ticket Number
           </label>
           <p className="mt-1 text-xs text-muted-foreground">
             Found on the top of your printed citation (e.g. CTN-2026-0001).
           </p>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
               id="ticket-id"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="CTN-2026-0000"
-              className="h-12 min-w-0 flex-1 rounded-lg border border-input bg-background px-4 font-mono text-sm uppercase tracking-wide text-foreground outline-none ring-ring focus:ring-2"
+              className="h-12 min-w-0 flex-1 rounded-xl border border-input bg-background px-4 font-mono text-sm uppercase tracking-wide text-foreground outline-none ring-ring transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
             />
             <button
               type="submit"
-              className="flex h-12 items-center gap-2 rounded-lg bg-authority px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              className="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
             >
               <Search className="size-4" />
               Look up
             </button>
           </div>
           {notFound && (
-            <p className="mt-3 flex items-center gap-2 text-sm font-medium text-overdue">
-              <AlertTriangle className="size-4" />
+            <p className="mt-3 flex items-center gap-2 rounded-xl bg-overdue/20 border border-overdue/30 px-4 py-2.5 text-sm font-medium text-overdue-foreground animate-scale-in">
+              <AlertTriangle className="size-4 shrink-0" />
               No citation found with that number. Check the ticket and try
               again.
             </p>
@@ -155,7 +156,7 @@ function PortalPage() {
 function TicketCard({ ticket, onPay }: { ticket: Ticket; onPay: () => void }) {
   const days = daysUntil(ticket.dueDate);
   return (
-    <section className="mt-6 rounded-xl border border-border bg-surface p-5 shadow-lift">
+    <section className="mt-6 animate-fade-in-up rounded-2xl border border-border bg-card p-5 shadow-panel sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-mono text-lg font-bold text-card-foreground">
@@ -187,11 +188,11 @@ function TicketCard({ ticket, onPay }: { ticket: Ticket; onPay: () => void }) {
         />
       </dl>
 
-      <div className="mt-5 rounded-lg bg-muted p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className="mt-5 rounded-xl bg-muted/60 p-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
           Violations
         </p>
-        <ul className="mt-2 space-y-1.5">
+        <ul className="mt-2 space-y-2">
           {ticket.violations.map((v) => (
             <li
               key={v.code}
@@ -203,12 +204,12 @@ function TicketCard({ ticket, onPay }: { ticket: Ticket; onPay: () => void }) {
                 </span>{" "}
                 {v.label}
               </span>
-              <span className="tabular font-medium">{peso(v.fine)}</span>
+              <span className="tabular font-semibold">{peso(v.fine)}</span>
             </li>
           ))}
         </ul>
         <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-          <span className="text-sm font-semibold text-card-foreground">
+          <span className="text-sm font-bold text-card-foreground">
             Total fine
           </span>
           <span className="font-display text-xl font-bold tabular text-card-foreground">
@@ -219,10 +220,10 @@ function TicketCard({ ticket, onPay }: { ticket: Ticket; onPay: () => void }) {
 
       {ticket.photoData && (
         <div className="mt-5">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Evidence Photo
           </p>
-          <div className="overflow-hidden rounded-lg border border-border bg-black/5">
+          <div className="overflow-hidden rounded-xl border border-border bg-black/5">
             <img
               src={ticket.photoData}
               alt="Evidence"
@@ -233,20 +234,20 @@ function TicketCard({ ticket, onPay }: { ticket: Ticket; onPay: () => void }) {
       )}
 
       {ticket.status === "Paid" ? (
-        <p className="mt-4 flex items-center gap-2 rounded-lg bg-paid/15 px-4 py-3 text-sm font-medium text-paid">
-          <CheckCircle2 className="size-4" />
+        <p className="mt-5 flex items-center gap-2 rounded-xl bg-paid/20 border border-paid/30 px-4 py-3 text-sm font-medium text-paid-foreground">
+          <CheckCircle2 className="size-4 shrink-0" />
           This citation has been settled. OR {ticket.payment?.orNumber}.
         </p>
       ) : ticket.status === "Contested" ? (
-        <p className="mt-4 flex items-center gap-2 rounded-lg bg-contested/15 px-4 py-3 text-sm font-medium text-contested">
-          <AlertTriangle className="size-4" />
+        <p className="mt-5 flex items-center gap-2 rounded-xl bg-contested/20 border border-contested/30 px-4 py-3 text-sm font-medium text-contested-foreground">
+          <AlertTriangle className="size-4 shrink-0" />
           This citation is under contest. Please appear at the Traffic
           Management Office.
         </p>
       ) : (
         <button
           onClick={onPay}
-          className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-authority text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
         >
           <QrCode className="size-4" />
           Pay {peso(ticket.totalFine)} via QRPh
@@ -259,7 +260,7 @@ function TicketCard({ ticket, onPay }: { ticket: Ticket; onPay: () => void }) {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+      <dt className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
         {label}
       </dt>
       <dd className="mt-0.5 font-medium text-card-foreground">{value}</dd>
@@ -278,69 +279,143 @@ function QrphPayment({
 }) {
   const payTicket = useTicketStore((s) => s.payTicket);
   const [processing, setProcessing] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [linkId, setLinkId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const confirm = () => {
+  const generateLink = async () => {
     setProcessing(true);
-    setTimeout(async () => {
-      try {
-        await payTicket(ticket.id, "QRPh", "QRPh Online Settlement");
-        onDone();
-      } catch (e) {
-        console.error(e);
-        setProcessing(false);
+    setError(null);
+    try {
+      const secret = import.meta.env.VITE_PAYMONGO_SECRET_KEY;
+      const res = await fetch("https://api.paymongo.com/v1/links", {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          authorization: "Basic " + btoa(secret + ":"),
+        },
+        body: JSON.stringify({
+          data: {
+            attributes: {
+              amount: ticket.totalFine * 100, // in centavos
+              description: `Citation Ticket ${ticket.id}`,
+              remarks: `Payment for plate ${ticket.plateNo}`,
+            },
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data?.data?.attributes?.checkout_url) {
+        setCheckoutUrl(data.data.attributes.checkout_url);
+        setLinkId(data.data.id);
+      } else {
+        throw new Error("Failed to generate payment link");
       }
-    }, 1500);
+    } catch (e: any) {
+      setError(e.message || "Failed to generate link");
+    } finally {
+      setProcessing(false);
+    }
   };
 
+  useEffect(() => {
+    // Generate link automatically on mount
+    generateLink();
+  }, []);
+
+  // Poll for status if we have a link ID
+  useEffect(() => {
+    if (!linkId) return;
+
+    let interval: ReturnType<typeof setInterval>;
+
+    const checkStatus = async () => {
+      try {
+        const secret = import.meta.env.VITE_PAYMONGO_SECRET_KEY;
+        const res = await fetch(`https://api.paymongo.com/v1/links/${linkId}`, {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            authorization: "Basic " + btoa(secret + ":"),
+          },
+        });
+        const data = await res.json();
+        if (data?.data?.attributes?.status === "paid") {
+          clearInterval(interval);
+
+          // Post payment in our system
+          const paymentData = data.data.attributes.payments?.[0];
+          const channel = paymentData?.data?.attributes?.source?.type || "Online"; // e.g. qrph
+          const ref = paymentData?.data?.attributes?.balance_transaction_id || data.data.attributes.reference_number;
+
+          await payTicket(ticket.id, "Online (PayMongo)", "QRPh / E-wallet", ref);
+          onDone();
+        }
+      } catch (e) {
+        console.error("Error polling link status", e);
+      }
+    };
+
+    interval = setInterval(checkStatus, 3000);
+    return () => clearInterval(interval);
+  }, [linkId, ticket.id, onDone, payTicket]);
+
   return (
-    <section className="mt-6 rounded-xl border border-border bg-surface p-5 text-center shadow-lift">
-      <h2 className="font-display text-lg font-semibold text-card-foreground">
-        Scan to pay with QRPh
+    <section className="mt-6 animate-scale-in rounded-2xl border border-border bg-card p-5 text-center shadow-panel sm:p-6">
+      <h2 className="font-display text-lg font-bold text-card-foreground">
+        Secure Online Payment
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Open any participating banking or e-wallet app and scan the code.
+        Powered by PayMongo (QRPh, GCash, Maya, Cards)
       </p>
 
-      <div className="mx-auto mt-5 grid size-52 grid-cols-7 gap-0 overflow-hidden rounded-lg border border-border p-3">
-        {Array.from({ length: 49 }).map((_, i) => (
-          <span
-            key={i}
-            className={
-              (i * 7 + ((i * 13) % 5) + ticket.id.length) % 3 === 0
-                ? "bg-authority"
-                : "bg-transparent"
-            }
-          />
-        ))}
+      <div className="mt-5 rounded-xl bg-muted/30 p-6 flex flex-col items-center">
+        <p className="font-display text-3xl font-bold tabular text-card-foreground">
+          {peso(ticket.totalFine)}
+        </p>
+        <p className="font-mono text-sm text-muted-foreground mt-1">Ticket {ticket.id}</p>
+        
+        {error && (
+          <div className="mt-4 p-3 bg-destructive/10 text-destructive text-sm rounded-lg border border-destructive/20">
+            {error}
+          </div>
+        )}
+
+        {!checkoutUrl && !error && (
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+            <p className="text-sm text-muted-foreground">Generating secure payment link...</p>
+          </div>
+        )}
+
+        {checkoutUrl && (
+          <div className="mt-6 w-full">
+            <a 
+              href={checkoutUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
+            >
+              Open Payment Page
+            </a>
+            <p className="mt-4 text-xs text-muted-foreground max-w-xs mx-auto">
+              Please complete the payment in the secure tab that opens. 
+              This page will automatically update once the payment is successful.
+            </p>
+          </div>
+        )}
       </div>
 
-      <p className="mt-4 font-display text-2xl font-bold tabular text-card-foreground">
-        {peso(ticket.totalFine)}
-      </p>
-      <p className="font-mono text-xs text-muted-foreground">{ticket.id}</p>
-
-      <div className="mt-5 flex gap-2">
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
         <button
           onClick={onBack}
-          disabled={processing}
-          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg border border-border text-sm font-semibold text-card-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border text-sm font-bold text-card-foreground transition-all hover:bg-muted active:scale-[0.98]"
         >
           <ArrowLeft className="size-4" />
-          Back
-        </button>
-        <button
-          onClick={confirm}
-          disabled={processing}
-          className="h-12 flex-[2] rounded-lg bg-authority text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
-        >
-          {processing
-            ? "Verifying payment…"
-            : "I've scanned — simulate payment"}
+          Cancel and go back
         </button>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">
-        Demo only — no real payment is processed.
-      </p>
     </section>
   );
 }
@@ -349,15 +424,15 @@ function Receipt({ ticket, onReset }: { ticket: Ticket; onReset: () => void }) {
   const p = ticket.payment;
   if (!p) return null;
   return (
-    <section className="mt-6 rounded-xl border border-border bg-surface p-5 shadow-lift">
-      <div className="flex items-center gap-2 text-paid">
+    <section className="mt-6 animate-fade-in-up rounded-2xl border border-border bg-card p-5 shadow-panel sm:p-6">
+      <div className="flex items-center gap-2 text-paid-foreground">
         <CheckCircle2 className="size-6" />
-        <h2 className="font-display text-lg font-semibold">
+        <h2 className="font-display text-lg font-bold">
           Payment successful
         </h2>
       </div>
 
-      <div className="mt-4 rounded-lg border border-dashed border-border bg-muted/50 p-5 font-mono text-sm text-card-foreground">
+      <div className="mt-4 rounded-xl border-2 border-dashed border-border bg-muted/30 p-5 font-mono text-sm text-card-foreground">
         <p className="text-center text-xs uppercase tracking-widest text-muted-foreground">
           Republic of the Philippines
         </p>
@@ -376,24 +451,24 @@ function Receipt({ ticket, onReset }: { ticket: Ticket; onReset: () => void }) {
         </dl>
         <div className="my-3 border-t border-dashed border-border" />
         <div className="flex items-center justify-between">
-          <span className="font-semibold">AMOUNT PAID</span>
+          <span className="font-bold">AMOUNT PAID</span>
           <span className="font-display text-xl font-bold tabular">
             {peso(p.amount)}
           </span>
         </div>
       </div>
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
         <button
           onClick={() => window.print()}
-          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-authority text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
         >
           <Download className="size-4" />
           Download / print e-receipt
         </button>
         <button
           onClick={onReset}
-          className="h-12 rounded-lg border border-border px-5 text-sm font-semibold text-card-foreground transition-colors hover:bg-muted"
+          className="h-12 rounded-xl border border-border px-5 text-sm font-bold text-card-foreground transition-all hover:bg-muted active:scale-[0.98]"
         >
           New lookup
         </button>
