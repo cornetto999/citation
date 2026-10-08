@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>Citation System</title>
+  <rect width="64" height="64" rx="16" fill="#30136B"/>
+  <rect x="1" y="1" width="62" height="62" rx="15" stroke="#FFFFFF" stroke-opacity=".16" stroke-width="2"/>
+  <path d="M32 12c5 4 10 6 16 7v14c0 9-6 15-16 20-10-5-16-11-16-20V19c6-1 11-3 16-7Z" stroke="#F6BD42" stroke-width="4" stroke-linejoin="round"/>
+  <path d="m24 32 6 6 11-13" stroke="#F6BD42" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
