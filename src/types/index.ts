@@ -3,6 +3,7 @@ export type Role = "enforcer" | "pnp" | "treasury" | "violator" | "admin";
 export interface User {
   id: string;
   name: string;
+  credential: string;
   badgeNo?: string;
   password?: string;
   role: Role;
@@ -11,7 +12,13 @@ export interface User {
 
 export type TicketStatus = "Unpaid" | "Paid" | "Contested" | "Overdue";
 
-export type PaymentChannel = "Cash (Over-the-counter)" | "QRPh" | "Unpaid";
+export type PaymentChannel =
+  | "Cash (Over-the-counter)"
+  | "QRPh"
+  | "GCash"
+  | "Maya"
+  | "Online (PayMongo)"
+  | "Unpaid";
 
 export interface ViolationCode {
   code: string;
@@ -45,5 +52,5 @@ export interface Ticket {
   issuedAt: string;
   dueDate: string;
   issuedBy: string;
-  payment?: Payment;
+  payment?: Payment | undefined;
 }

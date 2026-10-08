@@ -13,7 +13,7 @@ import { Loader2, ShieldCheck, Home, RefreshCw } from "lucide-react";
 import appCss from "../styles.css?url";
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-authority px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <div className="animate-fade-in-up max-w-md text-center">
         <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-2xl glass-dark">
           <ShieldCheck className="size-10 text-sidebar-primary" />
@@ -46,7 +46,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-authority px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <div className="animate-scale-in max-w-md text-center">
         <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-destructive/20 backdrop-blur-sm">
           <span className="text-3xl">⚠</span>

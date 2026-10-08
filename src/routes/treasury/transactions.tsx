@@ -50,7 +50,9 @@ function TreasuryTransactionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-xl font-bold tracking-tight">Transaction History</h2>
+        <h2 className="text-xl font-bold tracking-tight">
+          Transaction History
+        </h2>
       </div>
 
       <div className="rounded-2xl border border-border bg-card shadow-panel overflow-hidden">
@@ -79,7 +81,7 @@ function TreasuryTransactionsPage() {
                 <th className="px-4 py-3 text-right font-bold">Amount</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="stagger-children">
               {transactions.map((t) => (
                 <tr
                   key={t.id}
@@ -118,11 +120,11 @@ function TreasuryTransactionsPage() {
         </div>
 
         {/* Mobile card list */}
-        <div className="md:hidden p-3 space-y-3">
+        <div className="md:hidden p-3 space-y-3 stagger-children">
           {transactions.map((t) => (
             <div
               key={t.id}
-              className="rounded-2xl border border-border bg-background p-4 shadow-sm"
+              className="rounded-2xl border border-border bg-background p-4 shadow-sm transition-lift hover-lift"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">

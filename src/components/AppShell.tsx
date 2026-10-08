@@ -44,7 +44,7 @@ export function AppShell({
   }, [mobileMenuOpen]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* ── Header ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 bg-authority shadow-lift">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMC41IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCBmaWxsPSJ1cmwoI2cpIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIi8+PC9zdmc+')] opacity-60" />
@@ -145,7 +145,7 @@ export function AppShell({
       )}
 
       {/* ── Main Content ────────────────────────────────────────── */}
-      <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 lg:py-8">
+      <div className="on-brand mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 lg:py-8">
         <div className="flex gap-5 lg:gap-8">
           {/* Desktop sidebar */}
           {sidebar && (

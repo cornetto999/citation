@@ -89,7 +89,7 @@ function EnforcerCitationsPage() {
               {myTickets.length} result{myTickets.length === 1 ? "" : "s"}
             </p>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-white">
             <WalletCards className="size-3.5" /> Fine records
           </span>
         </div>
@@ -151,7 +151,7 @@ function EnforcerCitationsPage() {
                   <time dateTime={ticket.issuedAt}>
                     {dateTime(ticket.issuedAt)}
                   </time>
-                  <span className="rounded-lg bg-primary/10 px-2.5 py-1 font-bold tabular text-primary">
+                  <span className="rounded-lg bg-primary/10 px-2.5 py-1 font-bold tabular text-white">
                     {peso(ticket.totalFine)}
                   </span>
                 </div>

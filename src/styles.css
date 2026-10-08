@@ -1,8 +1,7 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
-
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 
@@ -84,28 +83,28 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.976 0.006 250);
-  --foreground: oklch(0.22 0.035 258);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.035 258);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.035 258);
-  --primary: oklch(0.34 0.088 258);
+  --background: oklch(1 0 0 / 8%);
+  --foreground: oklch(0.98 0.01 290);
+  --card: oklch(1 0 0 / 10%);
+  --card-foreground: oklch(0.98 0.01 290);
+  --popover: oklch(0.27 0.1 288 / 90%);
+  --popover-foreground: oklch(0.98 0.01 290);
+  --primary: oklch(0.4 0.18 290);
   --primary-foreground: oklch(0.985 0.005 250);
-  --secondary: oklch(0.94 0.012 250);
-  --secondary-foreground: oklch(0.3 0.05 258);
-  --muted: oklch(0.945 0.01 250);
-  --muted-foreground: oklch(0.52 0.028 256);
+  --secondary: oklch(1 0 0 / 12%);
+  --secondary-foreground: oklch(0.98 0.01 290);
+  --muted: oklch(1 0 0 / 8%);
+  --muted-foreground: oklch(0.82 0.025 290);
   --accent: oklch(0.78 0.16 74);
   --accent-foreground: oklch(0.24 0.05 258);
-  --destructive: oklch(0.55 0.22 27);
+  --destructive: oklch(0.78 0.14 27);
   --destructive-foreground: oklch(0.985 0.005 250);
-  --border: oklch(0.92 0.008 253);
-  --input: oklch(0.92 0.008 253);
-  --ring: oklch(0.34 0.088 258);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.78 0.12 290);
 
-  --surface: oklch(1 0 0 / 85%);
-  --surface-strong: oklch(0.28 0.06 258);
+  --surface: oklch(1 0 0 / 10%);
+  --surface-strong: oklch(0.3 0.14 290);
 
   --paid: oklch(0.93 0.06 158);
   --paid-foreground: oklch(0.42 0.11 158);
@@ -116,24 +115,44 @@
   --contested: oklch(0.93 0.03 250);
   --contested-foreground: oklch(0.42 0.07 258);
 
-  --chart-1: oklch(0.34 0.088 258);
+  --chart-1: oklch(0.4 0.18 290);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.24 0.065 258);
+  --sidebar: oklch(0.26 0.12 288);
   --sidebar-foreground: oklch(0.96 0.01 250);
   --sidebar-primary: oklch(0.78 0.16 74);
   --sidebar-primary-foreground: oklch(0.24 0.05 258);
-  --sidebar-accent: oklch(0.32 0.07 258);
+  --sidebar-accent: oklch(0.34 0.13 290);
   --sidebar-accent-foreground: oklch(0.96 0.01 250);
-  --sidebar-border: oklch(0.38 0.06 258);
+  --sidebar-border: oklch(0.4 0.12 290);
   --sidebar-ring: oklch(0.78 0.16 74);
+
+  /* Brand page backdrop: deep indigo with green + violet corner glows */
+  --brand-base: oklch(0.25 0.12 288);
+  --gradient-brand:
+    radial-gradient(
+      45% 40% at 100% 0%,
+      oklch(0.76 0.2 145 / 0.85),
+      transparent 70%
+    ),
+    radial-gradient(
+      40% 45% at 0% 100%,
+      oklch(0.76 0.2 145 / 0.8),
+      transparent 70%
+    ),
+    radial-gradient(
+      55% 50% at 100% 100%,
+      oklch(0.45 0.22 293 / 0.9),
+      transparent 75%
+    ),
+    linear-gradient(180deg, oklch(0.25 0.12 288), oklch(0.3 0.14 290));
 
   --gradient-authority: linear-gradient(
     135deg,
-    oklch(0.22 0.07 258),
-    oklch(0.36 0.11 262)
+    oklch(0.24 0.12 288),
+    oklch(0.34 0.17 292)
   );
   --gradient-accent: linear-gradient(
     135deg,
@@ -202,10 +221,52 @@
   }
 
   body {
-    background-color: var(--color-background);
+    background-color: var(--brand-base);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     line-height: 1.6;
+  }
+
+  /* Fixed brand backdrop (pseudo-element so it stays put on iOS too) */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image: var(--gradient-brand);
+    pointer-events: none;
+  }
+
+  /* Glass panels retain light text on the purple brand backdrop. */
+  .on-brand {
+    --foreground: oklch(0.98 0.01 290);
+    --muted-foreground: oklch(0.82 0.025 290);
+    color: var(--foreground);
+  }
+  .on-brand
+    :is(
+      [class*="bg-card"],
+      [class*="bg-background"],
+      [class*="bg-popover"],
+      .bg-white,
+      .bg-muted,
+      .bg-secondary,
+      .card-surface,
+      .glass
+    ) {
+    --foreground: oklch(0.98 0.01 290);
+    --muted-foreground: oklch(0.82 0.025 290);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--muted-foreground);
+  }
+
+  /* Native option menus need a solid backdrop for readable labels. */
+  select option {
+    background-color: var(--brand-base);
+    color: var(--foreground);
   }
 
   h1,
@@ -262,10 +323,11 @@
 
 /* Glassmorphism panel */
 @utility glass {
-  background: oklch(1 0 0 / 70%);
+  background: var(--card);
+  color: var(--card-foreground);
   backdrop-filter: blur(16px) saturate(1.4);
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  border: 1px solid oklch(1 0 0 / 20%);
+  border: 1px solid var(--border);
   box-shadow:
     0 1px 2px oklch(0 0 0 / 0.04),
     inset 0 1px 0 oklch(1 0 0 / 0.1);
@@ -273,7 +335,7 @@
 
 /* Dark glassmorphism */
 @utility glass-dark {
-  background: oklch(0.22 0.07 258 / 60%);
+  background: oklch(0.24 0.12 288 / 60%);
   backdrop-filter: blur(20px) saturate(1.5);
   -webkit-backdrop-filter: blur(20px) saturate(1.5);
   border: 1px solid oklch(1 0 0 / 8%);
@@ -432,5 +494,130 @@
   }
   ::-webkit-scrollbar-thumb:hover {
     background: oklch(0.5 0.03 256 / 0.5);
+  }
+}
+
+/* ─── Shared Surfaces ───────────────────────────────────────────── */
+
+/* Standard content card used across all dashboards */
+@utility card-surface {
+  --foreground: var(--card-foreground);
+  --muted-foreground: oklch(0.82 0.025 290);
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-card);
+  color: var(--color-card-foreground);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+}
+
+/* Semantic surfaces and legacy white panels share the existing glass finish.
+ * Exact class selectors leave translucent white accents on auth/sidebar intact.
+ * Portalled dialogs also receive these styles outside the on-brand wrapper.
+ */
+@layer utilities {
+  :is(.bg-card, .bg-background, .bg-popover, .bg-white) {
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  }
+
+  .bg-white {
+    background-color: var(--card);
+  }
+
+  /* Dialogs and sheets sit over content, so use a deeper glass tint. */
+  [role="dialog"]:is(.bg-background, .bg-card, .bg-white) {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+  }
+}
+
+/* Sticky table header that stays visible while scrolling long lists */
+@utility table-sticky-head {
+  & thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: color-mix(in oklch, var(--color-card) 92%, transparent);
+    backdrop-filter: blur(8px);
+  }
+}
+
+/* Faint grid backdrop for hero / auth screens */
+@utility bg-grid-faint {
+  background-image:
+    linear-gradient(oklch(1 0 0 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(1 0 0 / 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse at 50% 30%, black 30%, transparent 75%);
+}
+
+@keyframes aurora {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, -3%, 0) scale(1.08);
+  }
+}
+
+@utility animate-aurora {
+  animation: aurora 14s ease-in-out infinite;
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── Print ─────────────────────────────────────────────────────── */
+/*
+ * Any element with .print-area becomes the only thing printed.
+ * Used by receipts / citation slips so "Print" doesn't dump the whole dashboard.
+ */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  body:has(.print-area) * {
+    visibility: hidden;
+  }
+
+  body:has(.print-area) .print-area,
+  body:has(.print-area) .print-area * {
+    visibility: visible;
+  }
+
+  body:has(.print-area) .print-area {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    box-shadow: none !important;
+    border-color: #999 !important;
+  }
+
+  .print-area,
+  .print-area :is(.card-surface, .glass, .bg-card, .bg-background, .bg-popover, .bg-white) {
+    background-color: white !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    color: black !important;
+    --foreground: oklch(0.22 0.035 258);
+    --card-foreground: oklch(0.22 0.035 258);
+    --muted-foreground: oklch(0.52 0.028 256);
+  }
+
+  .no-print {
+    display: none !important;
   }
 }

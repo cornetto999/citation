@@ -70,8 +70,7 @@ const roles = [
     icon: ShieldCheck,
     name: "System Admin",
     access: "Private",
-    blurb:
-      "Monitor all citations, manage users, and generate system reports.",
+    blurb: "Monitor all citations, manage users, and generate system reports.",
     gradient: "from-rose-500/10 to-pink-500/10",
     iconBg: "bg-rose-500/10 text-rose-600",
   },
@@ -82,7 +81,7 @@ function RoleSelect() {
   const signOut = useAuthStore((s) => s.signOut);
 
   return (
-    <div className="relative min-h-screen bg-authority overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden">
       {/* Subtle dot pattern overlay */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMC41IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCBmaWxsPSJ1cmwoI2cpIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIi8+PC9zdmc+')] opacity-60" />
 
@@ -97,10 +96,16 @@ function RoleSelect() {
             Gitagum Traffic Management System
           </span>
         </div>
-        <h1 className="animate-fade-in-up mt-4 max-w-3xl font-display text-3xl font-bold tracking-tight text-primary-foreground sm:mt-5 sm:text-4xl lg:text-5xl" style={{ animationDelay: "80ms" }}>
+        <h1
+          className="animate-fade-in-up mt-4 max-w-3xl font-display text-3xl font-bold tracking-tight text-primary-foreground sm:mt-5 sm:text-4xl lg:text-5xl"
+          style={{ animationDelay: "80ms" }}
+        >
           Citation Ticket &amp; Payment System
         </h1>
-        <p className="animate-fade-in-up mt-3 max-w-2xl text-sm leading-relaxed text-primary-foreground/65 sm:mt-4 sm:text-base" style={{ animationDelay: "160ms" }}>
+        <p
+          className="animate-fade-in-up mt-3 max-w-2xl text-sm leading-relaxed text-primary-foreground/65 sm:mt-4 sm:text-base"
+          style={{ animationDelay: "160ms" }}
+        >
           One shared record of every citation — issued on the road, watched by
           the police, settled at the treasury window, and payable online by the
           motorist.
@@ -138,7 +143,10 @@ function RoleSelect() {
           ))}
         </div>
 
-        <p className="animate-fade-in mt-8 text-xs text-primary-foreground/40 sm:mt-10" style={{ animationDelay: "500ms" }}>
+        <p
+          className="animate-fade-in mt-8 text-xs text-primary-foreground/40 sm:mt-10"
+          style={{ animationDelay: "500ms" }}
+        >
           Demo environment — sample records only. Data is shared live across all
           dashboards.
         </p>

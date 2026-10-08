@@ -7,12 +7,19 @@ import { AppShell } from "@/components/AppShell";
 import { PnpSidebar } from "@/components/PnpSidebar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useTicketStore } from "@/store/useTicketStore";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ClientOnly } from "@/components/ClientOnly";
 
 import { daysUntil, peso, shortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { TicketStatus } from "@/types";
+import type { Ticket, TicketStatus } from "@/types";
 
 export const Route = createFileRoute("/pnp")({
   head: () => ({
@@ -40,13 +47,11 @@ export const Route = createFileRoute("/pnp")({
 
 const filters = ["All", "Unpaid", "Paid", "Overdue", "Contested"] as const;
 
-const TicketRow = memo(({ t }: { t: any }) => {
+const TicketRow = memo(({ t }: { t: Ticket }) => {
   const left = daysUntil(t.dueDate);
   const late = t.status !== "Paid" && left < 0;
   return (
-    <tr
-      className="border-b border-border/60 last:border-0 hover:bg-muted/30 transition-colors"
-    >
+    <tr className="border-b border-border/60 last:border-0 hover:bg-muted/30 transition-colors">
       <td className="px-4 py-3 font-mono text-xs font-semibold">{t.id}</td>
       <td className="px-4 py-3">
         <p className="font-semibold">{t.plateNo}</p>
@@ -57,7 +62,7 @@ const TicketRow = memo(({ t }: { t: any }) => {
         <p className="font-mono text-xs text-muted-foreground">{t.licenseNo}</p>
       </td>
       <td className="max-w-64 px-4 py-3 text-xs text-muted-foreground">
-        {t.violations.map((v: any) => v.label).join(", ")}
+        {t.violations.map((v) => v.label).join(", ")}
       </td>
       <td className="px-4 py-3 text-xs">{shortDate(t.issuedAt)}</td>
       <td className="px-4 py-3 text-xs">
@@ -108,7 +113,7 @@ const TicketRow = memo(({ t }: { t: any }) => {
 });
 
 /* Mobile card variant for small screens */
-const TicketCard = memo(({ t }: { t: any }) => {
+const TicketCard = memo(({ t }: { t: Ticket }) => {
   const left = daysUntil(t.dueDate);
   const late = t.status !== "Paid" && left < 0;
   return (
@@ -118,15 +123,13 @@ const TicketCard = memo(({ t }: { t: any }) => {
           <p className="font-mono text-xs font-semibold text-muted-foreground">
             {t.id}
           </p>
-          <p className="mt-1 text-base font-bold tracking-tight">
-            {t.plateNo}
-          </p>
+          <p className="mt-1 text-base font-bold tracking-tight">{t.plateNo}</p>
           <p className="text-sm text-muted-foreground">{t.violatorName}</p>
         </div>
         <StatusBadge status={t.status} />
       </div>
       <div className="mt-3 text-xs text-muted-foreground">
-        {t.violations.map((v: any) => v.label).join(", ")}
+        {t.violations.map((v) => v.label).join(", ")}
       </div>
       <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm">
         <div className="flex flex-col gap-0.5">
@@ -182,22 +185,33 @@ function PnpPage() {
   }, [tickets, filter, query]);
 
   const stats = [
-    { label: "Total citations", value: String(tickets.length) },
+    {
+      label: "Total citations",
+      value: String(tickets.length),
+      description: "All issued citations across field units.",
+      tickets,
+    },
     {
       label: "Unpaid",
       value: String(tickets.filter((t) => t.status === "Unpaid").length),
+      description: "Citations awaiting payment.",
+      tickets: tickets.filter((t) => t.status === "Unpaid"),
     },
     {
       label: "Overdue",
       value: String(tickets.filter((t) => t.status === "Overdue").length),
+      description: "Overdue citations awaiting settlement.",
+      tickets: tickets.filter((t) => t.status === "Overdue"),
     },
     {
       label: "Collected",
       value: peso(
         tickets
           .filter((t) => t.status === "Paid")
-          .reduce((s, t) => s + t.payment!.amount, 0),
+          .reduce((s, t) => s + (t.payment?.amount ?? 0), 0),
       ),
+      description: "Recorded payments for paid citations.",
+      tickets: tickets.filter((t) => t.status === "Paid"),
     },
   ];
 
@@ -216,17 +230,61 @@ function PnpPage() {
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 stagger-children">
           {stats.map((s) => (
-            <div
-              key={s.label}
-              className="rounded-2xl border border-border bg-card p-4 shadow-panel transition-all hover:shadow-lift hover:-translate-y-0.5"
-            >
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                {s.label}
-              </p>
-              <p className="mt-1.5 font-display text-2xl font-bold tabular">
-                {s.value}
-              </p>
-            </div>
+            <Dialog key={s.label}>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-2xl border border-border bg-card p-4 text-left shadow-panel transition-all hover:shadow-lift hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <span className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {s.label}
+                  </span>
+                  <span className="mt-1.5 block font-display text-2xl font-bold tabular">
+                    {s.value}
+                  </span>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-h-[85dvh] w-[calc(100%-2rem)] max-w-2xl grid-rows-[auto_auto_minmax(0,1fr)] gap-4 overflow-hidden rounded-2xl p-4 sm:p-6">
+                <DialogHeader className="pr-6 text-left">
+                  <DialogTitle>{s.label}</DialogTitle>
+                  <DialogDescription>{s.description}</DialogDescription>
+                </DialogHeader>
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
+                  <p className="font-display text-2xl font-bold tabular">
+                    {s.value}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {s.tickets.length}{" "}
+                    {s.tickets.length === 1 ? "citation" : "citations"}
+                  </p>
+                </div>
+                <div className="min-h-0 space-y-3 overflow-y-auto overscroll-contain pr-1">
+                  {s.tickets.map((ticket) => (
+                    <div key={ticket.id} className="space-y-2">
+                      <TicketCard t={ticket} />
+                      {s.label === "Collected" && ticket.payment && (
+                        <div className="flex flex-wrap justify-between gap-2 px-4 pb-2 text-xs text-muted-foreground">
+                          <span>
+                            {ticket.payment.orNumber} · {ticket.payment.channel}{" "}
+                            · {shortDate(ticket.payment.paidAt)}
+                          </span>
+                          <span className="font-semibold tabular text-foreground">
+                            Paid {peso(ticket.payment.amount)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {s.tickets.length === 0 && (
+                    <p className="py-10 text-center text-sm text-muted-foreground">
+                      {s.label === "Collected"
+                        ? "No payments have been recorded yet."
+                        : `No ${s.label.toLowerCase()} citations.`}
+                    </p>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           ))}
         </div>
 

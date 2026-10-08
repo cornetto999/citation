@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Search,
   ShieldCheck,
@@ -65,7 +65,7 @@ function PortalPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <header className="bg-authority shadow-lift">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMC41IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCBmaWxsPSJ1cmwoI2cpIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIi8+PC9zdmc+')] opacity-60" />
         <div className="relative mx-auto flex max-w-3xl flex-wrap items-center gap-2 px-3 py-3 sm:gap-3 sm:px-6 sm:py-4">
@@ -90,7 +90,7 @@ function PortalPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-3 py-5 sm:px-6 sm:py-8">
+      <main className="on-brand mx-auto max-w-3xl px-3 py-5 sm:px-6 sm:py-8">
         {/* Lookup */}
         <form
           onSubmit={search}
@@ -277,89 +277,111 @@ function QrphPayment({
   onBack: () => void;
   onDone: () => void;
 }) {
-  const payTicket = useTicketStore((s) => s.payTicket);
+  const fetchTickets = useTicketStore((s) => s.fetchTickets);
   const [processing, setProcessing] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [linkId, setLinkId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const generateLink = async () => {
-    setProcessing(true);
-    setError(null);
-    try {
-      const secret = import.meta.env.VITE_PAYMONGO_SECRET_KEY;
-      const res = await fetch("https://api.paymongo.com/v1/links", {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          "content-type": "application/json",
-          authorization: "Basic " + btoa(secret + ":"),
-        },
-        body: JSON.stringify({
-          data: {
-            attributes: {
-              amount: ticket.totalFine * 100, // in centavos
-              description: `Citation Ticket ${ticket.id}`,
-              remarks: `Payment for plate ${ticket.plateNo}`,
-            },
-          },
-        }),
-      });
-      const data = await res.json();
-      if (data?.data?.attributes?.checkout_url) {
-        setCheckoutUrl(data.data.attributes.checkout_url);
-        setLinkId(data.data.id);
-      } else {
-        throw new Error("Failed to generate payment link");
-      }
-    } catch (e: any) {
-      setError(e.message || "Failed to generate link");
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  useEffect(() => {
-    // Generate link automatically on mount
-    generateLink();
-  }, []);
-
-  // Poll for status if we have a link ID
-  useEffect(() => {
-    if (!linkId) return;
-
-    let interval: ReturnType<typeof setInterval>;
-
-    const checkStatus = async () => {
+  const generateLink = useCallback(
+    async (signal?: AbortSignal) => {
+      setProcessing(true);
+      setError(null);
+      setCheckoutUrl(null);
+      setLinkId(null);
       try {
-        const secret = import.meta.env.VITE_PAYMONGO_SECRET_KEY;
-        const res = await fetch(`https://api.paymongo.com/v1/links/${linkId}`, {
-          method: "GET",
-          headers: {
-            accept: "application/json",
-            authorization: "Basic " + btoa(secret + ":"),
-          },
+        const res = await fetch("/api/payments/link", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ticketId: ticket.id }),
+          ...(signal ? { signal } : {}),
         });
         const data = await res.json();
-        if (data?.data?.attributes?.status === "paid") {
-          clearInterval(interval);
+        if (!res.ok)
+          throw new Error(
+            data.error || "Unable to create payment link. Please try again.",
+          );
+        if (!data.checkoutUrl || !data.linkId)
+          throw new Error("The payment service returned an invalid link.");
+        if (!signal?.aborted) {
+          setCheckoutUrl(data.checkoutUrl);
+          setLinkId(data.linkId);
+        }
+      } catch (e: unknown) {
+        if (!signal?.aborted) {
+          setError(
+            e instanceof Error && e.message !== "Failed to fetch"
+              ? e.message
+              : "Unable to connect to the payment service. Check your connection and try again.",
+          );
+        }
+      } finally {
+        if (!signal?.aborted) setProcessing(false);
+      }
+    },
+    [ticket.id],
+  );
 
-          // Post payment in our system
-          const paymentData = data.data.attributes.payments?.[0];
-          const channel = paymentData?.data?.attributes?.source?.type || "Online"; // e.g. qrph
-          const ref = paymentData?.data?.attributes?.balance_transaction_id || data.data.attributes.reference_number;
+  useEffect(() => {
+    const controller = new AbortController();
+    void generateLink(controller.signal);
+    return () => controller.abort();
+  }, [generateLink]);
 
-          await payTicket(ticket.id, "Online (PayMongo)", "QRPh / E-wallet", ref);
+  useEffect(() => {
+    if (!linkId) return;
+    const controller = new AbortController();
+    let checking = false;
+    let completed = false;
+    const checkStatus = async () => {
+      if (checking || completed || controller.signal.aborted) return;
+      checking = true;
+      try {
+        const res = await fetch("/api/payments/status", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ticketId: ticket.id, linkId }),
+          signal: controller.signal,
+        });
+        const data = await res.json();
+        if (!res.ok)
+          throw new Error(
+            data.error ||
+              "Unable to check payment status. Retrying automatically.",
+          );
+        if (controller.signal.aborted) return;
+        setError(null);
+        if (data.paid === true) {
+          await fetchTickets();
+          if (controller.signal.aborted) return;
+          const state = useTicketStore.getState();
+          if (state.error || !state.getTicket(ticket.id)?.payment) {
+            throw new Error(
+              "Payment confirmed. Retrying receipt sync; please do not pay again.",
+            );
+          }
+          completed = true;
           onDone();
         }
-      } catch (e) {
-        console.error("Error polling link status", e);
+      } catch (e: unknown) {
+        if (!controller.signal.aborted) {
+          setError(
+            e instanceof Error && e.message !== "Failed to fetch"
+              ? e.message
+              : "Unable to check payment status. Retrying automatically.",
+          );
+        }
+      } finally {
+        checking = false;
       }
     };
-
-    interval = setInterval(checkStatus, 3000);
-    return () => clearInterval(interval);
-  }, [linkId, ticket.id, onDone, payTicket]);
+    void checkStatus();
+    const interval = setInterval(() => void checkStatus(), 3000);
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
+  }, [linkId, ticket.id, onDone, fetchTickets]);
 
   return (
     <section className="mt-6 animate-scale-in rounded-2xl border border-border bg-card p-5 text-center shadow-panel sm:p-6">
@@ -374,24 +396,39 @@ function QrphPayment({
         <p className="font-display text-3xl font-bold tabular text-card-foreground">
           {peso(ticket.totalFine)}
         </p>
-        <p className="font-mono text-sm text-muted-foreground mt-1">Ticket {ticket.id}</p>
-        
+        <p className="font-mono text-sm text-muted-foreground mt-1">
+          Ticket {ticket.id}
+        </p>
+
         {error && (
           <div className="mt-4 p-3 bg-destructive/10 text-destructive text-sm rounded-lg border border-destructive/20">
             {error}
           </div>
         )}
 
+        {error && !checkoutUrl && (
+          <button
+            type="button"
+            onClick={() => void generateLink()}
+            disabled={processing}
+            className="mt-4 rounded-xl border border-border px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            Try again
+          </button>
+        )}
+
         {!checkoutUrl && !error && (
           <div className="mt-6 flex flex-col items-center gap-3">
             <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-            <p className="text-sm text-muted-foreground">Generating secure payment link...</p>
+            <p className="text-sm text-muted-foreground">
+              Generating secure payment link...
+            </p>
           </div>
         )}
 
         {checkoutUrl && (
           <div className="mt-6 w-full">
-            <a 
+            <a
               href={checkoutUrl}
               target="_blank"
               rel="noreferrer"
@@ -400,8 +437,8 @@ function QrphPayment({
               Open Payment Page
             </a>
             <p className="mt-4 text-xs text-muted-foreground max-w-xs mx-auto">
-              Please complete the payment in the secure tab that opens. 
-              This page will automatically update once the payment is successful.
+              Please complete the payment in the secure tab that opens. This
+              page will automatically update once the payment is successful.
             </p>
           </div>
         )}
@@ -427,9 +464,7 @@ function Receipt({ ticket, onReset }: { ticket: Ticket; onReset: () => void }) {
     <section className="mt-6 animate-fade-in-up rounded-2xl border border-border bg-card p-5 shadow-panel sm:p-6">
       <div className="flex items-center gap-2 text-paid-foreground">
         <CheckCircle2 className="size-6" />
-        <h2 className="font-display text-lg font-bold">
-          Payment successful
-        </h2>
+        <h2 className="font-display text-lg font-bold">Payment successful</h2>
       </div>
 
       <div className="mt-4 rounded-xl border-2 border-dashed border-border bg-muted/30 p-5 font-mono text-sm text-card-foreground">
