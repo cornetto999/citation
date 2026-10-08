@@ -30,9 +30,7 @@ export function StatusBadge({
         className,
       )}
     >
-      <span
-        className={cn("size-1.5 rounded-full", dotStyles[status])}
-      />
+      <span className={cn("size-1.5 rounded-full", dotStyles[status])} />
       {status}
     </span>
   );

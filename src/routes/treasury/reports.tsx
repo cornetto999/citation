@@ -32,7 +32,10 @@ function DatePicker({
   label: string;
   date: Date | undefined;
   onSelect: (d: Date | undefined) => void;
-  disabled?: { after?: Date; before?: Date };
+  disabled?:
+    | import("react-day-picker").Matcher
+    | import("react-day-picker").Matcher[]
+    | undefined;
 }) {
   return (
     <Popover>
@@ -55,7 +58,6 @@ function DatePicker({
           selected={date}
           onSelect={onSelect}
           disabled={disabled}
-          initialFocus
         />
       </PopoverContent>
     </Popover>
@@ -133,14 +135,19 @@ function TreasuryReportsPage() {
             label="From date"
             date={fromDate}
             onSelect={setFromDate}
-            disabled={{ after: toDate ?? new Date() }}
+            disabled={toDate ? { after: toDate } : undefined}
           />
           <span className="text-sm text-muted-foreground">to</span>
           <DatePicker
             label="To date"
             date={toDate}
             onSelect={setToDate}
-            disabled={{ before: fromDate, after: new Date() }}
+            disabled={
+              [
+                fromDate ? { before: fromDate } : null,
+                { after: new Date() },
+              ].filter(Boolean) as import("react-day-picker").Matcher[]
+            }
           />
           <Button
             variant="ghost"

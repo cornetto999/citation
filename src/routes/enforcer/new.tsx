@@ -132,7 +132,8 @@ function EnforcerPage() {
     setForm((f) => ({ ...f, [key]: value }));
 
   const violationMatches = useMemo(() => {
-    const q = violationQuery.toLowerCase();
+    const q = violationQuery.trim().toLowerCase();
+    if (!q) return [];
     return VIOLATION_CODES.filter(
       (v) =>
         !picked.some((p) => p.code === v.code) &&
@@ -349,7 +350,9 @@ function EnforcerPage() {
             <Field label="Year" hint="Optional">
               <input
                 value={form.year}
-                onChange={(e) => set("year", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                onChange={(e) =>
+                  set("year", e.target.value.replace(/\D/g, "").slice(0, 4))
+                }
                 disabled={!form.vehicleType}
                 placeholder="e.g. 2019"
                 inputMode="numeric"

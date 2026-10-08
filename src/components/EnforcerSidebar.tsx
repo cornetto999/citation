@@ -87,14 +87,18 @@ export function EnforcerSidebar() {
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure you want to sign out?</AlertDialogTitle>
+              <AlertDialogTitle>
+                Are you sure you want to sign out?
+              </AlertDialogTitle>
               <AlertDialogDescription>
                 You will need to log in again to access the enforcer portal.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleSignOut}>Sign out</AlertDialogAction>
+              <AlertDialogAction onClick={handleSignOut}>
+                Sign out
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

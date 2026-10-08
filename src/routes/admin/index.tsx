@@ -106,10 +106,10 @@ function AdminDashboard() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-bold text-foreground">
           Dashboard Overview
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Monitor your municipality's real-time apprehension and revenue
           metrics.
         </p>
@@ -118,9 +118,9 @@ function AdminDashboard() {
       {/* A. Executive KPI Cards (Top Row - 4 columns) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Total Apprehensions */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div className="bg-card p-5 rounded-2xl border border-border shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-slate-500">
+            <h3 className="text-sm font-medium text-muted-foreground">
               Total Apprehensions
             </h3>
             <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
@@ -128,14 +128,14 @@ function AdminDashboard() {
             </div>
           </div>
           <div>
-            <p className="text-2xl font-bold text-slate-900">
+            <p className="text-2xl font-bold text-foreground">
               {metrics.todayCount}
             </p>
             <div className="flex items-center gap-1.5 mt-2">
               <span className="flex items-center text-xs font-medium text-emerald-600">
                 <TrendingUp className="size-3.5 mr-1" />+
-                {metrics.apprehensionsTrend >= 0
-                  ? metrics.apprehensionsTrend
+                {(metrics.apprehensionsTrend ?? 0) >= 0
+                  ? (metrics.apprehensionsTrend ?? 0)
                   : 0}
                 % vs yesterday
               </span>
@@ -144,9 +144,9 @@ function AdminDashboard() {
         </div>
 
         {/* Collection Rate */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div className="bg-card p-5 rounded-2xl border border-border shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-slate-500">
+            <h3 className="text-sm font-medium text-muted-foreground">
               Collection Rate
             </h3>
             <div className="bg-emerald-50 p-2 rounded-lg text-emerald-600">
@@ -154,19 +154,19 @@ function AdminDashboard() {
             </div>
           </div>
           <div>
-            <p className="text-2xl font-bold text-slate-900">
+            <p className="text-2xl font-bold text-foreground">
               {metrics.collectionRate}%
             </p>
-            <p className="text-xs text-slate-400 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Percentage paid vs. pending
             </p>
           </div>
         </div>
 
         {/* Total Revenue */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div className="bg-card p-5 rounded-2xl border border-border shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-slate-500">
+            <h3 className="text-sm font-medium text-muted-foreground">
               Total Revenue
             </h3>
             <div className="bg-indigo-50 p-2 rounded-lg text-indigo-600">
@@ -174,19 +174,19 @@ function AdminDashboard() {
             </div>
           </div>
           <div>
-            <p className="text-2xl font-bold text-slate-900">
+            <p className="text-2xl font-bold text-foreground">
               ₱{metrics.totalRevenue.toLocaleString()}
             </p>
-            <p className="text-xs text-slate-400 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Across all payment channels
             </p>
           </div>
         </div>
 
         {/* Pending Payments */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div className="bg-card p-5 rounded-2xl border border-border shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-slate-500">
+            <h3 className="text-sm font-medium text-muted-foreground">
               Pending Payments
             </h3>
             <div className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-md text-xs font-bold">
@@ -194,14 +194,14 @@ function AdminDashboard() {
             </div>
           </div>
           <div>
-            <p className="text-2xl font-bold text-slate-900">
+            <p className="text-2xl font-bold text-foreground">
               ₱
               {tickets
                 .filter((t) => t.status !== "Paid")
                 .reduce((s, t) => s + t.totalFine, 0)
                 .toLocaleString()}
             </p>
-            <p className="text-xs text-slate-400 mt-2">Total Pending</p>
+            <p className="text-xs text-muted-foreground mt-2">Total Pending</p>
           </div>
         </div>
       </div>
@@ -209,8 +209,8 @@ function AdminDashboard() {
       {/* B. Revenue & Ticket Trends (Middle Row - 2 columns) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Ticket Trends (7 Days) */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900 mb-6">
+        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
+          <h2 className="text-lg font-semibold text-foreground mb-6">
             Tickets Issued vs Paid (7 Days)
           </h2>
           <div className="h-72">
@@ -265,8 +265,8 @@ function AdminDashboard() {
         </div>
 
         {/* Payment Methods */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900 mb-6">
+        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
+          <h2 className="text-lg font-semibold text-foreground mb-6">
             Payment Methods
           </h2>
           <div className="h-72 flex items-center justify-center">
@@ -307,7 +307,7 @@ function AdminDashboard() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-slate-400 text-sm">
+              <p className="text-muted-foreground text-sm">
                 No payment data available yet.
               </p>
             )}
@@ -318,9 +318,9 @@ function AdminDashboard() {
       {/* Search & Settle Citations */}
       <div
         id="citations"
-        className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"
+        className="bg-card p-6 rounded-2xl border border-border shadow-sm"
       >
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">
+        <h2 className="text-lg font-semibold text-foreground mb-4">
           Search & Settle Citations
         </h2>
 
@@ -331,12 +331,12 @@ function AdminDashboard() {
               placeholder="Search by Ticket ID or Plate Number"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white pl-4 pr-10 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 transition-colors"
+              className="w-full rounded-lg border border-border bg-card pl-4 pr-10 py-2 text-sm text-foreground outline-none focus:border-slate-400 transition-colors"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
               >
                 <X className="size-4" />
               </button>
@@ -347,9 +347,9 @@ function AdminDashboard() {
           </button>
         </div>
 
-        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+        <div className="overflow-x-auto border border-border rounded-xl">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+            <thead className="bg-muted text-muted-foreground border-b border-border">
               <tr>
                 <th className="px-4 py-3 font-medium">Ticket ID</th>
                 <th className="px-4 py-3 font-medium">Date</th>
@@ -372,17 +372,17 @@ function AdminDashboard() {
                     }
                   }}
                   tabIndex={0}
-                  className={`cursor-pointer transition-colors hover:bg-slate-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 ${selectedTicket?.id === ticket.id ? "bg-indigo-50/50 border-l-4 border-indigo-600" : "border-l-4 border-transparent"}`}
+                  className={`cursor-pointer transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 ${selectedTicket?.id === ticket.id ? "bg-indigo-50/50 border-l-4 border-indigo-600" : "border-l-4 border-transparent"}`}
                 >
-                  <td className="px-4 py-3 font-medium text-slate-900">
+                  <td className="px-4 py-3 font-medium text-foreground">
                     {ticket.id.slice(0, 8).toUpperCase()}...
                   </td>
-                  <td className="px-4 py-3 text-slate-500">
+                  <td className="px-4 py-3 text-muted-foreground">
                     {shortDate(ticket.issuedAt)}
                   </td>
-                  <td className="px-4 py-3 text-slate-900">{ticket.plateNo}</td>
+                  <td className="px-4 py-3 text-foreground">{ticket.plateNo}</td>
                   <td
-                    className="px-4 py-3 text-slate-600 max-w-[200px] truncate"
+                    className="px-4 py-3 text-muted-foreground max-w-[200px] truncate"
                     title={ticket.violations.map((v) => v.label).join(", ")}
                   >
                     {ticket.violations[0]?.label || "Unknown"}{" "}
@@ -398,7 +398,7 @@ function AdminDashboard() {
                             ? "bg-rose-100 text-rose-700"
                             : ticket.status === "Contested"
                               ? "bg-amber-100 text-amber-700"
-                              : "bg-slate-100 text-slate-700"
+                              : "bg-muted text-foreground"
                       }`}
                     >
                       {ticket.status}
@@ -419,13 +419,13 @@ function AdminDashboard() {
                         className={`inline-flex items-center justify-center rounded-lg px-4 py-1.5 text-xs font-bold transition-colors ${
                           selectedTicket?.id === ticket.id
                             ? "bg-slate-900 text-white hover:bg-slate-800"
-                            : "border border-slate-300 text-slate-700 hover:bg-slate-100 bg-white"
+                            : "border border-border text-foreground hover:bg-muted bg-card"
                         }`}
                       >
                         Settle
                       </button>
                     ) : (
-                      <span className="text-slate-400 text-xl font-bold leading-none">
+                      <span className="text-muted-foreground text-xl font-bold leading-none">
                         ...
                       </span>
                     )}
@@ -436,7 +436,7 @@ function AdminDashboard() {
                 <tr>
                   <td
                     colSpan={7}
-                    className="px-4 py-8 text-center text-slate-500"
+                    className="px-4 py-8 text-center text-muted-foreground"
                   >
                     No citations found matching your search.
                   </td>
@@ -450,19 +450,19 @@ function AdminDashboard() {
       {/* C. Operational Feeds (Bottom Row - 2 columns) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Live Command Feed */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
+        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm lg:col-span-2">
           <div className="flex items-center gap-2 mb-4">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
             </span>
-            <h2 className="text-lg font-semibold text-slate-900">
+            <h2 className="text-lg font-semibold text-foreground">
               Live Command Feed
             </h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="text-slate-500 border-b border-slate-200">
+              <thead className="text-muted-foreground border-b border-border">
                 <tr>
                   <th className="px-4 py-3 font-medium">Time</th>
                   <th className="px-4 py-3 font-medium">Plate No</th>
@@ -476,22 +476,22 @@ function AdminDashboard() {
                   <tr
                     key={ticket.id}
                     onClick={() => handleFeedRowClick(ticket)}
-                    className="hover:bg-slate-50 transition-colors cursor-pointer group"
+                    className="hover:bg-muted transition-colors cursor-pointer group"
                   >
-                    <td className="px-4 py-3 text-slate-500">
+                    <td className="px-4 py-3 text-muted-foreground">
                       {new Date(ticket.issuedAt).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-900 group-hover:text-blue-600 transition-colors">
+                    <td className="px-4 py-3 font-medium text-foreground group-hover:text-blue-600 transition-colors">
                       {ticket.plateNo}
                     </td>
-                    <td className="px-4 py-3 text-slate-500">
+                    <td className="px-4 py-3 text-muted-foreground">
                       {ticket.issuedBy}
                     </td>
                     <td
-                      className="px-4 py-3 text-slate-600 max-w-[200px] truncate"
+                      className="px-4 py-3 text-muted-foreground max-w-[200px] truncate"
                       title={ticket.violations.map((v) => v.label).join(", ")}
                     >
                       {ticket.violations[0]?.label || "Unknown"}{" "}
@@ -519,7 +519,7 @@ function AdminDashboard() {
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-4 py-8 text-center text-slate-500"
+                      className="px-4 py-8 text-center text-muted-foreground"
                     >
                       No live activity.
                     </td>
@@ -531,8 +531,8 @@ function AdminDashboard() {
         </div>
 
         {/* Enforcer Leaderboard */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
             <Trophy className="size-5 text-amber-500" />
             Top Enforcers Today
           </h2>
@@ -541,7 +541,7 @@ function AdminDashboard() {
               metrics.leaderboard.map((enforcer, index) => (
                 <div
                   key={enforcer.name}
-                  className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100"
+                  className="flex items-center justify-between p-3 rounded-xl bg-muted border border-border"
                 >
                   <div className="flex items-center gap-3">
                     <div
@@ -549,23 +549,23 @@ function AdminDashboard() {
                         index === 0
                           ? "bg-amber-100 text-amber-600"
                           : index === 1
-                            ? "bg-slate-200 text-slate-600"
+                            ? "bg-slate-200 text-muted-foreground"
                             : "bg-orange-100 text-orange-600"
                       }`}
                     >
                       #{index + 1}
                     </div>
-                    <span className="font-medium text-slate-900">
+                    <span className="font-medium text-foreground">
                       {enforcer.name}
                     </span>
                   </div>
-                  <div className="text-sm font-semibold text-slate-600 bg-white px-2 py-1 rounded shadow-sm border border-slate-100">
+                  <div className="text-sm font-semibold text-muted-foreground bg-card px-2 py-1 rounded shadow-sm border border-border">
                     {enforcer.count} tickets
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-slate-500 flex flex-col items-center gap-2">
+              <div className="text-center py-8 text-muted-foreground flex flex-col items-center gap-2">
                 <Clock className="size-8 text-slate-300" />
                 <p>No apprehensions yet today.</p>
               </div>
@@ -576,7 +576,7 @@ function AdminDashboard() {
 
       {/* Live Command Feed — Ticket Detail Modal */}
       <Dialog open={feedModalOpen} onOpenChange={setFeedModalOpen}>
-        <DialogContent className="max-w-md bg-white">
+        <DialogContent className="max-w-md bg-card">
           <DialogHeader>
             <DialogTitle className="font-mono text-base">
               {feedTicket?.id}
@@ -602,58 +602,58 @@ function AdminDashboard() {
               {/* Details grid */}
               <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
                     Violator
                   </dt>
-                  <dd className="mt-0.5 font-semibold text-slate-900">
+                  <dd className="mt-0.5 font-semibold text-foreground">
                     {feedTicket.violatorName}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
                     Plate No.
                   </dt>
-                  <dd className="mt-0.5 font-semibold text-slate-900">
+                  <dd className="mt-0.5 font-semibold text-foreground">
                     {feedTicket.plateNo}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
                     License No.
                   </dt>
-                  <dd className="mt-0.5 font-semibold text-slate-900">
+                  <dd className="mt-0.5 font-semibold text-foreground">
                     {feedTicket.licenseNo}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
                     Vehicle
                   </dt>
-                  <dd className="mt-0.5 font-semibold text-slate-900">
+                  <dd className="mt-0.5 font-semibold text-foreground">
                     {feedTicket.vehicleType}
                   </dd>
                 </div>
                 <div className="col-span-2">
-                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
                     Location
                   </dt>
-                  <dd className="mt-0.5 font-semibold text-slate-900">
+                  <dd className="mt-0.5 font-semibold text-foreground">
                     {feedTicket.location}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
                     Issued By
                   </dt>
-                  <dd className="mt-0.5 font-semibold text-slate-900">
+                  <dd className="mt-0.5 font-semibold text-foreground">
                     {feedTicket.issuedBy}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
                     Issued At
                   </dt>
-                  <dd className="mt-0.5 font-semibold text-slate-900">
+                  <dd className="mt-0.5 font-semibold text-foreground">
                     {new Date(feedTicket.issuedAt).toLocaleString([], {
                       dateStyle: "medium",
                       timeStyle: "short",
@@ -661,18 +661,18 @@ function AdminDashboard() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
                     Due Date
                   </dt>
-                  <dd className="mt-0.5 font-semibold text-slate-900">
+                  <dd className="mt-0.5 font-semibold text-foreground">
                     {shortDate(feedTicket.dueDate)}
                   </dd>
                 </div>
               </dl>
 
               {/* Violations breakdown */}
-              <div className="rounded-lg bg-slate-50 border border-slate-200 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
+              <div className="rounded-lg bg-muted border border-border p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                   Violations
                 </p>
                 <ul className="space-y-1.5">
@@ -681,21 +681,21 @@ function AdminDashboard() {
                       key={v.code}
                       className="flex items-center justify-between"
                     >
-                      <span className="text-slate-600">
-                        <span className="font-mono text-xs text-slate-400 mr-1">
+                      <span className="text-muted-foreground">
+                        <span className="font-mono text-xs text-muted-foreground mr-1">
                           {v.code}
                         </span>
                         {v.label}
                       </span>
-                      <span className="font-semibold text-slate-900 tabular-nums">
+                      <span className="font-semibold text-foreground tabular-nums">
                         {peso(v.fine)}
                       </span>
                     </li>
                   ))}
                 </ul>
-                <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3">
-                  <span className="font-bold text-slate-900">Total Fine</span>
-                  <span className="text-lg font-bold text-slate-900 tabular-nums">
+                <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+                  <span className="font-bold text-foreground">Total Fine</span>
+                  <span className="text-lg font-bold text-foreground tabular-nums">
                     {peso(feedTicket.totalFine)}
                   </span>
                 </div>
@@ -703,10 +703,10 @@ function AdminDashboard() {
 
               {feedTicket.remarks && (
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-400 font-medium mb-1">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">
                     Remarks
                   </p>
-                  <p className="text-slate-700">{feedTicket.remarks}</p>
+                  <p className="text-foreground">{feedTicket.remarks}</p>
                 </div>
               )}
             </div>
@@ -718,15 +718,15 @@ function AdminDashboard() {
       <Sheet open={settleModalOpen} onOpenChange={setSettleModalOpen}>
         <SheetContent
           side="right"
-          className="w-[400px] sm:max-w-md p-0 flex flex-col h-full bg-white border-l border-slate-200"
+          className="w-[400px] sm:max-w-md p-0 flex flex-col h-full bg-card border-l border-border"
         >
           {selectedTicket && (
             <div className="flex flex-col h-full">
-              <div className="px-6 py-5 border-b border-slate-200 bg-white">
-                <h2 className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-2">
+              <div className="px-6 py-5 border-b border-border bg-card">
+                <h2 className="text-xs font-bold text-muted-foreground tracking-wider uppercase mb-2">
                   PROCESS SETTLEMENT:
                 </h2>
-                <p className="text-sm font-semibold text-slate-900">
+                <p className="text-sm font-semibold text-foreground">
                   Ticket #{selectedTicket.id.slice(0, 8).toUpperCase()} (Plate:{" "}
                   {selectedTicket.plateNo})
                 </p>
@@ -734,7 +734,7 @@ function AdminDashboard() {
 
               <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900 mb-4">
+                  <h3 className="text-sm font-semibold text-foreground mb-4">
                     Violation Summary
                   </h3>
                   <div className="space-y-3">
@@ -743,13 +743,13 @@ function AdminDashboard() {
                         key={v.code}
                         className="flex justify-between text-sm"
                       >
-                        <span className="text-slate-700">{v.label}</span>
-                        <span className="font-medium text-slate-900">
+                        <span className="text-foreground">{v.label}</span>
+                        <span className="font-medium text-foreground">
                           {v.fine}
                         </span>
                       </div>
                     ))}
-                    <div className="flex justify-between text-sm font-bold pt-3 border-t border-slate-200">
+                    <div className="flex justify-between text-sm font-bold pt-3 border-t border-border">
                       <span>Subtotal</span>
                       <span>
                         {selectedTicket.violations.reduce(
@@ -763,14 +763,14 @@ function AdminDashboard() {
 
                 {selectedTicket.status === "Overdue" && (
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900 mb-4">
+                    <h3 className="text-sm font-semibold text-foreground mb-4">
                       Penalties & Surcharges
                     </h3>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-700">
+                      <span className="text-foreground">
                         Overdue Surcharge (15 days)
                       </span>
-                      <span className="font-medium text-slate-900">
+                      <span className="font-medium text-foreground">
                         {selectedTicket.totalFine -
                           selectedTicket.violations.reduce(
                             (s, v) => s + v.fine,
@@ -781,17 +781,17 @@ function AdminDashboard() {
                   </div>
                 )}
 
-                <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
-                  <span className="font-bold text-slate-900">
+                <div className="flex justify-between items-center bg-muted p-4 rounded-xl border border-border">
+                  <span className="font-bold text-foreground">
                     Total Amount Due:
                   </span>
-                  <span className="text-2xl font-bold text-slate-900 tabular-nums">
+                  <span className="text-2xl font-bold text-foreground tabular-nums">
                     PHP {selectedTicket.totalFine.toLocaleString()}
                   </span>
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900 mb-3">
+                  <h3 className="text-sm font-semibold text-foreground mb-3">
                     Select Payment Method
                   </h3>
                   <div className="flex gap-2">
@@ -801,18 +801,18 @@ function AdminDashboard() {
                       }
                       className={`flex-1 py-2 text-sm font-semibold rounded-lg border transition-all ${
                         paymentMethod === "Cash (Over-the-counter)"
-                          ? "bg-slate-100 border-slate-300 text-slate-900"
-                          : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                          ? "bg-muted border-border text-foreground"
+                          : "bg-card border-border text-muted-foreground hover:bg-muted"
                       }`}
                     >
                       Cash (OTC)
                     </button>
                     <button
-                      onClick={() => setPaymentMethod("Online")} // GCash as fallback channel
+                      onClick={() => setPaymentMethod("GCash")} // GCash as fallback channel
                       className={`flex-1 py-2 text-sm font-semibold rounded-lg border transition-all ${
-                        paymentMethod === "Online"
-                          ? "bg-slate-100 border-slate-300 text-slate-900"
-                          : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                        paymentMethod === "GCash"
+                          ? "bg-muted border-border text-foreground"
+                          : "bg-card border-border text-muted-foreground hover:bg-muted"
                       }`}
                     >
                       GCash
@@ -821,8 +821,8 @@ function AdminDashboard() {
                       onClick={() => setPaymentMethod("QRPh")}
                       className={`flex-1 py-2 text-sm font-semibold rounded-lg border transition-all ${
                         paymentMethod === "QRPh"
-                          ? "bg-slate-100 border-slate-300 text-slate-900"
-                          : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                          ? "bg-muted border-border text-foreground"
+                          : "bg-card border-border text-muted-foreground hover:bg-muted"
                       }`}
                     >
                       Maya
@@ -836,19 +836,19 @@ function AdminDashboard() {
                     value={orNumber}
                     onChange={(e) => setOrNumber(e.target.value)}
                     placeholder="Enter Official Receipt (OR) Number"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
-              <div className="p-6 border-t border-slate-200 bg-white space-y-3">
+              <div className="p-6 border-t border-border bg-card space-y-3">
                 <button
                   onClick={handleConfirmSettle}
                   className="w-full flex items-center justify-center rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-sm"
                 >
                   Confirm & Mark as Paid
                 </button>
-                <button className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                <button className="w-full rounded-xl border border-border bg-card px-4 py-3.5 text-sm font-bold text-foreground hover:bg-muted transition-colors">
                   Generate Statement
                 </button>
               </div>

@@ -16,7 +16,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminLayout() {
-    const { user } = useAuthStore();
+  const { user } = useAuthStore();
   return (
     <AppShell
       title="Admin Portal"

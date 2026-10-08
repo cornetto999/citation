@@ -79,3 +79,10 @@ INSERT INTO public.users (name, credential, role, unit) VALUES
 ('Juan Reyes', 'juan.reyes@mail.com', 'violator', 'Public Citizen'),
 ('Admin User', 'admin@gitagum.gov.ph', 'admin', 'LGU Administrator')
 ON CONFLICT (credential) DO NOTHING;
+
+-- Performance Indexes
+CREATE INDEX IF NOT EXISTS idx_tickets_status ON public.tickets(status);
+CREATE INDEX IF NOT EXISTS idx_tickets_issued_at ON public.tickets(issued_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tickets_issued_by ON public.tickets(issued_by);
+CREATE INDEX IF NOT EXISTS idx_payments_ticket_id ON public.payments(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_payments_paid_at ON public.payments(paid_at DESC);

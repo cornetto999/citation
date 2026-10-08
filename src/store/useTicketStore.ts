@@ -14,8 +14,26 @@ export interface NewTicketInput {
   issuedBy: string;
 }
 
+interface PaymentRow {
+  id: string;
+  ticket_id: string;
+  amount: number;
+  channel: string;
+  paid_at: string;
+  received_by: string;
+  or_number: string;
+}
+
 interface TicketState {
   tickets: Ticket[];
+  /** True while a fetch is in flight. */
+  loading: boolean;
+  /** True once the first fetch has completed (success or failure). */
+  loaded: boolean;
+  /** Last error message from fetching, if any. */
+  error: string | null;
+  /** ISO timestamp of the last successful sync. */
+  lastSyncedAt: string | null;
   fetchTickets: () => Promise<void>;
   addTicket: (input: NewTicketInput) => Promise<Ticket>;
   payTicket: (
@@ -42,8 +60,13 @@ const nextTicketId = (tickets: Ticket[]) => {
 
 export const useTicketStore = create<TicketState>((set, get) => ({
   tickets: [],
+  loading: false,
+  loaded: false,
+  error: null,
+  lastSyncedAt: null,
 
   fetchTickets: async () => {
+    set({ loading: true });
     const { data: ticketsData, error: ticketsError } = await supabase
       .from("tickets")
       .select("*")
@@ -51,6 +74,7 @@ export const useTicketStore = create<TicketState>((set, get) => ({
 
     if (ticketsError) {
       console.error("Error fetching tickets:", ticketsError);
+      set({ loading: false, loaded: true, error: ticketsError.message });
       return;
     }
 
@@ -62,8 +86,13 @@ export const useTicketStore = create<TicketState>((set, get) => ({
       console.error("Error fetching payments:", paymentsError);
     }
 
-    const tickets: Ticket[] = ticketsData.map((t) => {
-      const paymentData = paymentsData?.find((p) => p.ticket_id === t.id);
+    const paymentsMap = new Map<string, PaymentRow>();
+    for (const p of (paymentsData ?? []) as PaymentRow[]) {
+      paymentsMap.set(p.ticket_id, p);
+    }
+
+    const tickets: Ticket[] = (ticketsData ?? []).map((t) => {
+      const paymentData = paymentsMap.get(t.id);
       let payment: Payment | undefined;
       if (paymentData) {
         payment = {
@@ -99,7 +128,13 @@ export const useTicketStore = create<TicketState>((set, get) => ({
       };
     });
 
-    set({ tickets });
+    set({
+      tickets,
+      loading: false,
+      loaded: true,
+      error: null,
+      lastSyncedAt: new Date().toISOString(),
+    });
   },
 
   addTicket: async (input) => {
@@ -220,21 +255,22 @@ export const useTicketStore = create<TicketState>((set, get) => ({
     ),
 
   subscribeToRealtime: () => {
-    const existingChannel = supabase.getChannels().find(c => c.topic === 'realtime:schema-db-changes');
+    const existingChannel = supabase
+      .getChannels()
+      .find((c) => c.topic === "realtime:schema-db-changes");
     if (existingChannel) return;
 
     supabase
-      .channel('schema-db-changes')
+      .channel("schema-db-changes")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
+          event: "*",
+          schema: "public",
         },
-        (payload) => {
-          console.log('Realtime update received!', payload);
+        () => {
           get().fetchTickets(); // Refetch whenever any ticket or payment changes
-        }
+        },
       )
       .subscribe();
   },

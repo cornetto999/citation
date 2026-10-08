@@ -24,7 +24,7 @@ function Metric({
   detail: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-panel transition-all hover:shadow-lift hover:-translate-y-0.5">
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-panel transition-lift hover-lift">
       <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
         {label}
       </p>
