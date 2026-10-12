@@ -2,7 +2,6 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { ShieldCheck, Radio, Landmark, LogIn, Eye, EyeOff } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { supabase } from "@/lib/supabase";
 import type { Role } from "@/types";
 
 export const Route = createFileRoute("/login")({
@@ -104,6 +103,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const fillAccount = (account: DemoAccount) => {
     setCredential(account.credential);
@@ -114,51 +114,40 @@ function LoginPage() {
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const normalizedCredential = credential.trim().toLowerCase();
-    const account = ACCOUNTS.find(
-      (candidate) =>
-        candidate.credential.toLowerCase() === normalizedCredential,
-    );
-
-    const { data: user, error: dbError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("credential", normalizedCredential)
-      .maybeSingle();
-
-    if (dbError) {
-      setError("Error connecting to database.");
-      console.error(dbError);
+    if (submitting) return;
+    setError("");
+    if (!credential.trim() || !password) {
+      setError("Enter your badge number or email and password.");
       return;
     }
-
-    if (!user && !account) {
-      setError("User not found in database.");
-      return;
-    }
-
-    if (user) {
-      if (user.password !== password) {
-        setError("Invalid password.");
+    setSubmitting(true);
+    try {
+      const normalizedCredential = credential.trim().toLowerCase();
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ credential: normalizedCredential, password }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.user) {
+        setError(result.error || "Unable to sign in. Please try again.");
         return;
       }
-    } else if (account) {
-      if (account.password !== password) {
-        setError("Invalid password for demo account.");
-        return;
-      }
+      const sessionUser = result.user;
+
+      signIn({
+        key: sessionUser.key,
+        name: sessionUser.name,
+        role: sessionUser.role,
+        unit: sessionUser.unit,
+        credential: sessionUser.credential,
+      });
+      await router.navigate({ to: roleDestination(sessionUser.role) });
+    } catch {
+      setError("Unable to sign in. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
-
-    const sessionUser = user ?? account;
-
-    signIn({
-      key: sessionUser.role,
-      name: sessionUser.name,
-      role: sessionUser.role,
-      unit: sessionUser.unit,
-      credential: sessionUser.credential,
-    });
-    await router.navigate({ to: roleDestination(sessionUser.role) });
   };
 
   return (
@@ -193,6 +182,7 @@ function LoginPage() {
           </label>
           <input
             id="credential"
+            required
             value={credential}
             onChange={(e) => setCredential(e.target.value)}
             autoComplete="username"
@@ -209,6 +199,7 @@ function LoginPage() {
           <div className="relative mt-2">
             <input
               id="password"
+              required
               type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -231,17 +222,22 @@ function LoginPage() {
           </div>
 
           {error && (
-            <p className="mt-4 rounded-xl bg-destructive/15 border border-destructive/20 px-4 py-2.5 text-sm font-medium text-destructive animate-scale-in">
+            <p
+              role="alert"
+              className="mt-4 rounded-xl bg-destructive/15 border border-destructive/20 px-4 py-2.5 text-sm font-medium text-destructive animate-scale-in"
+            >
               {error}
             </p>
           )}
 
           <button
             type="submit"
+            disabled={submitting}
+            aria-busy={submitting}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-sidebar-primary px-4 py-3.5 text-sm font-bold text-sidebar-primary-foreground shadow-glow transition-all hover:brightness-110 hover:shadow-lg active:scale-[0.98]"
           >
             <LogIn className="size-4" />
-            Sign in
+            {submitting ? "Signing in…" : "Sign in"}
           </button>
         </form>
 

@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Activity, ShieldAlert, LogOut } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
@@ -22,9 +23,13 @@ export function PnpSidebar() {
   const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
 
-  const handleSignOut = () => {
-    signOut();
-    navigate({ to: "/login" });
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      await navigate({ to: "/login" });
+    } catch {
+      toast.error("Unable to sign out. Check your connection and try again.");
+    }
   };
 
   return (

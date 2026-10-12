@@ -89,12 +89,16 @@ function AdminDashboard() {
   const handleConfirmSettle = async () => {
     if (!selectedTicket || !user) return;
     try {
-      await payTicket(
+      const payment = await payTicket(
         selectedTicket.id,
         paymentMethod as Exclude<PaymentChannel, "Unpaid">,
         user.name,
         orNumber || undefined,
       );
+      if (!payment) {
+        toast.error("This citation is already paid or is no longer available.");
+        return;
+      }
       toast.success("Citation settled successfully!");
       setSettleModalOpen(false);
       setSelectedTicket(null);
@@ -380,7 +384,9 @@ function AdminDashboard() {
                   <td className="px-4 py-3 text-muted-foreground">
                     {shortDate(ticket.issuedAt)}
                   </td>
-                  <td className="px-4 py-3 text-foreground">{ticket.plateNo}</td>
+                  <td className="px-4 py-3 text-foreground">
+                    {ticket.plateNo}
+                  </td>
                   <td
                     className="px-4 py-3 text-muted-foreground max-w-[200px] truncate"
                     title={ticket.violations.map((v) => v.label).join(", ")}

@@ -47,6 +47,8 @@ interface TicketState {
   subscribeToRealtime: () => void;
 }
 
+const paymentsInFlight = new Set<string>();
+
 const pad = (n: number) => String(n).padStart(4, "0");
 
 const nextTicketId = (tickets: Ticket[]) => {
@@ -66,75 +68,89 @@ export const useTicketStore = create<TicketState>((set, get) => ({
   lastSyncedAt: null,
 
   fetchTickets: async () => {
-    set({ loading: true });
-    const { data: ticketsData, error: ticketsError } = await supabase
-      .from("tickets")
-      .select("*")
-      .order("issued_at", { ascending: false });
+    if (get().loading) return;
+    set({ loading: true, error: null });
+    try {
+      const { data: ticketsData, error: ticketsError } = await supabase
+        .from("tickets")
+        .select("*")
+        .order("issued_at", { ascending: false });
 
-    if (ticketsError) {
-      console.error("Error fetching tickets:", ticketsError);
-      set({ loading: false, loaded: true, error: ticketsError.message });
-      return;
-    }
-
-    const { data: paymentsData, error: paymentsError } = await supabase
-      .from("payments")
-      .select("*");
-
-    if (paymentsError) {
-      console.error("Error fetching payments:", paymentsError);
-    }
-
-    const paymentsMap = new Map<string, PaymentRow>();
-    for (const p of (paymentsData ?? []) as PaymentRow[]) {
-      paymentsMap.set(p.ticket_id, p);
-    }
-
-    const tickets: Ticket[] = (ticketsData ?? []).map((t) => {
-      const paymentData = paymentsMap.get(t.id);
-      let payment: Payment | undefined;
-      if (paymentData) {
-        payment = {
-          id: paymentData.id,
-          ticketId: paymentData.ticket_id,
-          amount: paymentData.amount,
-          channel: paymentData.channel as Payment["channel"],
-          paidAt: paymentData.paid_at,
-          receivedBy: paymentData.received_by,
-          orNumber: paymentData.or_number,
-        };
+      if (ticketsError) {
+        console.error("Error fetching tickets:", ticketsError);
+        set({ loading: false, loaded: true, error: ticketsError.message });
+        return;
       }
 
-      return {
-        id: t.id,
-        plateNo: t.plate_no,
-        vehicleType: t.vehicle_type,
-        violatorName: t.violator_name,
-        licenseNo: t.license_no,
-        violations: t.violations as ViolationCode[],
-        totalFine: t.total_fine,
-        location: t.location,
-        remarks: t.remarks || undefined,
-        photoData: t.photo_name || undefined,
-        status:
-          t.status === "Unpaid" && new Date(t.due_date) < new Date()
-            ? "Overdue"
-            : (t.status as TicketStatus),
-        issuedAt: t.issued_at,
-        dueDate: t.due_date,
-        issuedBy: t.issued_by,
-        payment,
-      };
-    });
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from("payments")
+        .select("*");
 
-    set({
-      tickets,
-      loading: false,
-      loaded: true,
-      error: null,
-      lastSyncedAt: new Date().toISOString(),
-    });
+      if (paymentsError) {
+        console.error("Error fetching payments:", paymentsError);
+        set({ loading: false, loaded: true, error: paymentsError.message });
+        return;
+      }
+
+      const paymentsMap = new Map<string, PaymentRow>();
+      for (const p of (paymentsData ?? []) as PaymentRow[]) {
+        paymentsMap.set(p.ticket_id, p);
+      }
+
+      const tickets: Ticket[] = (ticketsData ?? []).map((t) => {
+        const paymentData = paymentsMap.get(t.id);
+        let payment: Payment | undefined;
+        if (paymentData) {
+          payment = {
+            id: paymentData.id,
+            ticketId: paymentData.ticket_id,
+            amount: paymentData.amount,
+            channel: paymentData.channel as Payment["channel"],
+            paidAt: paymentData.paid_at,
+            receivedBy: paymentData.received_by,
+            orNumber: paymentData.or_number,
+          };
+        }
+
+        return {
+          id: t.id,
+          plateNo: t.plate_no,
+          vehicleType: t.vehicle_type,
+          violatorName: t.violator_name,
+          licenseNo: t.license_no,
+          violations: t.violations as ViolationCode[],
+          totalFine: t.total_fine,
+          location: t.location,
+          remarks: t.remarks || undefined,
+          photoData: t.photo_name || undefined,
+          status:
+            t.status === "Unpaid" && new Date(t.due_date) < new Date()
+              ? "Overdue"
+              : (t.status as TicketStatus),
+          issuedAt: t.issued_at,
+          dueDate: t.due_date,
+          issuedBy: t.issued_by,
+          payment,
+        };
+      });
+
+      set({
+        tickets,
+        loading: false,
+        loaded: true,
+        error: null,
+        lastSyncedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      set({
+        loading: false,
+        loaded: true,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to load tickets. Please retry.",
+      });
+    }
   },
 
   addTicket: async (input) => {
@@ -182,53 +198,61 @@ export const useTicketStore = create<TicketState>((set, get) => ({
     const ticket = get().tickets.find((t) => t.id === ticketId);
     if (!ticket || ticket.status === "Paid") return undefined;
 
-    const payment: Payment = {
-      id: `PMT-${Date.now().toString().slice(-6)}`,
-      ticketId,
-      amount: ticket.totalFine,
-      channel,
-      paidAt: new Date().toISOString(),
-      receivedBy,
-      orNumber:
-        manualOrNumber ||
-        `OR-${new Date().getFullYear()}-${pad(
-          Math.floor(Math.random() * 9000) + 1000,
-        )}`,
-    };
-
-    const { error: paymentError } = await supabase.from("payments").insert({
-      id: payment.id,
-      ticket_id: payment.ticketId,
-      amount: payment.amount,
-      channel: payment.channel,
-      paid_at: payment.paidAt,
-      received_by: payment.receivedBy,
-      or_number: payment.orNumber,
-    });
-
-    if (paymentError) {
-      console.error("Error inserting payment:", paymentError);
-      throw paymentError;
+    if (paymentsInFlight.has(ticketId)) {
+      throw new Error("A payment for this ticket is already being processed.");
     }
+    paymentsInFlight.add(ticketId);
+    try {
+      const payment: Payment = {
+        id: `PMT-${Date.now().toString().slice(-6)}`,
+        ticketId,
+        amount: ticket.totalFine,
+        channel,
+        paidAt: new Date().toISOString(),
+        receivedBy,
+        orNumber:
+          manualOrNumber ||
+          `OR-${new Date().getFullYear()}-${pad(
+            Math.floor(Math.random() * 9000) + 1000,
+          )}`,
+      };
 
-    const { error: ticketError } = await supabase
-      .from("tickets")
-      .update({ status: "Paid" })
-      .eq("id", ticketId);
+      const { error: paymentError } = await supabase.from("payments").insert({
+        id: payment.id,
+        ticket_id: payment.ticketId,
+        amount: payment.amount,
+        channel: payment.channel,
+        paid_at: payment.paidAt,
+        received_by: payment.receivedBy,
+        or_number: payment.orNumber,
+      });
 
-    if (ticketError) {
-      console.error("Error updating ticket status:", ticketError);
-      throw ticketError;
+      if (paymentError) {
+        console.error("Error inserting payment:", paymentError);
+        throw paymentError;
+      }
+
+      const { error: ticketError } = await supabase
+        .from("tickets")
+        .update({ status: "Paid" })
+        .eq("id", ticketId);
+
+      if (ticketError) {
+        console.error("Error updating ticket status:", ticketError);
+        throw ticketError;
+      }
+
+      set({
+        tickets: get().tickets.map((t) =>
+          t.id === ticketId
+            ? { ...t, status: "Paid" as TicketStatus, payment }
+            : t,
+        ),
+      });
+      return payment;
+    } finally {
+      paymentsInFlight.delete(ticketId);
     }
-
-    set({
-      tickets: get().tickets.map((t) =>
-        t.id === ticketId
-          ? { ...t, status: "Paid" as TicketStatus, payment }
-          : t,
-      ),
-    });
-    return payment;
   },
 
   setStatus: async (ticketId, status) => {

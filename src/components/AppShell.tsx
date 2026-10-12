@@ -121,6 +121,8 @@ export function AppShell({
               "fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] transform shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:hidden",
               mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
             )}
+            inert={!mobileMenuOpen}
+            aria-hidden={!mobileMenuOpen}
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
