@@ -32,7 +32,7 @@ A role-based traffic citation and payment system for Gitagum Municipal Governmen
 
 ## Development
 
-Requires Node.js 20+ and npm (or bun).
+Requires Node.js 22.12+ and npm (or bun).
 
 ```sh
 git clone <repository-url>
