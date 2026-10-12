@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   Activity,
   ShieldCheck,
@@ -7,6 +7,7 @@ import {
   BarChart3,
   FileText,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
@@ -28,12 +29,18 @@ const navigation = [
 ] as const;
 
 export function AdminSidebar() {
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const currentPage = pathname.replace(/\/+$/, "") || "/";
   const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
 
-  const handleSignOut = () => {
-    signOut();
-    navigate({ to: "/login" });
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      await navigate({ to: "/login" });
+    } catch {
+      toast.error("Unable to sign out. Check your connection and try again.");
+    }
   };
 
   return (
@@ -59,16 +66,14 @@ export function AdminSidebar() {
           <Link
             key={to}
             to={to}
-            activeProps={{
-              className:
-                "bg-white/[0.12] text-primary-foreground shadow-sm border-l-2 border-sidebar-primary",
-            }}
-            inactiveProps={{
-              className:
-                "text-primary-foreground/50 border-l-2 border-transparent hover:bg-white/[0.06] hover:text-primary-foreground/80",
-            }}
+            activeOptions={{ exact: true, includeSearch: false }}
+            activeProps={{}}
+            aria-current={currentPage === to ? "page" : undefined}
             className={cn(
               "flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary",
+              currentPage === to
+                ? "bg-white/[0.12] text-primary-foreground shadow-sm border-l-2 border-sidebar-primary"
+                : "text-primary-foreground/50 border-l-2 border-transparent hover:bg-white/[0.06] hover:text-primary-foreground/80",
             )}
           >
             <Icon className="size-4" />

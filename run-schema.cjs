@@ -13,17 +13,24 @@ if (!connectionString) {
 }
 
 async function run() {
+  const schemaFile = process.argv[2] || "schema.sql";
+  if (!["schema.sql", "email_verification.sql"].includes(schemaFile)) {
+    console.error("Choose schema.sql or email_verification.sql.");
+    process.exitCode = 1;
+    return;
+  }
   const client = new Client({
     connectionString,
   });
 
   try {
     await client.connect();
-    const sql = fs.readFileSync("schema.sql", "utf8");
+    const sql = fs.readFileSync(schemaFile, "utf8");
     await client.query(sql);
-    console.log("Successfully executed schema.sql");
+    console.log(`Successfully executed ${schemaFile}`);
   } catch (err) {
-    console.error("Error executing SQL", err);
+    console.error("Error executing SQL", err.message);
+    process.exitCode = 1;
   } finally {
     await client.end();
   }

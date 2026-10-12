@@ -6,13 +6,16 @@ import tailwindcss from "@tailwindcss/vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig(({ mode }) => {
-  // Load the secret only into the server process; never expose it via VITE_*.
-  if (process.env["PAYMONGO_SECRET_KEY"] === "undefined") {
-    delete process.env["PAYMONGO_SECRET_KEY"];
-  }
+  // Load credentials only into the server process; never expose them via VITE_*.
   const env = loadEnv(mode, process.cwd(), "");
-  if (env["PAYMONGO_SECRET_KEY"]) {
-    process.env["PAYMONGO_SECRET_KEY"] = env["PAYMONGO_SECRET_KEY"];
+  for (const key of [
+    "PAYMONGO_SECRET_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_SECRET_KEY",
+    "AUTH_SESSION_SECRET",
+  ]) {
+    if (process.env[key] === "undefined") delete process.env[key];
+    if (env[key]) process.env[key] = env[key];
   }
   return {
     plugins: [

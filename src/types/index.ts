@@ -6,6 +6,9 @@ export interface User {
   credential: string;
   badgeNo?: string;
   password?: string;
+  emailVerificationRequired?: boolean;
+  emailVerifiedAt?: string | null;
+  authManaged?: boolean;
   role: Role;
   unit: string;
 }

@@ -6,6 +6,7 @@ import {
   Camera,
   Check,
   ChevronRight,
+  Loader2,
   RotateCcw,
   Search,
   X,
@@ -126,6 +127,10 @@ function EnforcerPage() {
   const [picked, setPicked] = useState<ViolationCode[]>([]);
   const [photoData, setPhotoData] = useState<string>();
   const [issued, setIssued] = useState<Ticket | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState("");
+  const [showMissingDetails, setShowMissingDetails] = useState(false);
+  const submittingRef = useRef(false);
   const plateRef = useRef<HTMLInputElement>(null);
 
   const set = (key: keyof typeof emptyForm, value: string) =>
@@ -145,13 +150,23 @@ function EnforcerPage() {
   }, [violationQuery, picked]);
 
   const total = picked.reduce((sum, v) => sum + v.fine, 0);
-  const canSubmit =
-    form.plateNo.trim() &&
-    form.wheels &&
-    form.vehicleType &&
-    form.brand &&
-    form.color &&
-    picked.length > 0;
+  const missingDetails = [
+    !form.plateNo.trim() && "plate number",
+    !form.wheels && "wheel count",
+    !form.vehicleType && "vehicle type",
+    !form.brand && "brand",
+    !form.color && "color",
+    picked.length === 0 && "at least one violation",
+  ].filter((detail): detail is string => Boolean(detail));
+  const displayedError =
+    showMissingDetails && missingDetails.length > 0
+      ? `Please complete: ${missingDetails.join(", ")}.`
+      : submissionError;
+
+  useEffect(() => {
+    if (showMissingDetails && missingDetails.length === 0)
+      toast.dismiss("citation-validation");
+  }, [showMissingDetails, missingDetails.length]);
 
   const reset = () => {
     setForm(emptyForm);
@@ -159,11 +174,34 @@ function EnforcerPage() {
     setPicked([]);
     setPhotoData(undefined);
     setIssued(null);
+    setSubmissionError("");
+    setShowMissingDetails(false);
     plateRef.current?.focus();
   };
 
   const submit = async () => {
-    if (!canSubmit) return;
+    if (submittingRef.current) return;
+    if (missingDetails.length > 0) {
+      const message = `Please complete: ${missingDetails.join(", ")}.`;
+      setSubmissionError("");
+      setShowMissingDetails(true);
+      toast.error("Missing citation details", {
+        id: "citation-validation",
+        description: message,
+      });
+      return;
+    }
+    if (!user || user.role !== "enforcer") {
+      setSubmissionError(
+        "Sign in as a traffic enforcer before issuing a citation.",
+      );
+      return;
+    }
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    setSubmissionError("");
+    setShowMissingDetails(false);
+    toast.dismiss("citation-validation");
     try {
       const payload = {
         plateNo: form.plateNo.toUpperCase().trim(),
@@ -177,13 +215,8 @@ function EnforcerPage() {
         location: form.location.trim(),
         remarks: form.remarks.trim() || undefined,
         photoData,
-        issuedBy: user!.name,
+        issuedBy: user.name,
       };
-
-      console.log(
-        "Submitting citation payload:",
-        JSON.stringify(payload, null, 2),
-      );
 
       const vehicleDesc = [
         `${payload.color} ${payload.brand} ${payload.vehicleType}`.trim(),
@@ -207,8 +240,14 @@ function EnforcerPage() {
       });
       setIssued(ticket);
       toast.success(`Citation ${ticket.id} issued successfully.`);
-    } catch (e) {
-      toast.error("Failed to issue citation");
+    } catch {
+      const message =
+        "Citation was not saved. Your details are still here. Check your connection and tap Issue citation to retry.";
+      setSubmissionError(message);
+      toast.error("Could not issue citation", { description: message });
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -229,6 +268,9 @@ function EnforcerPage() {
           <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-paid text-paid-foreground">
             <Check className="size-7" />
           </div>
+          <p role="status" className="mt-4 text-base font-semibold text-white">
+            Citation issued successfully
+          </p>
           <p className="mt-4 text-sm text-muted-foreground">Ticket number</p>
           <p className="font-mono text-2xl font-bold text-card-foreground">
             {issued.id}
@@ -271,7 +313,7 @@ function EnforcerPage() {
       className="max-w-md pb-40"
       sidebar={<EnforcerSidebar />}
     >
-      <div className="space-y-5">
+      <fieldset disabled={isSubmitting} className="space-y-5">
         <Field label="Plate number" hint="Required">
           <input
             ref={plateRef}
@@ -415,20 +457,20 @@ function EnforcerPage() {
           form.color ||
           form.plateNo) && (
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm shadow-sm transition-all">
-            <p className="font-semibold text-primary">Vehicle Profile</p>
+            <p className="font-semibold text-white">Vehicle Profile</p>
             {form.plateNo && (
-              <p className="mt-2 font-mono text-xl font-bold tracking-widest text-primary/90 uppercase">
+              <p className="mt-2 font-mono text-xl font-bold tracking-widest text-white uppercase">
                 {form.plateNo}
               </p>
             )}
-            <p className="mt-1 text-primary/80 font-medium">
+            <p className="mt-1 text-white font-medium">
               {form.wheels || "—"} • {form.color || "—"} {form.brand || "—"}{" "}
               {form.vehicleType || "—"}
               {form.model && ` · ${form.model}`}
               {form.year && ` · ${form.year}`}
             </p>
             {form.unitNo && (
-              <p className="mt-0.5 text-sm text-primary/70">{form.unitNo}</p>
+              <p className="mt-0.5 text-sm text-white">{form.unitNo}</p>
             )}
           </div>
         )}
@@ -603,9 +645,17 @@ function EnforcerPage() {
             </label>
           )}
         </Field>
-      </div>
+      </fieldset>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 px-3 py-3 backdrop-blur sm:px-6">
+        {displayedError && (
+          <p
+            role="alert"
+            className="mx-auto mb-3 max-w-7xl rounded-lg border border-destructive/30 bg-destructive/15 px-3 py-2 text-sm font-medium text-white"
+          >
+            {displayedError}
+          </p>
+        )}
         <div className="mx-auto flex max-w-7xl items-center gap-3">
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -617,10 +667,22 @@ function EnforcerPage() {
           </div>
           <button
             onClick={submit}
-            disabled={!canSubmit}
+            type="button"
+            disabled={isSubmitting}
+            aria-busy={isSubmitting}
             className="flex h-14 flex-1 items-center justify-center gap-2 rounded-lg bg-primary text-base font-semibold text-primary-foreground transition-opacity active:scale-[0.99] disabled:opacity-40 sm:max-w-xs sm:flex-none sm:px-8"
           >
-            Issue citation <ChevronRight className="size-5" />
+            {isSubmitting ? (
+              <>
+                <Loader2 aria-hidden="true" className="size-5 animate-spin" />{" "}
+                Issuing…
+              </>
+            ) : (
+              <>
+                Issue citation{" "}
+                <ChevronRight aria-hidden="true" className="size-5" />
+              </>
+            )}
           </button>
         </div>
       </div>

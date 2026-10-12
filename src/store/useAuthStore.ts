@@ -13,7 +13,7 @@ export interface SessionUser {
 interface AuthState {
   user: SessionUser | null;
   signIn: (user: SessionUser) => void;
-  signOut: () => void;
+  signOut: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -21,7 +21,12 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       signIn: (user) => set({ user }),
-      signOut: () => set({ user: null }),
+      signOut: async () => {
+        const response = await fetch("/api/auth/logout", { method: "POST" });
+        if (!response.ok)
+          throw new Error("Unable to sign out. Please try again.");
+        set({ user: null });
+      },
     }),
     {
       name: "auth-storage", // name of the item in the storage (must be unique)

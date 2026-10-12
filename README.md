@@ -43,6 +43,8 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+For admin-created accounts that verify their email before signing in, follow [the email verification setup](docs/email-verification.md). This requires Supabase Auth, a server-only admin key, the database migration, and custom SMTP for Gmail recipients.
+
 ## Deployment
 
 Deployed to Vercel. Push to `main` to trigger a build. The `nitro()` plugin auto-detects the Vercel environment and outputs the correct serverless function format.

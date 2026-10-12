@@ -3,6 +3,7 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { handlePaymentRequest } from "./lib/paymongo.server";
+import { handleAccountRequest } from "./lib/accounts.server";
 
 type ServerEntry = {
   fetch: (
@@ -58,6 +59,19 @@ function isH3SwallowedErrorBody(body: string): boolean {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    if (
+      [
+        "/api/auth/login",
+        "/api/auth/logout",
+        "/api/admin/users",
+        "/api/admin/users/resend",
+        "/api/admin/users/update",
+        "/api/admin/users/password",
+        "/api/admin/users/delete",
+      ].includes(new URL(request.url).pathname)
+    ) {
+      return handleAccountRequest(request);
+    }
     if (
       ["/api/payments/link", "/api/payments/status"].includes(
         new URL(request.url).pathname,
