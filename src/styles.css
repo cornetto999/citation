@@ -589,6 +589,14 @@
     margin: 12mm;
   }
 
+  body:has(.print-area) {
+    background: white !important;
+  }
+
+  body:has(.print-area)::before {
+    display: none;
+  }
+
   body:has(.print-area) * {
     visibility: hidden;
   }

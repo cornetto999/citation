@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useTicketStore } from "@/store/useTicketStore";
 import { useMemo } from "react";
 import { BarChart3, Download, FileText } from "lucide-react";
+import { toast } from "sonner";
 import {
   BarChart,
   Bar,
@@ -40,36 +41,43 @@ function AdminReports() {
   }, [tickets]);
 
   const handleExportCSV = () => {
-    const headers = [
-      "Ticket ID",
-      "Issued At",
-      "Violator",
-      "Vehicle",
-      "Fine",
-      "Issued By",
-      "Status",
-    ];
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      headers.join(",") +
-      "\n" +
-      tickets
-        .map(
-          (t) =>
-            `${t.id},${t.issuedAt},"${t.violatorName}","${t.vehicleType}",${t.totalFine},"${t.issuedBy}",${t.status}`,
-        )
-        .join("\n");
+    let link: HTMLAnchorElement | undefined;
+    try {
+      const headers = [
+        "Ticket ID",
+        "Issued At",
+        "Violator",
+        "Vehicle",
+        "Fine",
+        "Issued By",
+        "Status",
+      ];
+      const csvContent =
+        "data:text/csv;charset=utf-8," +
+        headers.join(",") +
+        "\n" +
+        tickets
+          .map(
+            (t) =>
+              `${t.id},${t.issuedAt},"${t.violatorName}","${t.vehicleType}",${t.totalFine},"${t.issuedBy}",${t.status}`,
+          )
+          .join("\n");
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute(
-      "download",
-      `citation_report_${new Date().toISOString().split("T")[0]}.csv`,
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const encodedUri = encodeURI(csvContent);
+      link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute(
+        "download",
+        `citation_report_${new Date().toISOString().split("T")[0]}.csv`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      toast.success("CSV download started.");
+    } catch {
+      toast.error("Could not export the report. Please try again.");
+    } finally {
+      link?.remove();
+    }
   };
 
   return (

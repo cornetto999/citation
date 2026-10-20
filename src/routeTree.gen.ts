@@ -18,13 +18,17 @@ import { Route as PortalRouteImport } from './routes/portal'
 import { Route as TreasuryRouteImport } from './routes/treasury'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminManageRouteImport } from './routes/admin/manage'
+import { Route as AdminOverdueRouteImport } from './routes/admin/overdue'
 import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as AuthVerifyRouteImport } from './routes/auth/verify'
 import { Route as EnforcerIndexRouteImport } from './routes/enforcer/index'
 import { Route as EnforcerCitationsRouteImport } from './routes/enforcer/citations'
 import { Route as EnforcerNewRouteImport } from './routes/enforcer/new'
+import { Route as PnpIndexRouteImport } from './routes/pnp/index'
+import { Route as PnpOverdueRouteImport } from './routes/pnp/overdue'
 import { Route as TreasuryIndexRouteImport } from './routes/treasury/index'
 import { Route as TreasuryCashierRouteImport } from './routes/treasury/cashier'
+import { Route as TreasuryOverdueRouteImport } from './routes/treasury/overdue'
 import { Route as TreasuryReportsRouteImport } from './routes/treasury/reports'
 import { Route as TreasuryTransactionsRouteImport } from './routes/treasury/transactions'
 
@@ -73,6 +77,11 @@ const AdminManageRoute = AdminManageRouteImport.update({
   path: '/manage',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminOverdueRoute = AdminOverdueRouteImport.update({
+  id: '/overdue',
+  path: '/overdue',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -98,6 +107,16 @@ const EnforcerNewRoute = EnforcerNewRouteImport.update({
   path: '/new',
   getParentRoute: () => EnforcerRoute,
 } as any)
+const PnpIndexRoute = PnpIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PnpRoute,
+} as any)
+const PnpOverdueRoute = PnpOverdueRouteImport.update({
+  id: '/overdue',
+  path: '/overdue',
+  getParentRoute: () => PnpRoute,
+} as any)
 const TreasuryIndexRoute = TreasuryIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -106,6 +125,11 @@ const TreasuryIndexRoute = TreasuryIndexRouteImport.update({
 const TreasuryCashierRoute = TreasuryCashierRouteImport.update({
   id: '/cashier',
   path: '/cashier',
+  getParentRoute: () => TreasuryRoute,
+} as any)
+const TreasuryOverdueRoute = TreasuryOverdueRouteImport.update({
+  id: '/overdue',
+  path: '/overdue',
   getParentRoute: () => TreasuryRoute,
 } as any)
 const TreasuryReportsRoute = TreasuryReportsRouteImport.update({
@@ -124,36 +148,43 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/enforcer': typeof EnforcerRouteWithChildren
   '/login': typeof LoginRoute
-  '/pnp': typeof PnpRoute
+  '/pnp': typeof PnpRouteWithChildren
   '/portal': typeof PortalRoute
   '/treasury': typeof TreasuryRouteWithChildren
   '/admin/manage': typeof AdminManageRoute
+  '/admin/overdue': typeof AdminOverdueRoute
   '/admin/reports': typeof AdminReportsRoute
   '/auth/verify': typeof AuthVerifyRoute
   '/enforcer/citations': typeof EnforcerCitationsRoute
   '/enforcer/new': typeof EnforcerNewRoute
+  '/pnp/overdue': typeof PnpOverdueRoute
   '/treasury/cashier': typeof TreasuryCashierRoute
+  '/treasury/overdue': typeof TreasuryOverdueRoute
   '/treasury/reports': typeof TreasuryReportsRoute
   '/treasury/transactions': typeof TreasuryTransactionsRoute
   '/admin/': typeof AdminIndexRoute
   '/enforcer/': typeof EnforcerIndexRoute
+  '/pnp/': typeof PnpIndexRoute
   '/treasury/': typeof TreasuryIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/pnp': typeof PnpRoute
   '/portal': typeof PortalRoute
   '/admin/manage': typeof AdminManageRoute
+  '/admin/overdue': typeof AdminOverdueRoute
   '/admin/reports': typeof AdminReportsRoute
   '/auth/verify': typeof AuthVerifyRoute
   '/enforcer/citations': typeof EnforcerCitationsRoute
   '/enforcer/new': typeof EnforcerNewRoute
+  '/pnp/overdue': typeof PnpOverdueRoute
   '/treasury/cashier': typeof TreasuryCashierRoute
+  '/treasury/overdue': typeof TreasuryOverdueRoute
   '/treasury/reports': typeof TreasuryReportsRoute
   '/treasury/transactions': typeof TreasuryTransactionsRoute
   '/admin': typeof AdminIndexRoute
   '/enforcer': typeof EnforcerIndexRoute
+  '/pnp': typeof PnpIndexRoute
   '/treasury': typeof TreasuryIndexRoute
 }
 export interface FileRoutesById {
@@ -162,19 +193,23 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteRouteWithChildren
   '/enforcer': typeof EnforcerRouteWithChildren
   '/login': typeof LoginRoute
-  '/pnp': typeof PnpRoute
+  '/pnp': typeof PnpRouteWithChildren
   '/portal': typeof PortalRoute
   '/treasury': typeof TreasuryRouteWithChildren
   '/admin/manage': typeof AdminManageRoute
+  '/admin/overdue': typeof AdminOverdueRoute
   '/admin/reports': typeof AdminReportsRoute
   '/auth/verify': typeof AuthVerifyRoute
   '/enforcer/citations': typeof EnforcerCitationsRoute
   '/enforcer/new': typeof EnforcerNewRoute
+  '/pnp/overdue': typeof PnpOverdueRoute
   '/treasury/cashier': typeof TreasuryCashierRoute
+  '/treasury/overdue': typeof TreasuryOverdueRoute
   '/treasury/reports': typeof TreasuryReportsRoute
   '/treasury/transactions': typeof TreasuryTransactionsRoute
   '/admin/': typeof AdminIndexRoute
   '/enforcer/': typeof EnforcerIndexRoute
+  '/pnp/': typeof PnpIndexRoute
   '/treasury/': typeof TreasuryIndexRoute
 }
 export interface FileRouteTypes {
@@ -188,32 +223,39 @@ export interface FileRouteTypes {
     | '/portal'
     | '/treasury'
     | '/admin/manage'
+    | '/admin/overdue'
     | '/admin/reports'
     | '/auth/verify'
     | '/enforcer/citations'
     | '/enforcer/new'
+    | '/pnp/overdue'
     | '/treasury/cashier'
+    | '/treasury/overdue'
     | '/treasury/reports'
     | '/treasury/transactions'
     | '/admin/'
     | '/enforcer/'
+    | '/pnp/'
     | '/treasury/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
-    | '/pnp'
     | '/portal'
     | '/admin/manage'
+    | '/admin/overdue'
     | '/admin/reports'
     | '/auth/verify'
     | '/enforcer/citations'
     | '/enforcer/new'
+    | '/pnp/overdue'
     | '/treasury/cashier'
+    | '/treasury/overdue'
     | '/treasury/reports'
     | '/treasury/transactions'
     | '/admin'
     | '/enforcer'
+    | '/pnp'
     | '/treasury'
   id:
     | '__root__'
@@ -225,15 +267,19 @@ export interface FileRouteTypes {
     | '/portal'
     | '/treasury'
     | '/admin/manage'
+    | '/admin/overdue'
     | '/admin/reports'
     | '/auth/verify'
     | '/enforcer/citations'
     | '/enforcer/new'
+    | '/pnp/overdue'
     | '/treasury/cashier'
+    | '/treasury/overdue'
     | '/treasury/reports'
     | '/treasury/transactions'
     | '/admin/'
     | '/enforcer/'
+    | '/pnp/'
     | '/treasury/'
   fileRoutesById: FileRoutesById
 }
@@ -242,7 +288,7 @@ export interface RootRouteChildren {
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   EnforcerRoute: typeof EnforcerRouteWithChildren
   LoginRoute: typeof LoginRoute
-  PnpRoute: typeof PnpRoute
+  PnpRoute: typeof PnpRouteWithChildren
   PortalRoute: typeof PortalRoute
   TreasuryRoute: typeof TreasuryRouteWithChildren
   AuthVerifyRoute: typeof AuthVerifyRoute
@@ -313,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminManageRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/overdue': {
+      id: '/admin/overdue'
+      path: '/overdue'
+      fullPath: '/admin/overdue'
+      preLoaderRoute: typeof AdminOverdueRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/reports': {
       id: '/admin/reports'
       path: '/reports'
@@ -348,6 +401,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EnforcerNewRouteImport
       parentRoute: typeof EnforcerRoute
     }
+    '/pnp/': {
+      id: '/pnp/'
+      path: '/'
+      fullPath: '/pnp/'
+      preLoaderRoute: typeof PnpIndexRouteImport
+      parentRoute: typeof PnpRoute
+    }
+    '/pnp/overdue': {
+      id: '/pnp/overdue'
+      path: '/overdue'
+      fullPath: '/pnp/overdue'
+      preLoaderRoute: typeof PnpOverdueRouteImport
+      parentRoute: typeof PnpRoute
+    }
     '/treasury/': {
       id: '/treasury/'
       path: '/'
@@ -360,6 +427,13 @@ declare module '@tanstack/react-router' {
       path: '/cashier'
       fullPath: '/treasury/cashier'
       preLoaderRoute: typeof TreasuryCashierRouteImport
+      parentRoute: typeof TreasuryRoute
+    }
+    '/treasury/overdue': {
+      id: '/treasury/overdue'
+      path: '/overdue'
+      fullPath: '/treasury/overdue'
+      preLoaderRoute: typeof TreasuryOverdueRouteImport
       parentRoute: typeof TreasuryRoute
     }
     '/treasury/reports': {
@@ -381,12 +455,14 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteRouteChildren {
   AdminManageRoute: typeof AdminManageRoute
+  AdminOverdueRoute: typeof AdminOverdueRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminManageRoute: AdminManageRoute,
+  AdminOverdueRoute: AdminOverdueRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
@@ -411,8 +487,21 @@ const EnforcerRouteWithChildren = EnforcerRoute._addFileChildren(
   EnforcerRouteChildren,
 )
 
+interface PnpRouteChildren {
+  PnpOverdueRoute: typeof PnpOverdueRoute
+  PnpIndexRoute: typeof PnpIndexRoute
+}
+
+const PnpRouteChildren: PnpRouteChildren = {
+  PnpOverdueRoute: PnpOverdueRoute,
+  PnpIndexRoute: PnpIndexRoute,
+}
+
+const PnpRouteWithChildren = PnpRoute._addFileChildren(PnpRouteChildren)
+
 interface TreasuryRouteChildren {
   TreasuryCashierRoute: typeof TreasuryCashierRoute
+  TreasuryOverdueRoute: typeof TreasuryOverdueRoute
   TreasuryReportsRoute: typeof TreasuryReportsRoute
   TreasuryTransactionsRoute: typeof TreasuryTransactionsRoute
   TreasuryIndexRoute: typeof TreasuryIndexRoute
@@ -420,6 +509,7 @@ interface TreasuryRouteChildren {
 
 const TreasuryRouteChildren: TreasuryRouteChildren = {
   TreasuryCashierRoute: TreasuryCashierRoute,
+  TreasuryOverdueRoute: TreasuryOverdueRoute,
   TreasuryReportsRoute: TreasuryReportsRoute,
   TreasuryTransactionsRoute: TreasuryTransactionsRoute,
   TreasuryIndexRoute: TreasuryIndexRoute,
@@ -434,7 +524,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRouteRoute: AdminRouteRouteWithChildren,
   EnforcerRoute: EnforcerRouteWithChildren,
   LoginRoute: LoginRoute,
-  PnpRoute: PnpRoute,
+  PnpRoute: PnpRouteWithChildren,
   PortalRoute: PortalRoute,
   TreasuryRoute: TreasuryRouteWithChildren,
   AuthVerifyRoute: AuthVerifyRoute,

@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Activity,
+  AlarmClock,
   Banknote,
   LineChart,
   Wallet,
@@ -10,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useTicketStore } from "@/store/useTicketStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,17 +28,22 @@ const navigation = [
   { to: "/treasury", label: "Dashboard", icon: Activity },
   { to: "/treasury/cashier", label: "Cashier Window", icon: Banknote },
   { to: "/treasury/transactions", label: "Transactions", icon: List },
+  { to: "/treasury/overdue", label: "Overdue", icon: AlarmClock },
   { to: "/treasury/reports", label: "Reports", icon: LineChart },
 ] as const;
 
 export function TreasurySidebar() {
   const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
+  const overdueCount = useTicketStore(
+    (s) => s.tickets.filter((t) => t.status === "Overdue").length,
+  );
 
   const handleSignOut = async () => {
     try {
       await signOut();
       await navigate({ to: "/login" });
+      toast.success("Signed out successfully.");
     } catch {
       toast.error("Unable to sign out. Check your connection and try again.");
     }
@@ -80,6 +87,11 @@ export function TreasurySidebar() {
           >
             <Icon className="size-4" />
             {label}
+            {to === "/treasury/overdue" && overdueCount > 0 && (
+              <span className="ml-auto rounded-full bg-destructive px-1.5 py-px text-[10px] font-bold tabular text-destructive-foreground">
+                {overdueCount}
+              </span>
+            )}
           </Link>
         ))}
       </div>

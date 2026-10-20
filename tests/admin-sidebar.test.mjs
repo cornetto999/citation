@@ -26,6 +26,10 @@ const source = readFileSync(
     "const useAuthStore = (select) => select({ signOut: async () => {} });",
   )
   .replace(
+    'import { useTicketStore } from "@/store/useTicketStore";',
+    "const useTicketStore = (select) => select({ tickets: [] });",
+  )
+  .replace(
     /import\s*\{([^}]+)\}\s*from\s*"@\/components\/ui\/alert-dialog";/,
     (_match, importedNames) => {
       const names = importedNames
@@ -60,7 +64,7 @@ delete globalThis.__adminSidebarDialog;
 function renderSidebar(url) {
   const root = createRootRoute();
   const admin = createRoute({ getParentRoute: () => root, path: "/admin" });
-  const children = ["/", "/manage", "/reports"].map((path) =>
+  const children = ["/", "/manage", "/overdue", "/reports"].map((path) =>
     createRoute({ getParentRoute: () => admin, path }),
   );
   const router = createRouter({
@@ -93,6 +97,8 @@ for (const [url, selected] of [
   ["/admin/", "Monitoring"],
   ["/admin/manage", "Manage Users"],
   ["/admin/manage/?search=admin", "Manage Users"],
+  ["/admin/overdue", "Overdue"],
+  ["/admin/overdue/", "Overdue"],
   ["/admin/reports", "Reports"],
   ["/admin/reports/", "Reports"],
   ["/admin/reports?period=month", "Reports"],
@@ -101,7 +107,7 @@ for (const [url, selected] of [
     const markup = renderSidebar(url);
     assert.match(markup, /<nav\b[^>]*aria-label="Admin navigation"/);
     const links = readLinks(markup);
-    assert.equal(links.length, 4);
+    assert.equal(links.length, 5);
     const highlighted = links.filter(
       (link) =>
         link.classes.includes("bg-white/[0.12]") &&

@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import { KeyRound, Loader2, Pencil, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import type { Role, User } from "@/types";
 
 interface UserDetailsDialogProps {
@@ -71,6 +72,7 @@ export function UserDetailsDialog({
   const [success, setSuccess] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const busyRef = useRef(false);
   const isBusy = action !== null;
   const isOwnAccount = account.id === currentUserId;
@@ -110,13 +112,16 @@ export function UserDetailsDialog({
       setFormData(userForm(result.user));
       setIsEditing(false);
       onUserUpdated(result.user);
-      setSuccess(result.message || "User details updated.");
+      const message = result.message || "User details updated.";
+      setSuccess(message);
+      toast.success(message);
     } catch (error) {
-      setError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Unable to update the user. Please retry.",
-      );
+          : "Unable to update the user. Please retry.";
+      setError(message);
+      toast.error("Could not update user", { description: message });
     } finally {
       busyRef.current = false;
       setAction(null);
@@ -132,12 +137,19 @@ export function UserDetailsDialog({
     setSuccess("");
     if (password.length < 8) {
       setError("Use a password with at least 8 characters.");
+      toast.error("Use a password with at least 8 characters.", {
+        id: "user-password-validation",
+      });
       return;
     }
     if (password !== confirmPassword) {
       setError("The passwords do not match.");
+      toast.error("The passwords do not match.", {
+        id: "user-password-validation",
+      });
       return;
     }
+    toast.dismiss("user-password-validation");
     busyRef.current = true;
     setAction("password");
     try {
@@ -149,13 +161,16 @@ export function UserDetailsDialog({
       setPassword("");
       setConfirmPassword("");
       setIsPasswordFormOpen(false);
-      setSuccess(result.message || "Password updated successfully.");
+      const message = result.message || "Password updated successfully.";
+      setSuccess(message);
+      toast.success(message);
     } catch (error) {
-      setError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Unable to update the password. Please retry.",
-      );
+          : "Unable to update the password. Please retry.";
+      setError(message);
+      toast.error("Could not update password", { description: message });
     } finally {
       busyRef.current = false;
       setAction(null);
@@ -178,11 +193,12 @@ export function UserDetailsDialog({
         result.message || `${account.name} was deleted.`,
       );
     } catch (error) {
-      setDeleteError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Unable to delete the user. Please retry.",
-      );
+          : "Unable to delete the user. Please retry.";
+      setDeleteError(message);
+      toast.error("Could not delete user", { description: message });
     } finally {
       busyRef.current = false;
       setAction(null);
@@ -585,7 +601,10 @@ export function UserDetailsDialog({
                 onOpenChange={(open) => {
                   if (busyRef.current) return;
                   setDeleteOpen(open);
-                  if (open) setDeleteError("");
+                  if (open) {
+                    setDeleteError("");
+                    setDeleteConfirmText("");
+                  }
                 }}
               >
                 <AlertDialog.Trigger asChild>
@@ -610,6 +629,28 @@ export function UserDetailsDialog({
                       and payment history will be retained. This account
                       deletion cannot be undone.
                     </AlertDialog.Description>
+                    <div className="mt-4 space-y-1.5">
+                      <label
+                        htmlFor="delete-user-confirm-input"
+                        className="block text-xs font-medium text-foreground"
+                      >
+                        To confirm deletion, type{" "}
+                        <span className="font-mono font-bold text-destructive">
+                          delete this user
+                        </span>{" "}
+                        below:
+                      </label>
+                      <input
+                        id="delete-user-confirm-input"
+                        type="text"
+                        value={deleteConfirmText}
+                        onChange={(e) => setDeleteConfirmText(e.target.value)}
+                        placeholder="delete this user"
+                        disabled={isBusy}
+                        autoComplete="off"
+                        className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-destructive focus:ring-2 focus:ring-destructive/20"
+                      />
+                    </div>
                     {deleteError && (
                       <p
                         role="alert"
@@ -631,9 +672,19 @@ export function UserDetailsDialog({
                       <AlertDialog.Action asChild>
                         <button
                           type="button"
-                          disabled={isBusy}
+                          disabled={
+                            isBusy ||
+                            deleteConfirmText.trim().toLowerCase() !==
+                              "delete this user"
+                          }
                           onClick={(event) => {
                             event.preventDefault();
+                            if (
+                              deleteConfirmText.trim().toLowerCase() !==
+                              "delete this user"
+                            ) {
+                              return;
+                            }
                             void handleDelete();
                           }}
                           className="inline-flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive disabled:opacity-50"

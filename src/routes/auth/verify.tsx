@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/auth/verify")({
@@ -127,6 +128,11 @@ function VerifyEmailPage() {
   const submittingRef = useRef(false);
   const mountedRef = useRef(false);
 
+  const showError = (message: string) => {
+    setError(message);
+    toast.error(message);
+  };
+
   useEffect(() => {
     mountedRef.current = true;
     let cancelled = false;
@@ -135,11 +141,17 @@ function VerifyEmailPage() {
     verificationPromise.current ??= verifyInvitation();
     verificationPromise.current
       .then((result) => {
-        if (!cancelled) setVerification(result);
+        if (!cancelled) {
+          setVerification(result);
+          if (result.status === "invalid") {
+            toast.error(result.message, { id: "invitation-verification" });
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) {
           setVerification({ status: "invalid", message: invalidLinkMessage });
+          toast.error(invalidLinkMessage, { id: "invitation-verification" });
         }
       });
 
@@ -155,11 +167,11 @@ function VerifyEmailPage() {
 
     setError("");
     if (!passwordSaved && password.length < 8) {
-      setError("Use a password with at least 8 characters.");
+      showError("Use a password with at least 8 characters.");
       return;
     }
     if (!passwordSaved && password !== confirmPassword) {
-      setError("The passwords do not match.");
+      showError("The passwords do not match.");
       return;
     }
 
@@ -178,6 +190,7 @@ function VerifyEmailPage() {
         ) {
           if (mountedRef.current) {
             setVerification({ status: "invalid", message: invalidLinkMessage });
+            toast.error(invalidLinkMessage, { id: "invitation-verification" });
           }
           return;
         }
@@ -186,7 +199,7 @@ function VerifyEmailPage() {
           password,
         });
         if (passwordError) {
-          if (mountedRef.current) setError(passwordError.message);
+          if (mountedRef.current) showError(passwordError.message);
           return;
         }
         saved = true;
@@ -196,7 +209,7 @@ function VerifyEmailPage() {
       const { error: signOutError } = await supabase.auth.signOut();
       if (signOutError) {
         if (mountedRef.current) {
-          setError(
+          showError(
             "Your password was saved, but we couldn't finish signing out. Select Finish setup to try again.",
           );
         }
@@ -207,10 +220,11 @@ function VerifyEmailPage() {
         setPassword("");
         setConfirmPassword("");
         setVerification({ status: "success" });
+        toast.success("Account setup complete. You can now sign in.");
       }
     } catch {
       if (mountedRef.current) {
-        setError(
+        showError(
           saved
             ? "Your password was saved. Check your connection and select Finish setup to complete the setup."
             : "We couldn't save your password. Check your connection and try again.",

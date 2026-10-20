@@ -28,6 +28,11 @@ export const Route = createFileRoute("/treasury/cashier")({
   head: () => ({
     meta: [{ title: "Cashier Window | Municipal Treasury" }],
   }),
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { ticket?: string | undefined } => ({
+    ticket: typeof search["ticket"] === "string" ? search["ticket"] : undefined,
+  }),
   component: TreasuryCashierPage,
 });
 
@@ -49,6 +54,23 @@ function TreasuryCashierPage() {
   const [manualOrNumber, setManualOrNumber] = useState("");
   const [receipt, setReceipt] = useState<Payment | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const { ticket: ticketParam } = Route.useSearch();
+
+  // Preselect a citation handed off from another page (e.g. Overdue → Collect)
+  useEffect(() => {
+    if (!ticketParam) return;
+    const match = tickets.find((t) => t.id === ticketParam);
+    if (!match) return;
+    setQuery(match.id);
+    setSelected(match);
+    setReceipt(null);
+    setTendered("");
+    void navigate({
+      to: "/treasury/cashier",
+      search: {},
+      replace: true,
+    });
+  }, [ticketParam, tickets, navigate]);
 
   const current = selected
     ? (tickets.find((t) => t.id === selected.id) ?? null)
@@ -65,21 +87,34 @@ function TreasuryCashierPage() {
   const change = current ? cash - current.totalFine : 0;
 
   const process = async () => {
-    if (!current || cash < current.totalFine) return;
+    if (!user) {
+      toast.error("Please sign in again before posting a payment.");
+      return;
+    }
+    if (!current || current.status === "Paid") {
+      toast.error("This citation is already paid or is no longer available.");
+      return;
+    }
+    if (!Number.isFinite(cash) || cash < current.totalFine) {
+      toast.error("Enter enough cash to cover the citation fine.");
+      return;
+    }
     try {
       const payment = await payTicket(
         current.id,
         "Cash (Over-the-counter)",
-        user!.name,
+        user.name,
         manualOrNumber.trim() || undefined,
       );
-      if (payment) {
-        setReceipt(payment);
-        toast.success(`Payment posted for ${current.id}`, {
-          description: `OR ${payment.orNumber}`,
-        });
+      if (!payment) {
+        toast.error("This citation is already paid or is no longer available.");
+        return;
       }
-    } catch (e) {
+      setReceipt(payment);
+      toast.success(`Payment posted for ${current.id}`, {
+        description: `OR ${payment.orNumber}`,
+      });
+    } catch {
       toast.error("Failed to post payment");
     }
   };

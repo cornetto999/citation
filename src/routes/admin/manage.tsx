@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Users, Shield, BadgeCheck, Loader2, Plus, X } from "lucide-react";
+import { toast } from "sonner";
 import { UserDetailsDialog } from "@/components/UserDetailsDialog";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { User, Role } from "@/types";
@@ -55,14 +56,21 @@ function AdminManageUsers() {
       if (!Array.isArray(result.users)) {
         throw new Error("Unable to load users. Please retry.");
       }
-      if (!signal?.aborted) setUsers(result.users);
+      if (!signal?.aborted) {
+        setUsers(result.users);
+        toast.dismiss("admin-users-load");
+      }
     } catch (error) {
       if (!signal?.aborted) {
-        setLoadError(
+        const message =
           error instanceof Error
             ? error.message
-            : "Unable to load users. Please retry.",
-        );
+            : "Unable to load users. Please retry.";
+        setLoadError(message);
+        toast.error("Could not load users", {
+          id: "admin-users-load",
+          description: message,
+        });
       }
     } finally {
       if (!signal?.aborted) setLoading(false);
@@ -102,10 +110,11 @@ function AdminManageUsers() {
       if (!response.ok) {
         throw new Error(result.error || "Unable to invite user. Please retry.");
       }
-      setSuccessMessage(
+      const message =
         result.message ||
-          "Invitation sent. The user must verify their email and set a password before signing in.",
-      );
+        "Invitation sent. The user must verify their email and set a password before signing in.";
+      setSuccessMessage(message);
+      toast.success("Invitation sent", { description: message });
       setIsModalOpen(false);
       setFormData({
         name: "",
@@ -115,11 +124,12 @@ function AdminManageUsers() {
       });
       await fetchUsers();
     } catch (error) {
-      setError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Unable to invite user. Please retry.",
-      );
+          : "Unable to invite user. Please retry.";
+      setError(message);
+      toast.error("Could not invite user", { description: message });
     } finally {
       submittingRef.current = false;
       setIsSubmitting(false);
@@ -147,17 +157,19 @@ function AdminManageUsers() {
           result.error || "Unable to resend the invitation. Please retry.",
         );
       }
-      setSuccessMessage(
+      const message =
         result.message ||
-          "A new verification link has been sent to the user's email.",
-      );
+        "A new verification link has been sent to the user's email.";
+      setSuccessMessage(message);
+      toast.success("Invitation resent", { description: message });
       await fetchUsers();
     } catch (error) {
-      setActionError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Unable to resend the invitation. Please retry.",
-      );
+          : "Unable to resend the invitation. Please retry.";
+      setActionError(message);
+      toast.error("Could not resend invitation", { description: message });
     } finally {
       resendingRef.current = false;
       setResendingUserId(null);
@@ -200,6 +212,7 @@ function AdminManageUsers() {
     setUsers((previous) => previous.filter((user) => user.id !== userId));
     setSelectedUser(null);
     setSuccessMessage(message);
+    toast.success("User deleted", { description: message });
   };
 
   return (

@@ -43,11 +43,30 @@ interface TicketState {
     manualOrNumber?: string,
   ) => Promise<Payment | undefined>;
   setStatus: (ticketId: string, status: TicketStatus) => Promise<void>;
+  /** Flag an overdue citation for PNP enforcement. */
+  endorseToPnp: (ticketId: string, endorsedBy: string) => Promise<void>;
+  /** Remove a previous PNP endorsement. */
+  withdrawEndorsement: (ticketId: string) => Promise<void>;
   getTicket: (ticketId: string) => Ticket | undefined;
   subscribeToRealtime: () => void;
 }
 
 const paymentsInFlight = new Set<string>();
+
+/** Turn a missing-column error into an actionable message. */
+const endorsementError = (error: { message?: string; code?: string }) => {
+  const msg = error.message ?? "";
+  if (
+    error.code === "PGRST204" ||
+    error.code === "42703" ||
+    msg.includes("endorsed_")
+  ) {
+    return new Error(
+      "PNP endorsement columns are missing. Run overdue_endorsement.sql on the database.",
+    );
+  }
+  return new Error(msg || "Unable to update PNP endorsement.");
+};
 
 const pad = (n: number) => String(n).padStart(4, "0");
 
@@ -131,6 +150,8 @@ export const useTicketStore = create<TicketState>((set, get) => ({
           dueDate: t.due_date,
           issuedBy: t.issued_by,
           payment,
+          endorsedAt: t.endorsed_at || undefined,
+          endorsedBy: t.endorsed_by || undefined,
         };
       });
 
@@ -269,6 +290,45 @@ export const useTicketStore = create<TicketState>((set, get) => ({
     set({
       tickets: get().tickets.map((t) =>
         t.id === ticketId ? { ...t, status } : t,
+      ),
+    });
+  },
+
+  endorseToPnp: async (ticketId, endorsedBy) => {
+    const endorsedAt = new Date().toISOString();
+    const { error } = await supabase
+      .from("tickets")
+      .update({ endorsed_at: endorsedAt, endorsed_by: endorsedBy })
+      .eq("id", ticketId);
+
+    if (error) {
+      console.error("Error endorsing ticket to PNP:", error);
+      throw endorsementError(error);
+    }
+
+    set({
+      tickets: get().tickets.map((t) =>
+        t.id === ticketId ? { ...t, endorsedAt, endorsedBy } : t,
+      ),
+    });
+  },
+
+  withdrawEndorsement: async (ticketId) => {
+    const { error } = await supabase
+      .from("tickets")
+      .update({ endorsed_at: null, endorsed_by: null })
+      .eq("id", ticketId);
+
+    if (error) {
+      console.error("Error withdrawing PNP endorsement:", error);
+      throw endorsementError(error);
+    }
+
+    set({
+      tickets: get().tickets.map((t) =>
+        t.id === ticketId
+          ? { ...t, endorsedAt: undefined, endorsedBy: undefined }
+          : t,
       ),
     });
   },

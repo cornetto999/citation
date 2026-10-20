@@ -35,6 +35,7 @@ export function EnforcerSidebar() {
     try {
       await signOut();
       await navigate({ to: "/login" });
+      toast.success("Signed out successfully.");
     } catch {
       toast.error("Unable to sign out. Check your connection and try again.");
     }

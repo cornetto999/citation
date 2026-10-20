@@ -11,6 +11,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { Loader2, ShieldCheck, Home, RefreshCw } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 
 import appCss from "../styles.css?url";
 function NotFoundComponent() {
@@ -158,10 +159,51 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    import("@/store/useTicketStore").then(({ useTicketStore }) => {
-      useTicketStore.getState().fetchTickets();
-      useTicketStore.getState().subscribeToRealtime();
-    });
+    const toastId = "ticket-sync-error";
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+    let hasSyncFailure = false;
+
+    import("@/store/useTicketStore")
+      .then(({ useTicketStore }) => {
+        if (!active) return;
+
+        const notifySyncError = (
+          state: ReturnType<typeof useTicketStore.getState>,
+        ) => {
+          if (state.loading || !state.loaded) return;
+          if (state.error) {
+            if (!hasSyncFailure) {
+              toast.error("Unable to refresh citation data.", {
+                id: toastId,
+                description: "Check your connection and refresh the page.",
+              });
+              hasSyncFailure = true;
+            }
+          } else if (hasSyncFailure) {
+            hasSyncFailure = false;
+            toast.dismiss(toastId);
+          }
+        };
+
+        unsubscribe = useTicketStore.subscribe(notifySyncError);
+        notifySyncError(useTicketStore.getState());
+        void useTicketStore.getState().fetchTickets();
+        useTicketStore.getState().subscribeToRealtime();
+      })
+      .catch(() => {
+        if (!active) return;
+        hasSyncFailure = true;
+        toast.error("Unable to load citation data. Please refresh the page.", {
+          id: toastId,
+        });
+      });
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+      toast.dismiss(toastId);
+    };
   }, []);
 
   return (

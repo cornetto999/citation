@@ -1,8 +1,9 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Activity, ShieldAlert, LogOut } from "lucide-react";
+import { Activity, AlarmClock, ShieldAlert, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useTicketStore } from "@/store/useTicketStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,16 +18,22 @@ import {
 
 const navigation = [
   { to: "/pnp", label: "Monitoring", icon: Activity },
+  { to: "/pnp/overdue", label: "Overdue", icon: AlarmClock },
 ] as const;
 
 export function PnpSidebar() {
   const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
+  const endorsedCount = useTicketStore(
+    (s) =>
+      s.tickets.filter((t) => t.status === "Overdue" && t.endorsedAt).length,
+  );
 
   const handleSignOut = async () => {
     try {
       await signOut();
       await navigate({ to: "/login" });
+      toast.success("Signed out successfully.");
     } catch {
       toast.error("Unable to sign out. Check your connection and try again.");
     }
@@ -55,6 +62,7 @@ export function PnpSidebar() {
           <Link
             key={to}
             to={to}
+            activeOptions={{ exact: true }}
             activeProps={{
               className:
                 "bg-white/[0.12] text-primary-foreground shadow-sm border-l-2 border-sidebar-primary",
@@ -69,6 +77,14 @@ export function PnpSidebar() {
           >
             <Icon className="size-4" />
             {label}
+            {to === "/pnp/overdue" && endorsedCount > 0 && (
+              <span
+                className="ml-auto rounded-full bg-destructive px-1.5 py-px text-[10px] font-bold tabular text-destructive-foreground"
+                title={`${endorsedCount} endorsed for enforcement`}
+              >
+                {endorsedCount}
+              </span>
+            )}
           </Link>
         ))}
       </div>

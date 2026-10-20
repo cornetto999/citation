@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Search,
   ShieldCheck,
   QrCode,
   CheckCircle2,
-  Download,
+  Printer,
+  ReceiptText,
   ArrowLeft,
   AlertTriangle,
 } from "lucide-react";
@@ -13,6 +14,7 @@ import { useTicketStore } from "@/store/useTicketStore";
 import { StatusBadge } from "@/components/StatusBadge";
 import { peso, dateTime, shortDate, daysUntil } from "@/lib/format";
 import type { Ticket } from "@/types";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/portal")({
   head: () => ({
@@ -44,29 +46,63 @@ type Stage = "lookup" | "pay" | "receipt";
 function PortalPage() {
   const getTicket = useTicketStore((s) => s.getTicket);
   const [query, setQuery] = useState("");
-  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [ticketId, setTicketId] = useState<string | null>(null);
+  const ticket = useTicketStore((s) =>
+    s.tickets.find((ticket) => ticket.id === ticketId),
+  );
   const [notFound, setNotFound] = useState(false);
   const [stage, setStage] = useState<Stage>("lookup");
+  const showReceipt = useCallback(() => setStage("receipt"), []);
 
   const search = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!query.trim()) return;
+    const lookupToastId = "citation-lookup";
+    if (!query.trim()) {
+      toast.error("Enter a citation ticket number", { id: lookupToastId });
+      return;
+    }
+    const state = useTicketStore.getState();
+    if (state.loading || !state.loaded) {
+      toast.info("Citation records are still loading", {
+        id: lookupToastId,
+        description: "Please try your lookup again in a moment.",
+      });
+      return;
+    }
+    if (state.error) {
+      toast.error("Unable to look up your citation", {
+        id: lookupToastId,
+        description: "Check your connection and refresh the page to try again.",
+      });
+      return;
+    }
     const found = getTicket(query);
-    setTicket(found ?? null);
+    setTicketId(found?.id ?? null);
     setNotFound(!found);
     setStage("lookup");
+    if (found) {
+      toast.success("Citation found", {
+        id: lookupToastId,
+        description: `${found.id} · ${found.status}`,
+      });
+    } else {
+      toast.error("Citation not found", {
+        id: lookupToastId,
+        description: "Check your ticket number and try again.",
+      });
+    }
   };
 
   const reset = () => {
-    setTicket(null);
+    setTicketId(null);
     setNotFound(false);
     setQuery("");
     setStage("lookup");
   };
 
   return (
-    <div className="min-h-screen">
-      <header className="bg-authority shadow-lift">
+    <div className="min-h-screen print:min-h-0">
+      <header className="no-print bg-authority shadow-lift">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMC41IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCBmaWxsPSJ1cmwoI2cpIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIi8+PC9zdmc+')] opacity-60" />
         <div className="relative mx-auto flex max-w-3xl flex-wrap items-center gap-2 px-3 py-3 sm:gap-3 sm:px-6 sm:py-4">
           <Link
@@ -90,11 +126,11 @@ function PortalPage() {
         </div>
       </header>
 
-      <main className="on-brand mx-auto max-w-3xl px-3 py-5 sm:px-6 sm:py-8">
+      <main className="on-brand mx-auto max-w-3xl px-3 py-5 sm:px-6 sm:py-8 print:m-0 print:max-w-none print:p-0">
         {/* Lookup */}
         <form
           onSubmit={search}
-          className="animate-fade-in-up rounded-2xl border border-border bg-card p-5 shadow-panel sm:p-6"
+          className="no-print animate-fade-in-up rounded-2xl border border-border bg-card p-5 shadow-panel sm:p-6"
         >
           <label
             htmlFor="ticket-id"
@@ -131,18 +167,17 @@ function PortalPage() {
         </form>
 
         {ticket && stage === "lookup" && (
-          <TicketCard ticket={ticket} onPay={() => setStage("pay")} />
+          <TicketCard
+            ticket={ticket}
+            onPay={() => setStage("pay")}
+            onViewReceipt={showReceipt}
+          />
         )}
         {ticket && stage === "pay" && (
           <QrphPayment
             ticket={ticket}
             onBack={() => setStage("lookup")}
-            onDone={() => {
-              setTicket(
-                useTicketStore.getState().getTicket(ticket.id) ?? ticket,
-              );
-              setStage("receipt");
-            }}
+            onDone={showReceipt}
           />
         )}
         {ticket && stage === "receipt" && (
@@ -153,7 +188,15 @@ function PortalPage() {
   );
 }
 
-function TicketCard({ ticket, onPay }: { ticket: Ticket; onPay: () => void }) {
+function TicketCard({
+  ticket,
+  onPay,
+  onViewReceipt,
+}: {
+  ticket: Ticket;
+  onPay: () => void;
+  onViewReceipt: () => void;
+}) {
   const days = daysUntil(ticket.dueDate);
   return (
     <section className="mt-6 animate-fade-in-up rounded-2xl border border-border bg-card p-5 shadow-panel sm:p-6">
@@ -234,10 +277,33 @@ function TicketCard({ ticket, onPay }: { ticket: Ticket; onPay: () => void }) {
       )}
 
       {ticket.status === "Paid" ? (
-        <p className="mt-5 flex items-center gap-2 rounded-xl bg-paid/20 border border-paid/30 px-4 py-3 text-sm font-medium text-paid-foreground">
-          <CheckCircle2 className="size-4 shrink-0" />
-          This citation has been settled. OR {ticket.payment?.orNumber}.
-        </p>
+        <div className="mt-5 space-y-3">
+          <p className="flex items-center gap-2 rounded-xl bg-paid/20 border border-paid/30 px-4 py-3 text-sm font-medium text-paid-foreground">
+            <CheckCircle2 className="size-4 shrink-0" />
+            This citation has been settled.
+            {ticket.payment && ` OR ${ticket.payment.orNumber}.`}
+          </p>
+          {ticket.payment ? (
+            <>
+              <button
+                type="button"
+                onClick={onViewReceipt}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
+              >
+                <ReceiptText className="size-4" />
+                View e-receipt
+              </button>
+              <p className="text-center text-xs text-muted-foreground">
+                View, print, or save a copy of your payment receipt anytime.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground" role="status">
+              Receipt details are not available yet. Please try again later or
+              contact the Municipal Treasury. Do not pay again.
+            </p>
+          )}
+        </div>
       ) : ticket.status === "Contested" ? (
         <p className="mt-5 flex items-center gap-2 rounded-xl bg-contested/20 border border-contested/30 px-4 py-3 text-sm font-medium text-contested-foreground">
           <AlertTriangle className="size-4 shrink-0" />
@@ -282,50 +348,61 @@ function QrphPayment({
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [linkId, setLinkId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const linkRequest = useRef<AbortController | null>(null);
 
-  const generateLink = useCallback(
-    async (signal?: AbortSignal) => {
-      setProcessing(true);
-      setError(null);
-      setCheckoutUrl(null);
-      setLinkId(null);
-      try {
-        const res = await fetch("/api/payments/link", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ticketId: ticket.id }),
-          ...(signal ? { signal } : {}),
+  const generateLink = useCallback(async () => {
+    linkRequest.current?.abort();
+    const controller = new AbortController();
+    linkRequest.current = controller;
+    const { signal } = controller;
+    const toastId = `payment-link-${ticket.id}`;
+    setProcessing(true);
+    setError(null);
+    setCheckoutUrl(null);
+    setLinkId(null);
+    try {
+      const res = await fetch("/api/payments/link", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ticketId: ticket.id }),
+        signal,
+      });
+      const data = await res.json();
+      if (!res.ok)
+        throw new Error(
+          data.error || "Unable to create payment link. Please try again.",
+        );
+      if (!data.checkoutUrl || !data.linkId)
+        throw new Error("The payment service returned an invalid link.");
+      if (!signal.aborted) {
+        setCheckoutUrl(data.checkoutUrl);
+        setLinkId(data.linkId);
+        toast.success("Payment page ready", {
+          id: toastId,
+          description: "Open the secure payment page to complete your payment.",
         });
-        const data = await res.json();
-        if (!res.ok)
-          throw new Error(
-            data.error || "Unable to create payment link. Please try again.",
-          );
-        if (!data.checkoutUrl || !data.linkId)
-          throw new Error("The payment service returned an invalid link.");
-        if (!signal?.aborted) {
-          setCheckoutUrl(data.checkoutUrl);
-          setLinkId(data.linkId);
-        }
-      } catch (e: unknown) {
-        if (!signal?.aborted) {
-          setError(
-            e instanceof Error && e.message !== "Failed to fetch"
-              ? e.message
-              : "Unable to connect to the payment service. Check your connection and try again.",
-          );
-        }
-      } finally {
-        if (!signal?.aborted) setProcessing(false);
       }
-    },
-    [ticket.id],
-  );
+    } catch (e: unknown) {
+      if (!signal.aborted) {
+        const message =
+          e instanceof Error && e.message !== "Failed to fetch"
+            ? e.message
+            : "Unable to connect to the payment service. Check your connection and try again.";
+        setError(message);
+        toast.error("Unable to start online payment", {
+          id: toastId,
+          description: message,
+        });
+      }
+    } finally {
+      if (!signal.aborted) setProcessing(false);
+      if (linkRequest.current === controller) linkRequest.current = null;
+    }
+  }, [ticket.id]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    void generateLink(controller.signal);
-    return () => controller.abort();
+    void generateLink();
+    return () => linkRequest.current?.abort();
   }, [generateLink]);
 
   useEffect(() => {
@@ -333,6 +410,9 @@ function QrphPayment({
     const controller = new AbortController();
     let checking = false;
     let completed = false;
+    let paymentConfirmed = false;
+    let lastError: string | null = null;
+    const toastId = `payment-status-${ticket.id}`;
     const checkStatus = async () => {
       if (checking || completed || controller.signal.aborted) return;
       checking = true;
@@ -350,8 +430,8 @@ function QrphPayment({
               "Unable to check payment status. Retrying automatically.",
           );
         if (controller.signal.aborted) return;
-        setError(null);
         if (data.paid === true) {
+          paymentConfirmed = true;
           await fetchTickets();
           if (controller.signal.aborted) return;
           const state = useTicketStore.getState();
@@ -361,15 +441,38 @@ function QrphPayment({
             );
           }
           completed = true;
+          toast.dismiss(`payment-link-${ticket.id}`);
+          toast.success("Payment successful", {
+            id: toastId,
+            description: `Your payment for ${ticket.id} is confirmed. Your e-receipt is ready.`,
+          });
           onDone();
+        } else if (lastError) {
+          toast.dismiss(toastId);
         }
+        setError(null);
+        lastError = null;
       } catch (e: unknown) {
         if (!controller.signal.aborted) {
-          setError(
+          const message =
             e instanceof Error && e.message !== "Failed to fetch"
               ? e.message
-              : "Unable to check payment status. Retrying automatically.",
-          );
+              : "Unable to check payment status. Retrying automatically.";
+          setError(message);
+          if (message !== lastError) {
+            if (paymentConfirmed) {
+              toast.warning("Payment confirmed; receipt pending", {
+                id: toastId,
+                description: message,
+              });
+            } else {
+              toast.error("Unable to check payment status", {
+                id: toastId,
+                description: message,
+              });
+            }
+            lastError = message;
+          }
         }
       } finally {
         checking = false;
@@ -380,6 +483,7 @@ function QrphPayment({
     return () => {
       controller.abort();
       clearInterval(interval);
+      if (!completed) toast.dismiss(toastId);
     };
   }, [linkId, ticket.id, onDone, fetchTickets]);
 
@@ -438,7 +542,8 @@ function QrphPayment({
             </a>
             <p className="mt-4 text-xs text-muted-foreground max-w-xs mx-auto">
               Please complete the payment in the secure tab that opens. This
-              page will automatically update once the payment is successful.
+              page will automatically show your e-receipt once the payment is
+              confirmed. You can also look up this citation later to view it.
             </p>
           </div>
         )}
@@ -461,22 +566,26 @@ function Receipt({ ticket, onReset }: { ticket: Ticket; onReset: () => void }) {
   const p = ticket.payment;
   if (!p) return null;
   return (
-    <section className="mt-6 animate-fade-in-up rounded-2xl border border-border bg-card p-5 shadow-panel sm:p-6">
-      <div className="flex items-center gap-2 text-paid-foreground">
+    <section className="mt-6 animate-fade-in-up rounded-2xl border border-border bg-card p-5 shadow-panel sm:p-6 print:m-0 print:animate-none print:border-0 print:p-0 print:shadow-none">
+      <div className="no-print flex items-center gap-2 text-paid-foreground">
         <CheckCircle2 className="size-6" />
         <h2 className="font-display text-lg font-bold">Payment successful</h2>
       </div>
 
-      <div className="mt-4 rounded-xl border-2 border-dashed border-border bg-muted/30 p-5 font-mono text-sm text-card-foreground">
+      <div className="print-area mt-4 rounded-xl border-2 border-dashed border-border bg-muted/30 p-5 font-mono text-sm text-card-foreground print:mt-0">
         <p className="text-center text-xs uppercase tracking-widest text-muted-foreground">
           Republic of the Philippines
         </p>
         <p className="text-center text-xs uppercase tracking-widest text-muted-foreground">
+          Municipality of Gitagum
+        </p>
+        <p className="mt-1 text-center text-xs uppercase tracking-widest text-muted-foreground">
           Municipal Treasury — Official e-Receipt
         </p>
         <div className="my-3 border-t border-dashed border-border" />
         <dl className="space-y-1.5">
           <Row k="OR Number" v={p.orNumber} />
+          <Row k="Transaction ID" v={p.id} />
           <Row k="Citation" v={ticket.id} />
           <Row k="Paid by" v={ticket.violatorName} />
           <Row k="Plate No." v={ticket.plateNo} />
@@ -493,13 +602,18 @@ function Receipt({ ticket, onReset }: { ticket: Ticket; onReset: () => void }) {
         </div>
       </div>
 
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+      <p className="no-print mt-4 text-center text-xs text-muted-foreground">
+        Choose “Save as PDF” in the print dialog to download your receipt. You
+        can retrieve it later using your citation ticket number.
+      </p>
+      <div className="no-print mt-5 flex flex-col gap-2 sm:flex-row">
         <button
+          type="button"
           onClick={() => window.print()}
           className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
         >
-          <Download className="size-4" />
-          Download / print e-receipt
+          <Printer className="size-4" />
+          Print / save PDF
         </button>
         <button
           onClick={onReset}
@@ -514,9 +628,9 @@ function Receipt({ ticket, onReset }: { ticket: Ticket; onReset: () => void }) {
 
 function Row({ k, v }: { k: string; v: string }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <dt className="text-muted-foreground">{k}</dt>
-      <dd className="text-right font-medium">{v}</dd>
+    <div className="flex items-start justify-between gap-4">
+      <dt className="shrink-0 text-muted-foreground">{k}</dt>
+      <dd className="min-w-0 break-words text-right font-medium">{v}</dd>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { ShieldCheck, Radio, Landmark, LogIn, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { Role } from "@/types";
 
@@ -105,6 +106,11 @@ function LoginPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const showError = (message: string) => {
+    setError(message);
+    toast.error(message);
+  };
+
   const fillAccount = (account: DemoAccount) => {
     setCredential(account.credential);
     setPassword(account.password);
@@ -117,7 +123,7 @@ function LoginPage() {
     if (submitting) return;
     setError("");
     if (!credential.trim() || !password) {
-      setError("Enter your badge number or email and password.");
+      showError("Enter your badge number or email and password.");
       return;
     }
     setSubmitting(true);
@@ -130,7 +136,7 @@ function LoginPage() {
       });
       const result = await response.json();
       if (!response.ok || !result.user) {
-        setError(result.error || "Unable to sign in. Please try again.");
+        showError(result.error || "Unable to sign in. Please try again.");
         return;
       }
       const sessionUser = result.user;
@@ -143,8 +149,9 @@ function LoginPage() {
         credential: sessionUser.credential,
       });
       await router.navigate({ to: roleDestination(sessionUser.role) });
+      toast.success("Signed in successfully.");
     } catch {
-      setError("Unable to sign in. Check your connection and try again.");
+      showError("Unable to sign in. Check your connection and try again.");
     } finally {
       setSubmitting(false);
     }

@@ -56,4 +56,8 @@ export interface Ticket {
   dueDate: string;
   issuedBy: string;
   payment?: Payment | undefined;
+  /** ISO timestamp when the overdue citation was endorsed to the PNP. */
+  endorsedAt?: string | undefined;
+  /** Name of the admin/treasury user who endorsed it. */
+  endorsedBy?: string | undefined;
 }

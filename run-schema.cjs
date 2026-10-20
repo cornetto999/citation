@@ -14,8 +14,13 @@ if (!connectionString) {
 
 async function run() {
   const schemaFile = process.argv[2] || "schema.sql";
-  if (!["schema.sql", "email_verification.sql"].includes(schemaFile)) {
-    console.error("Choose schema.sql or email_verification.sql.");
+  const allowed = [
+    "schema.sql",
+    "email_verification.sql",
+    "overdue_endorsement.sql",
+  ];
+  if (!allowed.includes(schemaFile)) {
+    console.error(`Choose one of: ${allowed.join(", ")}.`);
     process.exitCode = 1;
     return;
   }
