@@ -7,11 +7,14 @@ import {
   Users,
   BarChart3,
   FileText,
+  ClipboardList,
+  History,
+  CalendarClock,
+  Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useTicketStore } from "@/store/useTicketStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,9 +29,14 @@ import {
 
 const navigation = [
   { to: "/admin", label: "Monitoring", icon: Activity },
+  { to: "/admin/citations", label: "Citation Register", icon: FileText },
   { to: "/admin/manage", label: "Manage Users", icon: Users },
   { to: "/admin/overdue", label: "Overdue", icon: AlarmClock },
+  { to: "/admin/cases", label: "Case Review", icon: ClipboardList },
+  { to: "/admin/followups", label: "Follow-up Queue", icon: CalendarClock },
+  { to: "/admin/audit", label: "Activity History", icon: History },
   { to: "/admin/reports", label: "Reports", icon: BarChart3 },
+  { to: "/admin/settings", label: "Citation Settings", icon: Settings2 },
 ] as const;
 
 export function AdminSidebar() {
@@ -36,9 +44,6 @@ export function AdminSidebar() {
   const currentPage = pathname.replace(/\/+$/, "") || "/";
   const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
-  const overdueCount = useTicketStore(
-    (s) => s.tickets.filter((t) => t.status === "Overdue").length,
-  );
 
   const handleSignOut = async () => {
     try {
@@ -85,20 +90,8 @@ export function AdminSidebar() {
           >
             <Icon className="size-4" />
             {label}
-            {to === "/admin/overdue" && overdueCount > 0 && (
-              <span className="ml-auto rounded-full bg-destructive px-1.5 py-px text-[10px] font-bold tabular text-destructive-foreground">
-                {overdueCount}
-              </span>
-            )}
           </Link>
         ))}
-        <a
-          href="#citations"
-          className="flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-semibold text-primary-foreground/50 border-l-2 border-transparent transition-all duration-200 hover:bg-white/[0.06] hover:text-primary-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary"
-        >
-          <FileText className="size-4" />
-          Citations
-        </a>
       </div>
 
       <div className="mt-4 border-t border-white/[0.06] pt-2">

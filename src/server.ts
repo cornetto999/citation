@@ -3,6 +3,7 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { handlePaymentRequest } from "./lib/paymongo.server";
+import { handleWorkflowRequest } from "./lib/workflow.server";
 import { handleAccountRequest } from "./lib/accounts.server";
 
 type ServerEntry = {
@@ -63,6 +64,8 @@ export default {
       [
         "/api/auth/login",
         "/api/auth/logout",
+        "/api/auth/session",
+        "/api/admin/users/status",
         "/api/admin/users",
         "/api/admin/users/resend",
         "/api/admin/users/update",
@@ -73,9 +76,17 @@ export default {
       return handleAccountRequest(request);
     }
     if (
-      ["/api/payments/link", "/api/payments/status"].includes(
-        new URL(request.url).pathname,
-      )
+      new URL(request.url).pathname.startsWith("/api/workflow/") ||
+      new URL(request.url).pathname.startsWith("/api/public/")
+    )
+      return handleWorkflowRequest(request);
+    if (
+      [
+        "/api/payments/link",
+        "/api/payments/status",
+        "/api/payments/webhook",
+        "/api/payments/reconcile",
+      ].includes(new URL(request.url).pathname)
     ) {
       return handlePaymentRequest(request);
     }

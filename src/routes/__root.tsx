@@ -11,7 +11,9 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { Loader2, ShieldCheck, Home, RefreshCw } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
-import { toast } from "sonner";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useTicketStore } from "@/store/useTicketStore";
+import { clearCitationDrafts } from "@/lib/citation-drafts";
 
 import appCss from "../styles.css?url";
 function NotFoundComponent() {
@@ -158,53 +160,49 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  const userKey = useAuthStore((s) => s.user?.key);
   useEffect(() => {
-    const toastId = "ticket-sync-error";
+    queryClient.clear();
     let active = true;
-    let unsubscribe: (() => void) | undefined;
-    let hasSyncFailure = false;
 
-    import("@/store/useTicketStore")
-      .then(({ useTicketStore }) => {
+    if (!userKey) return;
+    fetch("/api/auth/session", { credentials: "same-origin" })
+      .then(async (response) => {
         if (!active) return;
-
-        const notifySyncError = (
-          state: ReturnType<typeof useTicketStore.getState>,
-        ) => {
-          if (state.loading || !state.loaded) return;
-          if (state.error) {
-            if (!hasSyncFailure) {
-              toast.error("Unable to refresh citation data.", {
-                id: toastId,
-                description: "Check your connection and refresh the page.",
-              });
-              hasSyncFailure = true;
-            }
-          } else if (hasSyncFailure) {
-            hasSyncFailure = false;
-            toast.dismiss(toastId);
-          }
-        };
-
-        unsubscribe = useTicketStore.subscribe(notifySyncError);
-        notifySyncError(useTicketStore.getState());
-        void useTicketStore.getState().fetchTickets();
-        useTicketStore.getState().subscribeToRealtime();
+        if (response.status === 401 || response.status === 403) {
+          clearCitationDrafts();
+          useTicketStore.getState().clear();
+          useAuthStore.setState({ user: null });
+          return;
+        }
+        if (!response.ok) return;
+        const { user } = await response.json();
+        if (!active) return;
+        useAuthStore.setState({ user });
       })
-      .catch(() => {
-        if (!active) return;
-        hasSyncFailure = true;
-        toast.error("Unable to load citation data. Please refresh the page.", {
-          id: toastId,
-        });
-      });
-
+      .catch(() => {});
     return () => {
       active = false;
-      unsubscribe?.();
-      toast.dismiss(toastId);
     };
-  }, []);
+  }, [userKey, queryClient]);
+
+  useEffect(() => {
+    const expire = () => {
+      clearCitationDrafts();
+      useTicketStore.getState().clear();
+      useAuthStore.setState({ user: null });
+      queryClient.clear();
+    };
+    const refresh = () => {
+      void queryClient.invalidateQueries();
+    };
+    window.addEventListener("citation-session-expired", expire);
+    window.addEventListener("citation-data-changed", refresh);
+    return () => {
+      window.removeEventListener("citation-session-expired", expire);
+      window.removeEventListener("citation-data-changed", refresh);
+    };
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>

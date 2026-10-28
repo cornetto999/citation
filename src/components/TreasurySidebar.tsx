@@ -7,11 +7,13 @@ import {
   Wallet,
   LogOut,
   List,
+  Clock3,
+  ListChecks,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useTicketStore } from "@/store/useTicketStore";
+import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,14 +32,14 @@ const navigation = [
   { to: "/treasury/transactions", label: "Transactions", icon: List },
   { to: "/treasury/overdue", label: "Overdue", icon: AlarmClock },
   { to: "/treasury/reports", label: "Reports", icon: LineChart },
+  { to: "/treasury/shifts", label: "Cashier Shifts", icon: Clock3 },
+  { to: "/treasury/followups", label: "Follow-up Queue", icon: ListChecks },
 ] as const;
 
 export function TreasurySidebar() {
   const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
-  const overdueCount = useTicketStore(
-    (s) => s.tickets.filter((t) => t.status === "Overdue").length,
-  );
+  const { overdueCount } = useDashboardMetrics();
 
   const handleSignOut = async () => {
     try {

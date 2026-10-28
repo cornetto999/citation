@@ -14,19 +14,19 @@ A role-based traffic citation and payment system for Gitagum Municipal Governmen
 
 ## Features
 
-- **Enforcer** — Mobile-first fast citation entry with plate lookup, violation picker, and photo capture
-- **PNP** — Read-only monitoring table with status filters and due-date watch
-- **Treasury** — Cashier POS: search ticket, process cash or GCash payment, print e-receipt
-- **Admin** — Full dashboard with metrics, charts, user management, and reports
-- **Portal** — Public ticket lookup and QRPh online payment
+- **Enforcer** — Citation entry, opt-in drafts, recent shortcuts, owned records, and printable slips with secure portal QR codes
+- **PNP** — Read-only monitoring, active endorsement hotlist, overdue aging, and checkpoint print/CSV tools
+- **Treasury** — Fast cashier, manual official receipt entry, shifts, receipt reprints, payment exceptions, reports, and follow-up queues
+- **Admin** — Searchable citation register, attention queues, staff controls, cases, audit history, reports, and versioned settings
+- **Portal** — Verified single-citation lookup, online checkout recovery, masked identity, and payment record access
 
 ## Tech Stack
 
 - [TanStack Start](https://tanstack.com/start) + [TanStack Router](https://tanstack.com/router) — SSR framework with file-based routing
 - [React 19](https://react.dev) + TypeScript
 - [Tailwind CSS v4](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com)
-- [Supabase](https://supabase.com) — Postgres database + realtime subscriptions
-- [Zustand](https://zustand-demo.pmnd.rs) — Global ticket state with optimistic updates
+- [Supabase](https://supabase.com) — Postgres database accessed through authenticated server handlers
+- [Zustand](https://zustand-demo.pmnd.rs) + TanStack Query — Session-aware client cache, paginated queries, and periodic refresh
 - [Recharts](https://recharts.org) — Analytics charts
 - [Nitro](https://nitro.unjs.io) — Server engine (auto-detects Vercel/Node/Cloudflare)
 
@@ -50,6 +50,10 @@ If Vite reports `Cannot find native binding`, check `node -p 'process.version + 
 If nvm prints `Unknown option: n` from XAMPP's `head` command, run `export PATH="/usr/bin:$PATH"` before `nvm use 22` so nvm uses macOS's `head`.
 
 For admin-created accounts that verify their email before signing in, follow [the email verification setup](docs/email-verification.md). This requires Supabase Auth, a server-only admin key, the database migration, and custom SMTP for Gmail recipients.
+
+For the current Admin, Treasury, Enforcer, public, and PNP release, follow [the workflow release and migration guide](docs/workflow-release.md). The application requires `migrations/20261021_workflow.sql`; the earlier endorsement migration alone is insufficient. See [the PNP workflow guide](docs/pnp-workflow.md) for operational details.
+
+Run `npm test`, `npm run typecheck`, and `npm run build` before releasing. Database tests use an isolated PGlite database and never connect to the municipal database.
 
 ## Deployment
 

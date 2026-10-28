@@ -7,6 +7,7 @@ export const peso = (amount: number) =>
 
 export const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-PH", {
+    timeZone: "Asia/Manila",
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -14,6 +15,7 @@ export const shortDate = (iso: string) =>
 
 export const dateTime = (iso: string) =>
   new Date(iso).toLocaleString("en-PH", {
+    timeZone: "Asia/Manila",
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -23,6 +25,7 @@ export const dateTime = (iso: string) =>
 
 export const timeOnly = (iso: string) =>
   new Date(iso).toLocaleTimeString("en-PH", {
+    timeZone: "Asia/Manila",
     hour: "numeric",
     minute: "2-digit",
   });
@@ -30,13 +33,15 @@ export const timeOnly = (iso: string) =>
 export const daysUntil = (iso: string) =>
   Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
 
-/** YYYY-MM-DD in the user's local timezone (not UTC). */
+/** Municipal business date, independent of the device timezone. */
 export const localDateKey = (d: Date | string) => {
   const date = typeof d === "string" ? new Date(d) : d;
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 };
 
 export const isToday = (iso: string) =>
@@ -74,7 +79,14 @@ export const downloadCsv = (
   rows: (string | number | null | undefined)[][],
 ) => {
   const escape = (v: string | number | null | undefined) => {
-    const s = v == null ? "" : String(v);
+    // Free-text citation fields must remain text when opened in a spreadsheet.
+    // Preserve actual numbers so exported fines can still be summed.
+    const s =
+      typeof v === "string" && /^[\s\uFEFF]*[=+@-]|^[\t\r\n]/.test(v)
+        ? `'${v}`
+        : v == null
+          ? ""
+          : String(v);
     return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const csv = [headers, ...rows]

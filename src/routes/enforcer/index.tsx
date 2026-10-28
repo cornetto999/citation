@@ -1,11 +1,13 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowUpRight, ClipboardList } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { workflowRequest, workflowParams } from "@/lib/workflow-client";
+import { WorkflowFeedback } from "@/components/WorkflowFeedback";
 import { AppShell } from "@/components/AppShell";
 import { EnforcerSidebar } from "@/components/EnforcerSidebar";
-import { peso } from "@/lib/format";
+import { localDateKey } from "@/lib/format";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useTicketStore } from "@/store/useTicketStore";
 
 export const Route = createFileRoute("/enforcer/")({
   head: () => ({
@@ -38,7 +40,7 @@ function Metric({
 
 function EnforcerDashboardPage() {
   const user = useAuthStore((s) => s.user);
-  const tickets = useTicketStore((s) => s.tickets);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,19 +49,31 @@ function EnforcerDashboardPage() {
     }
   }, [navigate, user]);
 
-  const allMyTickets = useMemo(
-    () => tickets.filter((ticket) => ticket.issuedBy === user?.name),
-    [tickets, user?.name],
-  );
-
-  const outstandingCount = allMyTickets.filter(
-    (ticket) => ticket.status === "Unpaid" || ticket.status === "Overdue",
-  ).length;
-
-  const totalAssessed = allMyTickets.reduce(
-    (sum, ticket) => sum + ticket.totalFine,
-    0,
-  );
+  const today = localDateKey(new Date());
+  const result = useQuery({
+    queryKey: ["workflow", "enforcer-overview", user?.key, today],
+    queryFn: async ({ signal }) => {
+      const counts = await Promise.all(
+        [
+          { pageSize: 1 },
+          { pageSize: 1, from: today, to: today },
+          { pageSize: 1, status: "Overdue" },
+        ].map((filter) =>
+          workflowRequest<{ total: number }>(
+            `/api/workflow/tickets?${workflowParams(filter)}`,
+            { signal },
+          ),
+        ),
+      );
+      return {
+        all: counts[0]!.total,
+        today: counts[1]!.total,
+        overdue: counts[2]!.total,
+      };
+    },
+    enabled: user?.role === "enforcer",
+    staleTime: 15_000,
+  });
 
   if (!user || user.role !== "enforcer") return null;
 
@@ -99,23 +113,38 @@ function EnforcerDashboardPage() {
               New citation <ArrowUpRight className="size-4" />
             </Link>
           </div>
+          <div className="mt-4">
+            <WorkflowFeedback
+              error={result.error}
+              loading={result.isFetching}
+              updatedAt={result.dataUpdatedAt}
+              onRetry={() => void result.refetch()}
+            />
+          </div>
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3 stagger-children">
             <Metric
               label="Issued"
-              value={String(allMyTickets.length)}
+              value={result.data ? String(result.data.all) : "—"}
               detail="all time"
             />
             <Metric
-              label="Open"
-              value={String(outstandingCount)}
-              detail="needs settlement"
+              label="Issued today"
+              value={result.data ? String(result.data.today) : "—"}
+              detail="Philippine time"
             />
             <Metric
-              label="Assessed"
-              value={peso(totalAssessed)}
-              detail="total fines"
+              label="Overdue"
+              value={result.data ? String(result.data.overdue) : "—"}
+              detail="awaiting settlement"
             />
           </div>
+          <Link
+            to="/enforcer/citations"
+            search={{}}
+            className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 text-sm font-semibold"
+          >
+            Open my citation register <ArrowUpRight className="size-4" />
+          </Link>
         </section>
       </div>
     </AppShell>

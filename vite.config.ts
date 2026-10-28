@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   for (const key of [
     "PAYMONGO_SECRET_KEY",
+    "PAYMONGO_WEBHOOK_SECRET",
     "SUPABASE_SERVICE_ROLE_KEY",
     "SUPABASE_SECRET_KEY",
     "AUTH_SESSION_SECRET",

@@ -42,3 +42,7 @@ export const inAgingBucket = (days: number, bucket: AgingBucket) => {
 };
 
 export const isOverdue = (t: Ticket) => t.status === "Overdue";
+
+/** Payment resolves enforcement without erasing the original endorsement. */
+export const isFlaggedToPnp = (t: Ticket) =>
+  Boolean(t.endorsedAt) && t.status !== "Paid";

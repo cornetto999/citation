@@ -1,7 +1,15 @@
 import { useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
-import { KeyRound, Loader2, Pencil, Trash2, X } from "lucide-react";
+import {
+  KeyRound,
+  Loader2,
+  Pencil,
+  Trash2,
+  X,
+  ShieldOff,
+  ShieldCheck,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { Role, User } from "@/types";
 
@@ -65,17 +73,20 @@ export function UserDetailsDialog({
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [action, setAction] = useState<"save" | "password" | "delete" | null>(
-    null,
-  );
+  const [action, setAction] = useState<
+    "save" | "password" | "delete" | "status" | null
+  >(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [statusReason, setStatusReason] = useState("");
+  const [statusFormOpen, setStatusFormOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const busyRef = useRef(false);
   const isBusy = action !== null;
   const isOwnAccount = account.id === currentUserId;
+  const isDeleteConfirmed = deleteConfirmText === "delete this user";
   const verificationPending =
     account.emailVerificationRequired && !account.emailVerifiedAt;
   const emailStatus = account.emailVerifiedAt
@@ -177,8 +188,57 @@ export function UserDetailsDialog({
     }
   };
 
+  const handleAccessChange = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    if (busyRef.current || isOwnAccount || statusReason.trim().length < 3)
+      return;
+    busyRef.current = true;
+    setAction("status");
+    setError("");
+    setSuccess("");
+    try {
+      const result = await postUserAction(
+        "/api/admin/users/status",
+        {
+          userId: account.id,
+          active: account.active === false,
+          reason: statusReason.trim(),
+        },
+        "Unable to update account access. Please retry.",
+      );
+      if (!result.user || result.user.id !== account.id)
+        throw new Error(
+          "Unable to confirm the account access update. Please retry.",
+        );
+      setAccount(result.user);
+      onUserUpdated(result.user);
+      setStatusFormOpen(false);
+      setStatusReason("");
+      const message =
+        result.user.active === false
+          ? "Account deactivated. Existing records are retained."
+          : "Account reactivated.";
+      setSuccess(message);
+      toast.success(message);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to update account access.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      busyRef.current = false;
+      setAction(null);
+    }
+  };
+
   const handleDelete = async () => {
-    if (busyRef.current || isOwnAccount) return;
+    if (busyRef.current || isOwnAccount || !deleteOpen || !isDeleteConfirmed) {
+      return;
+    }
     busyRef.current = true;
     setAction("delete");
     setDeleteError("");
@@ -579,6 +639,103 @@ export function UserDetailsDialog({
             </section>
 
             <section
+              aria-labelledby="user-access-heading"
+              className="border-t border-border pt-5"
+            >
+              <h2
+                id="user-access-heading"
+                className="font-semibold text-foreground"
+              >
+                Account access
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {account.active === false
+                  ? "This account is deactivated and cannot sign in."
+                  : "This account has active access. Deactivation ends access and preserves citation and payment records."}
+              </p>
+              {account.disabledReason && (
+                <p className="mt-2 rounded-lg bg-muted p-3 text-sm">
+                  Reason: {account.disabledReason}
+                </p>
+              )}
+              {isOwnAccount ? (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  You cannot deactivate the administrator account you are
+                  currently using.
+                </p>
+              ) : !statusFormOpen ? (
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => {
+                    setStatusFormOpen(true);
+                    setError("");
+                    setSuccess("");
+                  }}
+                  className={`${secondaryButtonClassName} mt-4`}
+                >
+                  {account.active === false ? (
+                    <ShieldCheck className="size-4" />
+                  ) : (
+                    <ShieldOff className="size-4" />
+                  )}
+                  {account.active === false
+                    ? "Reactivate account"
+                    : "Deactivate account"}
+                </button>
+              ) : (
+                <form onSubmit={handleAccessChange} className="mt-4 space-y-3">
+                  <label
+                    htmlFor="account-access-reason"
+                    className="block text-sm font-medium"
+                  >
+                    Reason for{" "}
+                    {account.active === false ? "reactivation" : "deactivation"}
+                  </label>
+                  <textarea
+                    id="account-access-reason"
+                    required
+                    minLength={3}
+                    maxLength={1000}
+                    rows={3}
+                    disabled={isBusy}
+                    value={statusReason}
+                    onChange={(event) => setStatusReason(event.target.value)}
+                    className={inputClassName}
+                    placeholder="Explain the access change for the audit record."
+                  />
+                  <div className="flex flex-wrap justify-end gap-3">
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => {
+                        setStatusFormOpen(false);
+                        setStatusReason("");
+                      }}
+                      className={secondaryButtonClassName}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isBusy || statusReason.trim().length < 3}
+                      className={primaryButtonClassName}
+                    >
+                      {action === "status" && (
+                        <Loader2 className="size-4 animate-spin" />
+                      )}
+                      {action === "status"
+                        ? "Updating access…"
+                        : account.active === false
+                          ? "Confirm reactivation"
+                          : "Confirm deactivation"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </section>
+
+            <section
               aria-labelledby="user-delete-heading"
               className="border-t border-border pt-5"
             >
@@ -648,6 +805,8 @@ export function UserDetailsDialog({
                         placeholder="delete this user"
                         disabled={isBusy}
                         autoComplete="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
                         className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-destructive focus:ring-2 focus:ring-destructive/20"
                       />
                     </div>
@@ -673,18 +832,10 @@ export function UserDetailsDialog({
                         <button
                           type="button"
                           disabled={
-                            isBusy ||
-                            deleteConfirmText.trim().toLowerCase() !==
-                              "delete this user"
+                            isBusy || isOwnAccount || !isDeleteConfirmed
                           }
                           onClick={(event) => {
                             event.preventDefault();
-                            if (
-                              deleteConfirmText.trim().toLowerCase() !==
-                              "delete this user"
-                            ) {
-                              return;
-                            }
                             void handleDelete();
                           }}
                           className="inline-flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive disabled:opacity-50"

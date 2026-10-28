@@ -3,7 +3,7 @@ import { Activity, AlarmClock, ShieldAlert, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useTicketStore } from "@/store/useTicketStore";
+import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,10 +24,8 @@ const navigation = [
 export function PnpSidebar() {
   const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
-  const endorsedCount = useTicketStore(
-    (s) =>
-      s.tickets.filter((t) => t.status === "Overdue" && t.endorsedAt).length,
-  );
+  const metrics = useDashboardMetrics();
+  const endorsedCount = metrics.updatedAt ? metrics.flaggedCount : undefined;
 
   const handleSignOut = async () => {
     try {
@@ -77,14 +75,19 @@ export function PnpSidebar() {
           >
             <Icon className="size-4" />
             {label}
-            {to === "/pnp/overdue" && endorsedCount > 0 && (
-              <span
-                className="ml-auto rounded-full bg-destructive px-1.5 py-px text-[10px] font-bold tabular text-destructive-foreground"
-                title={`${endorsedCount} endorsed for enforcement`}
-              >
-                {endorsedCount}
-              </span>
-            )}
+            {to === "/pnp/overdue" &&
+              (endorsedCount === undefined || endorsedCount > 0) && (
+                <span
+                  className="ml-auto rounded-full bg-destructive px-1.5 py-px text-[10px] font-bold tabular text-destructive-foreground"
+                  title={
+                    endorsedCount === undefined
+                      ? "Loading citation totals"
+                      : `${endorsedCount} active citations flagged to PNP · ${metrics.overdueCount} overdue citations`
+                  }
+                >
+                  {endorsedCount ?? "—"}
+                </span>
+              )}
           </Link>
         ))}
       </div>

@@ -26,10 +26,6 @@ const source = readFileSync(
     "const useAuthStore = (select) => select({ signOut: async () => {} });",
   )
   .replace(
-    'import { useTicketStore } from "@/store/useTicketStore";',
-    "const useTicketStore = (select) => select({ tickets: [] });",
-  )
-  .replace(
     /import\s*\{([^}]+)\}\s*from\s*"@\/components\/ui\/alert-dialog";/,
     (_match, importedNames) => {
       const names = importedNames
@@ -61,11 +57,26 @@ const { AdminSidebar } = await import(
 );
 delete globalThis.__adminSidebarDialog;
 
+const expectedNavigation = [
+  ["/admin", "Monitoring"],
+  ["/admin/citations", "Citation Register"],
+  ["/admin/manage", "Manage Users"],
+  ["/admin/overdue", "Overdue"],
+  ["/admin/cases", "Case Review"],
+  ["/admin/followups", "Follow-up Queue"],
+  ["/admin/audit", "Activity History"],
+  ["/admin/reports", "Reports"],
+  ["/admin/settings", "Citation Settings"],
+];
+
 function renderSidebar(url) {
   const root = createRootRoute();
   const admin = createRoute({ getParentRoute: () => root, path: "/admin" });
-  const children = ["/", "/manage", "/overdue", "/reports"].map((path) =>
-    createRoute({ getParentRoute: () => admin, path }),
+  const children = expectedNavigation.map(([path]) =>
+    createRoute({
+      getParentRoute: () => admin,
+      path: path.slice("/admin".length) || "/",
+    }),
   );
   const router = createRouter({
     routeTree: root.addChildren([admin.addChildren(children)]),
@@ -92,22 +103,20 @@ function readLinks(markup) {
   );
 }
 
-for (const [url, selected] of [
-  ["/admin", "Monitoring"],
-  ["/admin/", "Monitoring"],
-  ["/admin/manage", "Manage Users"],
-  ["/admin/manage/?search=admin", "Manage Users"],
-  ["/admin/overdue", "Overdue"],
-  ["/admin/overdue/", "Overdue"],
-  ["/admin/reports", "Reports"],
-  ["/admin/reports/", "Reports"],
-  ["/admin/reports?period=month", "Reports"],
-]) {
+for (const [url, selected] of expectedNavigation.flatMap(([path, label]) => [
+  [path, label],
+  [`${path}/`, label],
+  [`${path}?query=sample&page=2&status=Overdue`, label],
+])) {
   test(`${url} highlights only ${selected}`, () => {
     const markup = renderSidebar(url);
     assert.match(markup, /<nav\b[^>]*aria-label="Admin navigation"/);
     const links = readLinks(markup);
-    assert.equal(links.length, 5);
+    assert.deepEqual(
+      links.map((link) => [link.href?.replace(/\/$/, ""), link.label]),
+      expectedNavigation,
+      "All administrative workflows remain reachable from every page",
+    );
     const highlighted = links.filter(
       (link) =>
         link.classes.includes("bg-white/[0.12]") &&

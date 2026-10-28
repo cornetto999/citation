@@ -17,9 +17,14 @@ import { Route as PnpRouteImport } from './routes/pnp'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as TreasuryRouteImport } from './routes/treasury'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminAuditRouteImport } from './routes/admin/audit'
+import { Route as AdminCasesRouteImport } from './routes/admin/cases'
+import { Route as AdminCitationsRouteImport } from './routes/admin/citations'
+import { Route as AdminFollowupsRouteImport } from './routes/admin/followups'
 import { Route as AdminManageRouteImport } from './routes/admin/manage'
 import { Route as AdminOverdueRouteImport } from './routes/admin/overdue'
 import { Route as AdminReportsRouteImport } from './routes/admin/reports'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AuthVerifyRouteImport } from './routes/auth/verify'
 import { Route as EnforcerIndexRouteImport } from './routes/enforcer/index'
 import { Route as EnforcerCitationsRouteImport } from './routes/enforcer/citations'
@@ -28,8 +33,11 @@ import { Route as PnpIndexRouteImport } from './routes/pnp/index'
 import { Route as PnpOverdueRouteImport } from './routes/pnp/overdue'
 import { Route as TreasuryIndexRouteImport } from './routes/treasury/index'
 import { Route as TreasuryCashierRouteImport } from './routes/treasury/cashier'
+import { Route as TreasuryFollowupsRouteImport } from './routes/treasury/followups'
 import { Route as TreasuryOverdueRouteImport } from './routes/treasury/overdue'
+import { Route as TreasuryReceiptsRouteImport } from './routes/treasury/receipts'
 import { Route as TreasuryReportsRouteImport } from './routes/treasury/reports'
+import { Route as TreasuryShiftsRouteImport } from './routes/treasury/shifts'
 import { Route as TreasuryTransactionsRouteImport } from './routes/treasury/transactions'
 
 const IndexRoute = IndexRouteImport.update({
@@ -72,6 +80,26 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminAuditRoute = AdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminCasesRoute = AdminCasesRouteImport.update({
+  id: '/cases',
+  path: '/cases',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminCitationsRoute = AdminCitationsRouteImport.update({
+  id: '/citations',
+  path: '/citations',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminFollowupsRoute = AdminFollowupsRouteImport.update({
+  id: '/followups',
+  path: '/followups',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminManageRoute = AdminManageRouteImport.update({
   id: '/manage',
   path: '/manage',
@@ -85,6 +113,11 @@ const AdminOverdueRoute = AdminOverdueRouteImport.update({
 const AdminReportsRoute = AdminReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AuthVerifyRoute = AuthVerifyRouteImport.update({
@@ -127,14 +160,29 @@ const TreasuryCashierRoute = TreasuryCashierRouteImport.update({
   path: '/cashier',
   getParentRoute: () => TreasuryRoute,
 } as any)
+const TreasuryFollowupsRoute = TreasuryFollowupsRouteImport.update({
+  id: '/followups',
+  path: '/followups',
+  getParentRoute: () => TreasuryRoute,
+} as any)
 const TreasuryOverdueRoute = TreasuryOverdueRouteImport.update({
   id: '/overdue',
   path: '/overdue',
   getParentRoute: () => TreasuryRoute,
 } as any)
+const TreasuryReceiptsRoute = TreasuryReceiptsRouteImport.update({
+  id: '/receipts',
+  path: '/receipts',
+  getParentRoute: () => TreasuryRoute,
+} as any)
 const TreasuryReportsRoute = TreasuryReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => TreasuryRoute,
+} as any)
+const TreasuryShiftsRoute = TreasuryShiftsRouteImport.update({
+  id: '/shifts',
+  path: '/shifts',
   getParentRoute: () => TreasuryRoute,
 } as any)
 const TreasuryTransactionsRoute = TreasuryTransactionsRouteImport.update({
@@ -151,16 +199,24 @@ export interface FileRoutesByFullPath {
   '/pnp': typeof PnpRouteWithChildren
   '/portal': typeof PortalRoute
   '/treasury': typeof TreasuryRouteWithChildren
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/cases': typeof AdminCasesRoute
+  '/admin/citations': typeof AdminCitationsRoute
+  '/admin/followups': typeof AdminFollowupsRoute
   '/admin/manage': typeof AdminManageRoute
   '/admin/overdue': typeof AdminOverdueRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/auth/verify': typeof AuthVerifyRoute
   '/enforcer/citations': typeof EnforcerCitationsRoute
   '/enforcer/new': typeof EnforcerNewRoute
   '/pnp/overdue': typeof PnpOverdueRoute
   '/treasury/cashier': typeof TreasuryCashierRoute
+  '/treasury/followups': typeof TreasuryFollowupsRoute
   '/treasury/overdue': typeof TreasuryOverdueRoute
+  '/treasury/receipts': typeof TreasuryReceiptsRoute
   '/treasury/reports': typeof TreasuryReportsRoute
+  '/treasury/shifts': typeof TreasuryShiftsRoute
   '/treasury/transactions': typeof TreasuryTransactionsRoute
   '/admin/': typeof AdminIndexRoute
   '/enforcer/': typeof EnforcerIndexRoute
@@ -171,16 +227,24 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/portal': typeof PortalRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/cases': typeof AdminCasesRoute
+  '/admin/citations': typeof AdminCitationsRoute
+  '/admin/followups': typeof AdminFollowupsRoute
   '/admin/manage': typeof AdminManageRoute
   '/admin/overdue': typeof AdminOverdueRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/auth/verify': typeof AuthVerifyRoute
   '/enforcer/citations': typeof EnforcerCitationsRoute
   '/enforcer/new': typeof EnforcerNewRoute
   '/pnp/overdue': typeof PnpOverdueRoute
   '/treasury/cashier': typeof TreasuryCashierRoute
+  '/treasury/followups': typeof TreasuryFollowupsRoute
   '/treasury/overdue': typeof TreasuryOverdueRoute
+  '/treasury/receipts': typeof TreasuryReceiptsRoute
   '/treasury/reports': typeof TreasuryReportsRoute
+  '/treasury/shifts': typeof TreasuryShiftsRoute
   '/treasury/transactions': typeof TreasuryTransactionsRoute
   '/admin': typeof AdminIndexRoute
   '/enforcer': typeof EnforcerIndexRoute
@@ -196,16 +260,24 @@ export interface FileRoutesById {
   '/pnp': typeof PnpRouteWithChildren
   '/portal': typeof PortalRoute
   '/treasury': typeof TreasuryRouteWithChildren
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/cases': typeof AdminCasesRoute
+  '/admin/citations': typeof AdminCitationsRoute
+  '/admin/followups': typeof AdminFollowupsRoute
   '/admin/manage': typeof AdminManageRoute
   '/admin/overdue': typeof AdminOverdueRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/auth/verify': typeof AuthVerifyRoute
   '/enforcer/citations': typeof EnforcerCitationsRoute
   '/enforcer/new': typeof EnforcerNewRoute
   '/pnp/overdue': typeof PnpOverdueRoute
   '/treasury/cashier': typeof TreasuryCashierRoute
+  '/treasury/followups': typeof TreasuryFollowupsRoute
   '/treasury/overdue': typeof TreasuryOverdueRoute
+  '/treasury/receipts': typeof TreasuryReceiptsRoute
   '/treasury/reports': typeof TreasuryReportsRoute
+  '/treasury/shifts': typeof TreasuryShiftsRoute
   '/treasury/transactions': typeof TreasuryTransactionsRoute
   '/admin/': typeof AdminIndexRoute
   '/enforcer/': typeof EnforcerIndexRoute
@@ -222,16 +294,24 @@ export interface FileRouteTypes {
     | '/pnp'
     | '/portal'
     | '/treasury'
+    | '/admin/audit'
+    | '/admin/cases'
+    | '/admin/citations'
+    | '/admin/followups'
     | '/admin/manage'
     | '/admin/overdue'
     | '/admin/reports'
+    | '/admin/settings'
     | '/auth/verify'
     | '/enforcer/citations'
     | '/enforcer/new'
     | '/pnp/overdue'
     | '/treasury/cashier'
+    | '/treasury/followups'
     | '/treasury/overdue'
+    | '/treasury/receipts'
     | '/treasury/reports'
+    | '/treasury/shifts'
     | '/treasury/transactions'
     | '/admin/'
     | '/enforcer/'
@@ -242,16 +322,24 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/portal'
+    | '/admin/audit'
+    | '/admin/cases'
+    | '/admin/citations'
+    | '/admin/followups'
     | '/admin/manage'
     | '/admin/overdue'
     | '/admin/reports'
+    | '/admin/settings'
     | '/auth/verify'
     | '/enforcer/citations'
     | '/enforcer/new'
     | '/pnp/overdue'
     | '/treasury/cashier'
+    | '/treasury/followups'
     | '/treasury/overdue'
+    | '/treasury/receipts'
     | '/treasury/reports'
+    | '/treasury/shifts'
     | '/treasury/transactions'
     | '/admin'
     | '/enforcer'
@@ -266,16 +354,24 @@ export interface FileRouteTypes {
     | '/pnp'
     | '/portal'
     | '/treasury'
+    | '/admin/audit'
+    | '/admin/cases'
+    | '/admin/citations'
+    | '/admin/followups'
     | '/admin/manage'
     | '/admin/overdue'
     | '/admin/reports'
+    | '/admin/settings'
     | '/auth/verify'
     | '/enforcer/citations'
     | '/enforcer/new'
     | '/pnp/overdue'
     | '/treasury/cashier'
+    | '/treasury/followups'
     | '/treasury/overdue'
+    | '/treasury/receipts'
     | '/treasury/reports'
+    | '/treasury/shifts'
     | '/treasury/transactions'
     | '/admin/'
     | '/enforcer/'
@@ -352,6 +448,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/audit': {
+      id: '/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AdminAuditRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/cases': {
+      id: '/admin/cases'
+      path: '/cases'
+      fullPath: '/admin/cases'
+      preLoaderRoute: typeof AdminCasesRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/citations': {
+      id: '/admin/citations'
+      path: '/citations'
+      fullPath: '/admin/citations'
+      preLoaderRoute: typeof AdminCitationsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/followups': {
+      id: '/admin/followups'
+      path: '/followups'
+      fullPath: '/admin/followups'
+      preLoaderRoute: typeof AdminFollowupsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/manage': {
       id: '/admin/manage'
       path: '/manage'
@@ -371,6 +495,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/admin/reports'
       preLoaderRoute: typeof AdminReportsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/auth/verify': {
@@ -429,6 +560,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TreasuryCashierRouteImport
       parentRoute: typeof TreasuryRoute
     }
+    '/treasury/followups': {
+      id: '/treasury/followups'
+      path: '/followups'
+      fullPath: '/treasury/followups'
+      preLoaderRoute: typeof TreasuryFollowupsRouteImport
+      parentRoute: typeof TreasuryRoute
+    }
     '/treasury/overdue': {
       id: '/treasury/overdue'
       path: '/overdue'
@@ -436,11 +574,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TreasuryOverdueRouteImport
       parentRoute: typeof TreasuryRoute
     }
+    '/treasury/receipts': {
+      id: '/treasury/receipts'
+      path: '/receipts'
+      fullPath: '/treasury/receipts'
+      preLoaderRoute: typeof TreasuryReceiptsRouteImport
+      parentRoute: typeof TreasuryRoute
+    }
     '/treasury/reports': {
       id: '/treasury/reports'
       path: '/reports'
       fullPath: '/treasury/reports'
       preLoaderRoute: typeof TreasuryReportsRouteImport
+      parentRoute: typeof TreasuryRoute
+    }
+    '/treasury/shifts': {
+      id: '/treasury/shifts'
+      path: '/shifts'
+      fullPath: '/treasury/shifts'
+      preLoaderRoute: typeof TreasuryShiftsRouteImport
       parentRoute: typeof TreasuryRoute
     }
     '/treasury/transactions': {
@@ -454,16 +606,26 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteRouteChildren {
+  AdminAuditRoute: typeof AdminAuditRoute
+  AdminCasesRoute: typeof AdminCasesRoute
+  AdminCitationsRoute: typeof AdminCitationsRoute
+  AdminFollowupsRoute: typeof AdminFollowupsRoute
   AdminManageRoute: typeof AdminManageRoute
   AdminOverdueRoute: typeof AdminOverdueRoute
   AdminReportsRoute: typeof AdminReportsRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminAuditRoute: AdminAuditRoute,
+  AdminCasesRoute: AdminCasesRoute,
+  AdminCitationsRoute: AdminCitationsRoute,
+  AdminFollowupsRoute: AdminFollowupsRoute,
   AdminManageRoute: AdminManageRoute,
   AdminOverdueRoute: AdminOverdueRoute,
   AdminReportsRoute: AdminReportsRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
@@ -501,16 +663,22 @@ const PnpRouteWithChildren = PnpRoute._addFileChildren(PnpRouteChildren)
 
 interface TreasuryRouteChildren {
   TreasuryCashierRoute: typeof TreasuryCashierRoute
+  TreasuryFollowupsRoute: typeof TreasuryFollowupsRoute
   TreasuryOverdueRoute: typeof TreasuryOverdueRoute
+  TreasuryReceiptsRoute: typeof TreasuryReceiptsRoute
   TreasuryReportsRoute: typeof TreasuryReportsRoute
+  TreasuryShiftsRoute: typeof TreasuryShiftsRoute
   TreasuryTransactionsRoute: typeof TreasuryTransactionsRoute
   TreasuryIndexRoute: typeof TreasuryIndexRoute
 }
 
 const TreasuryRouteChildren: TreasuryRouteChildren = {
   TreasuryCashierRoute: TreasuryCashierRoute,
+  TreasuryFollowupsRoute: TreasuryFollowupsRoute,
   TreasuryOverdueRoute: TreasuryOverdueRoute,
+  TreasuryReceiptsRoute: TreasuryReceiptsRoute,
   TreasuryReportsRoute: TreasuryReportsRoute,
+  TreasuryShiftsRoute: TreasuryShiftsRoute,
   TreasuryTransactionsRoute: TreasuryTransactionsRoute,
   TreasuryIndexRoute: TreasuryIndexRoute,
 }

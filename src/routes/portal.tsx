@@ -10,7 +10,11 @@ import {
   ArrowLeft,
   AlertTriangle,
 } from "lucide-react";
-import { useTicketStore } from "@/store/useTicketStore";
+import {
+  readPaymentRecovery,
+  savePaymentRecovery,
+  clearPaymentRecovery,
+} from "@/lib/public-payment-recovery";
 import { StatusBadge } from "@/components/StatusBadge";
 import { peso, dateTime, shortDate, daysUntil } from "@/lib/format";
 import type { Ticket } from "@/types";
@@ -20,10 +24,11 @@ export const Route = createFileRoute("/portal")({
   head: () => ({
     meta: [
       { title: "Online Pay | Citation Ticket & Payment System" },
+      { name: "referrer", content: "no-referrer" },
       {
         name: "description",
         content:
-          "Look up your traffic citation ticket by ID, pay securely online via QRPh, and download your official e-receipt.",
+          "Look up your traffic citation ticket by ID, pay securely online via QRPh, and download your payment record.",
       },
       {
         property: "og:title",
@@ -32,7 +37,7 @@ export const Route = createFileRoute("/portal")({
       {
         property: "og:description",
         content:
-          "Look up your traffic citation, pay via QRPh, and download your e-receipt.",
+          "Look up your traffic citation, pay via QRPh, and download your payment record.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -43,61 +48,165 @@ export const Route = createFileRoute("/portal")({
 
 type Stage = "lookup" | "pay" | "receipt";
 
+type PublicVerification = { accessToken?: string; licenseNo?: string };
+
+async function publicRequest<T>(
+  path: string,
+  body: object,
+  signal?: AbortSignal,
+): Promise<T> {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+    ...(signal ? { signal } : {}),
+    referrerPolicy: "no-referrer",
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok)
+    throw new Error(
+      result?.error ||
+        "Unable to verify this citation. Check the details and try again.",
+    );
+  if (!result)
+    throw new Error(
+      "The server returned an unreadable response. Please retry.",
+    );
+  return result as T;
+}
+
 function PortalPage() {
-  const getTicket = useTicketStore((s) => s.getTicket);
   const [query, setQuery] = useState("");
-  const [ticketId, setTicketId] = useState<string | null>(null);
-  const ticket = useTicketStore((s) =>
-    s.tickets.find((ticket) => ticket.id === ticketId),
-  );
-  const [notFound, setNotFound] = useState(false);
+  const [officeInformation, setOfficeInformation] = useState("");
+  const [licenseNo, setLicenseNo] = useState("");
+  const [accessToken, setAccessToken] = useState("");
+  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [verification, setVerification] = useState<PublicVerification>({});
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [recoveryTicket, setRecoveryTicket] = useState("");
   const [stage, setStage] = useState<Stage>("lookup");
+  const lookupRequest = useRef<AbortController | null>(null);
   const showReceipt = useCallback(() => setStage("receipt"), []);
 
-  const search = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const lookupToastId = "citation-lookup";
-    if (!query.trim()) {
-      toast.error("Enter a citation ticket number", { id: lookupToastId });
-      return;
-    }
-    const state = useTicketStore.getState();
-    if (state.loading || !state.loaded) {
-      toast.info("Citation records are still loading", {
-        id: lookupToastId,
-        description: "Please try your lookup again in a moment.",
-      });
-      return;
-    }
-    if (state.error) {
-      toast.error("Unable to look up your citation", {
-        id: lookupToastId,
-        description: "Check your connection and refresh the page to try again.",
-      });
-      return;
-    }
-    const found = getTicket(query);
-    setTicketId(found?.id ?? null);
-    setNotFound(!found);
-    setStage("lookup");
-    if (found) {
-      toast.success("Citation found", {
-        id: lookupToastId,
-        description: `${found.id} · ${found.status}`,
-      });
-    } else {
-      toast.error("Citation not found", {
-        id: lookupToastId,
-        description: "Check your ticket number and try again.",
-      });
-    }
-  };
+  const lookup = useCallback(
+    async (ticketId: string, credentials: PublicVerification) => {
+      lookupRequest.current?.abort();
+      const controller = new AbortController();
+      lookupRequest.current = controller;
+      setLoading(true);
+      setError("");
+      setTicket(null);
+      setStage("lookup");
+      try {
+        const result = await publicRequest<{ ticket: Ticket }>(
+          "/api/public/ticket",
+          { ticketId, ...credentials },
+          controller.signal,
+        );
+        if (controller.signal.aborted) return;
+        setTicket(result.ticket);
+        setVerification(credentials);
+        const saved = readPaymentRecovery();
+        if (
+          saved?.ticketId === result.ticket.id &&
+          result.ticket.status !== "Paid"
+        )
+          setStage("pay");
+        if (
+          result.ticket.status === "Paid" &&
+          saved?.ticketId === result.ticket.id
+        )
+          clearPaymentRecovery();
+      } catch (failure) {
+        if (!controller.signal.aborted)
+          setError(
+            failure instanceof Error
+              ? failure.message
+              : "Unable to connect. Please retry.",
+          );
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    },
+    [],
+  );
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ticketId = params.get("ticket")?.trim().toUpperCase() || "";
+    const token = params.get("access") || "";
+    const recovery = readPaymentRecovery();
+    setQuery(ticketId || recovery?.ticketId || "");
+    setAccessToken(token);
+    setRecoveryTicket(recovery?.ticketId || "");
+    if (ticketId && token) void lookup(ticketId, { accessToken: token });
+    return () => lookupRequest.current?.abort();
+  }, [lookup]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/public/information", {
+      signal: controller.signal,
+      referrerPolicy: "no-referrer",
+    })
+      .then(async (response) => (response.ok ? response.json() : null))
+      .then((result) => {
+        if (
+          !controller.signal.aborted &&
+          typeof result?.officeInformation === "string"
+        )
+          setOfficeInformation(result.officeInformation);
+      })
+      .catch(() => {
+        /* Standard Treasury guidance remains available while office information is unavailable. */
+      });
+    return () => controller.abort();
+  }, []);
+
+  const search = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!query.trim()) {
+      setError("Enter your citation ticket number.");
+      return;
+    }
+    if (!accessToken && !licenseNo.trim()) {
+      setError(
+        "Use the secure link on your citation slip, or enter the exact recorded license number for an older citation.",
+      );
+      return;
+    }
+    void lookup(
+      query.trim().toUpperCase(),
+      accessToken ? { accessToken } : { licenseNo: licenseNo.trim() },
+    );
+  };
+  const paymentDone = useCallback(async () => {
+    if (!ticket) return;
+    const result = await publicRequest<{ ticket: Ticket }>(
+      "/api/public/ticket",
+      { ticketId: ticket.id, ...verification },
+    );
+    if (!result.ticket.payment)
+      throw new Error(
+        "Payment confirmed. Your receipt is still syncing; please do not pay again.",
+      );
+    setTicket(result.ticket);
+    setStage("receipt");
+    clearPaymentRecovery();
+    setRecoveryTicket("");
+  }, [ticket, verification]);
   const reset = () => {
-    setTicketId(null);
-    setNotFound(false);
+    lookupRequest.current?.abort();
+    setLoading(false);
+    setTicket(null);
+    setError("");
     setQuery("");
+    setLicenseNo("");
+    setAccessToken("");
+    setVerification({});
     setStage("lookup");
+    window.history.replaceState(null, "", "/portal");
   };
 
   return (
@@ -127,6 +236,14 @@ function PortalPage() {
       </header>
 
       <main className="on-brand mx-auto max-w-3xl px-3 py-5 sm:px-6 sm:py-8 print:m-0 print:max-w-none print:p-0">
+        {officeInformation && (
+          <aside className="no-print mb-5 rounded-xl border border-border bg-card p-4 text-sm">
+            <h2 className="font-semibold">Municipal Treasury information</h2>
+            <p className="mt-2 whitespace-pre-wrap text-muted-foreground">
+              {officeInformation}
+            </p>
+          </aside>
+        )}
         {/* Lookup */}
         <form
           onSubmit={search}
@@ -145,23 +262,70 @@ function PortalPage() {
             <input
               id="ticket-id"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                lookupRequest.current?.abort();
+                setLoading(false);
+                setQuery(e.target.value);
+                setTicket(null);
+                setAccessToken("");
+                setVerification({});
+                setStage("lookup");
+                setError("");
+              }}
               placeholder="CTN-2026-0000"
               className="h-12 min-w-0 flex-1 rounded-xl border border-input bg-background px-4 font-mono text-sm uppercase tracking-wide text-foreground outline-none ring-ring transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
             />
             <button
               type="submit"
+              disabled={loading}
               className="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
             >
               <Search className="size-4" />
-              Look up
+              {loading ? "Verifying…" : "Verify citation"}
             </button>
           </div>
-          {notFound && (
-            <p className="mt-3 flex items-center gap-2 rounded-xl bg-overdue/20 border border-overdue/30 px-4 py-2.5 text-sm font-medium text-overdue-foreground animate-scale-in">
-              <AlertTriangle className="size-4 shrink-0" />
-              No citation found with that number. Check the ticket and try
-              again.
+          {!accessToken && (
+            <label className="mt-4 block text-sm font-semibold">
+              License number on citation
+              <input
+                value={licenseNo}
+                onChange={(event) => {
+                  lookupRequest.current?.abort();
+                  setLoading(false);
+                  setTicket(null);
+                  setStage("lookup");
+                  setLicenseNo(event.target.value);
+                }}
+                autoComplete="off"
+                placeholder="Exact license number for older citations"
+                className="mt-2 h-12 w-full rounded-xl border border-input bg-background px-4 font-mono text-sm outline-none focus:ring-2 focus:ring-ring/30"
+              />
+              <span className="mt-2 block text-xs font-normal text-muted-foreground">
+                New citations require the secure QR/link printed on the slip.
+                Older citations can use the exact recorded license number. If no
+                license was recorded, ask the Municipal Treasury for assistance.
+              </span>
+            </label>
+          )}
+          {accessToken && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Secure citation link detected. Keep this link private.
+            </p>
+          )}
+          {recoveryTicket && !ticket && (
+            <p className="mt-3 rounded-xl border border-border bg-muted/40 p-3 text-sm">
+              A previous online payment for <strong>{recoveryTicket}</strong>{" "}
+              can be recovered after verification. Check its status before
+              paying again.
+            </p>
+          )}
+          {error && (
+            <p
+              role="alert"
+              className="mt-3 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              {error}
             </p>
           )}
         </form>
@@ -177,7 +341,8 @@ function PortalPage() {
           <QrphPayment
             ticket={ticket}
             onBack={() => setStage("lookup")}
-            onDone={showReceipt}
+            verification={verification}
+            onDone={paymentDone}
           />
         )}
         {ticket && stage === "receipt" && (
@@ -261,27 +426,13 @@ function TicketCard({
         </div>
       </div>
 
-      {ticket.photoData && (
-        <div className="mt-5">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Evidence Photo
-          </p>
-          <div className="overflow-hidden rounded-xl border border-border bg-black/5">
-            <img
-              src={ticket.photoData}
-              alt="Evidence"
-              className="max-h-64 w-full object-contain"
-            />
-          </div>
-        </div>
-      )}
-
       {ticket.status === "Paid" ? (
         <div className="mt-5 space-y-3">
           <p className="flex items-center gap-2 rounded-xl bg-paid/20 border border-paid/30 px-4 py-3 text-sm font-medium text-paid-foreground">
             <CheckCircle2 className="size-4 shrink-0" />
             This citation has been settled.
-            {ticket.payment && ` OR ${ticket.payment.orNumber}.`}
+            {ticket.payment &&
+              ` ${ticket.payment.channel === "Cash (Over-the-counter)" ? "OR" : "Provider reference"} ${ticket.payment.orNumber}.`}
           </p>
           {ticket.payment ? (
             <>
@@ -291,7 +442,7 @@ function TicketCard({
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
               >
                 <ReceiptText className="size-4" />
-                View e-receipt
+                View payment record
               </button>
               <p className="text-center text-xs text-muted-foreground">
                 View, print, or save a copy of your payment receipt anytime.
@@ -336,228 +487,196 @@ function Field({ label, value }: { label: string; value: string }) {
 
 function QrphPayment({
   ticket,
+  verification,
   onBack,
   onDone,
 }: {
   ticket: Ticket;
+  verification: PublicVerification;
   onBack: () => void;
-  onDone: () => void;
+  onDone: () => Promise<void>;
 }) {
-  const fetchTickets = useTicketStore((s) => s.fetchTickets);
   const [processing, setProcessing] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [linkId, setLinkId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const [checkVersion, setCheckVersion] = useState(0);
   const linkRequest = useRef<AbortController | null>(null);
-
+  const ready = useRef(false);
   const generateLink = useCallback(async () => {
     linkRequest.current?.abort();
     const controller = new AbortController();
     linkRequest.current = controller;
-    const { signal } = controller;
-    const toastId = `payment-link-${ticket.id}`;
     setProcessing(true);
     setError(null);
-    setCheckoutUrl(null);
-    setLinkId(null);
     try {
-      const res = await fetch("/api/payments/link", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ticketId: ticket.id }),
-        signal,
-      });
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(
-          data.error || "Unable to create payment link. Please try again.",
-        );
+      const data = await publicRequest<{ checkoutUrl: string; linkId: string }>(
+        "/api/payments/link",
+        { ticketId: ticket.id, ...verification },
+        controller.signal,
+      );
       if (!data.checkoutUrl || !data.linkId)
         throw new Error("The payment service returned an invalid link.");
-      if (!signal.aborted) {
-        setCheckoutUrl(data.checkoutUrl);
+      const checkout = new URL(data.checkoutUrl);
+      if (checkout.protocol !== "https:")
+        throw new Error("The payment service returned an insecure link.");
+      if (!controller.signal.aborted) {
+        setCheckoutUrl(checkout.href);
         setLinkId(data.linkId);
-        toast.success("Payment page ready", {
-          id: toastId,
-          description: "Open the secure payment page to complete your payment.",
+        savePaymentRecovery({
+          ticketId: ticket.id,
+          linkId: data.linkId,
+          savedAt: Date.now(),
         });
       }
-    } catch (e: unknown) {
-      if (!signal.aborted) {
-        const message =
-          e instanceof Error && e.message !== "Failed to fetch"
-            ? e.message
-            : "Unable to connect to the payment service. Check your connection and try again.";
-        setError(message);
-        toast.error("Unable to start online payment", {
-          id: toastId,
-          description: message,
-        });
-      }
+    } catch (failure) {
+      if (!controller.signal.aborted)
+        setError(
+          failure instanceof Error
+            ? failure.message
+            : "Unable to connect to the payment service. Please retry.",
+        );
     } finally {
-      if (!signal.aborted) setProcessing(false);
-      if (linkRequest.current === controller) linkRequest.current = null;
+      if (!controller.signal.aborted) setProcessing(false);
     }
-  }, [ticket.id]);
+  }, [ticket.id, verification]);
 
   useEffect(() => {
-    void generateLink();
+    // Recover the existing provider session before considering a new checkout.
+    if (!ready.current) {
+      const saved = readPaymentRecovery();
+      if (saved?.ticketId === ticket.id) setLinkId(saved.linkId);
+      ready.current = true;
+    }
     return () => linkRequest.current?.abort();
-  }, [generateLink]);
+  }, [ticket.id]);
 
   useEffect(() => {
     if (!linkId) return;
     const controller = new AbortController();
     let checking = false;
     let completed = false;
-    let paymentConfirmed = false;
-    let lastError: string | null = null;
-    const toastId = `payment-status-${ticket.id}`;
-    const checkStatus = async () => {
+    const check = async () => {
       if (checking || completed || controller.signal.aborted) return;
       checking = true;
       try {
-        const res = await fetch("/api/payments/status", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ticketId: ticket.id, linkId }),
-          signal: controller.signal,
-        });
-        const data = await res.json();
-        if (!res.ok)
-          throw new Error(
-            data.error ||
-              "Unable to check payment status. Retrying automatically.",
-          );
+        const data = await publicRequest<{
+          paid: boolean;
+          checkoutUrl?: string;
+        }>(
+          "/api/payments/status",
+          { ticketId: ticket.id, linkId, ...verification },
+          controller.signal,
+        );
         if (controller.signal.aborted) return;
-        if (data.paid === true) {
-          paymentConfirmed = true;
-          await fetchTickets();
-          if (controller.signal.aborted) return;
-          const state = useTicketStore.getState();
-          if (state.error || !state.getTicket(ticket.id)?.payment) {
-            throw new Error(
-              "Payment confirmed. Retrying receipt sync; please do not pay again.",
-            );
-          }
+        if (data.paid) {
+          setConfirmed(true);
+          setCheckoutUrl(null);
+          await onDone();
           completed = true;
-          toast.dismiss(`payment-link-${ticket.id}`);
-          toast.success("Payment successful", {
-            id: toastId,
-            description: `Your payment for ${ticket.id} is confirmed. Your e-receipt is ready.`,
-          });
-          onDone();
-        } else if (lastError) {
-          toast.dismiss(toastId);
+          clearPaymentRecovery();
+          toast.success("Payment confirmed. Your receipt is ready.");
+        } else if (data.checkoutUrl) {
+          const checkout = new URL(data.checkoutUrl);
+          if (checkout.protocol === "https:") setCheckoutUrl(checkout.href);
         }
-        setError(null);
-        lastError = null;
-      } catch (e: unknown) {
-        if (!controller.signal.aborted) {
-          const message =
-            e instanceof Error && e.message !== "Failed to fetch"
-              ? e.message
-              : "Unable to check payment status. Retrying automatically.";
-          setError(message);
-          if (message !== lastError) {
-            if (paymentConfirmed) {
-              toast.warning("Payment confirmed; receipt pending", {
-                id: toastId,
-                description: message,
-              });
-            } else {
-              toast.error("Unable to check payment status", {
-                id: toastId,
-                description: message,
-              });
-            }
-            lastError = message;
-          }
-        }
+        if (!controller.signal.aborted) setError(null);
+      } catch (failure) {
+        if (!controller.signal.aborted)
+          setError(
+            failure instanceof Error
+              ? failure.message
+              : "Unable to check payment status. Retrying automatically.",
+          );
       } finally {
         checking = false;
       }
     };
-    void checkStatus();
-    const interval = setInterval(() => void checkStatus(), 3000);
+    void check();
+    const interval = setInterval(() => void check(), 5000);
     return () => {
       controller.abort();
       clearInterval(interval);
-      if (!completed) toast.dismiss(toastId);
     };
-  }, [linkId, ticket.id, onDone, fetchTickets]);
+  }, [linkId, ticket.id, verification, onDone, checkVersion]);
 
   return (
-    <section className="mt-6 animate-scale-in rounded-2xl border border-border bg-card p-5 text-center shadow-panel sm:p-6">
-      <h2 className="font-display text-lg font-bold text-card-foreground">
-        Secure Online Payment
+    <section className="mt-6 rounded-2xl border border-border bg-card p-5 text-center shadow-panel sm:p-6">
+      <h2 className="font-display text-lg font-bold">
+        {confirmed
+          ? "Payment confirmed · receipt syncing"
+          : linkId
+            ? "Waiting for payment confirmation"
+            : "Secure online payment"}
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Powered by PayMongo (QRPh, GCash, Maya, Cards)
+        PayMongo · QRPh, GCash, Maya and cards
       </p>
-
-      <div className="mt-5 rounded-xl bg-muted/30 p-6 flex flex-col items-center">
-        <p className="font-display text-3xl font-bold tabular text-card-foreground">
+      <div className="mt-5 rounded-xl bg-muted/30 p-6">
+        <p className="font-display text-3xl font-bold tabular">
           {peso(ticket.totalFine)}
         </p>
-        <p className="font-mono text-sm text-muted-foreground mt-1">
-          Ticket {ticket.id}
+        <p className="mt-1 font-mono text-sm text-muted-foreground">
+          {ticket.id}
         </p>
-
         {error && (
-          <div className="mt-4 p-3 bg-destructive/10 text-destructive text-sm rounded-lg border border-destructive/20">
+          <p
+            role="alert"
+            className="mt-4 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
+          >
             {error}
-          </div>
+          </p>
         )}
-
-        {error && !checkoutUrl && (
+        {!linkId && (
           <button
             type="button"
             onClick={() => void generateLink()}
             disabled={processing}
-            className="mt-4 rounded-xl border border-border px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            className="mt-5 min-h-12 w-full rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50"
           >
-            Try again
+            {processing ? "Preparing checkout…" : "Continue to secure checkout"}
           </button>
         )}
-
-        {!checkoutUrl && !error && (
-          <div className="mt-6 flex flex-col items-center gap-3">
-            <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-            <p className="text-sm text-muted-foreground">
-              Generating secure payment link...
-            </p>
-          </div>
+        {checkoutUrl && !confirmed && (
+          <a
+            href={checkoutUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-5 flex min-h-14 items-center justify-center rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground"
+          >
+            Open existing payment page
+          </a>
         )}
-
-        {checkoutUrl && (
-          <div className="mt-6 w-full">
-            <a
-              href={checkoutUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
+        {linkId && (
+          <>
+            <p role="status" className="mt-4 text-sm text-muted-foreground">
+              {confirmed
+                ? "Your payment is confirmed. Please do not pay again while the receipt is retrieved."
+                : "Your checkout is saved. Complete payment in the secure tab, then return here. If you close this page, verify the citation again to recover payment status."}
+            </p>
+            <button
+              type="button"
+              onClick={() => setCheckVersion((value) => value + 1)}
+              className="mt-3 min-h-11 rounded-lg border border-border px-4 text-sm font-semibold"
             >
-              Open Payment Page
-            </a>
-            <p className="mt-4 text-xs text-muted-foreground max-w-xs mx-auto">
-              Please complete the payment in the secure tab that opens. This
-              page will automatically show your e-receipt once the payment is
-              confirmed. You can also look up this citation later to view it.
-            </p>
-          </div>
+              Check payment status now
+            </button>
+          </>
         )}
       </div>
-
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-        <button
-          onClick={onBack}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border text-sm font-bold text-card-foreground transition-all hover:bg-muted active:scale-[0.98]"
-        >
-          <ArrowLeft className="size-4" />
-          Cancel and go back
-        </button>
-      </div>
+      <p className="mt-4 text-xs text-muted-foreground">
+        You may also settle at the Municipal Treasury. Tell the cashier about
+        any payment already submitted online so its status can be checked first.
+      </p>
+      <button
+        type="button"
+        onClick={onBack}
+        className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border text-sm font-semibold"
+      >
+        <ArrowLeft className="size-4" />
+        Back to citation
+      </button>
     </section>
   );
 }
@@ -580,11 +699,18 @@ function Receipt({ ticket, onReset }: { ticket: Ticket; onReset: () => void }) {
           Municipality of Gitagum
         </p>
         <p className="mt-1 text-center text-xs uppercase tracking-widest text-muted-foreground">
-          Municipal Treasury — Official e-Receipt
+          Municipal Treasury — Payment record copy
         </p>
         <div className="my-3 border-t border-dashed border-border" />
         <dl className="space-y-1.5">
-          <Row k="OR Number" v={p.orNumber} />
+          <Row
+            k={
+              p.channel === "Cash (Over-the-counter)"
+                ? "OR Number"
+                : "Provider reference"
+            }
+            v={p.orNumber}
+          />
           <Row k="Transaction ID" v={p.id} />
           <Row k="Citation" v={ticket.id} />
           <Row k="Paid by" v={ticket.violatorName} />
@@ -602,9 +728,15 @@ function Receipt({ ticket, onReset }: { ticket: Ticket; onReset: () => void }) {
         </div>
       </div>
 
+      <p className="mt-4 text-center text-xs text-muted-foreground">
+        {p.channel === "Cash (Over-the-counter)"
+          ? "Refer to the original Official Receipt issued by Municipal Treasury."
+          : "The provider reference identifies the confirmed online payment. Contact Municipal Treasury for Official Receipt assistance."}
+      </p>
       <p className="no-print mt-4 text-center text-xs text-muted-foreground">
         Choose “Save as PDF” in the print dialog to download your receipt. You
-        can retrieve it later using your citation ticket number.
+        can retrieve it later using your secure citation link or verified
+        lookup.
       </p>
       <div className="no-print mt-5 flex flex-col gap-2 sm:flex-row">
         <button

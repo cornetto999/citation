@@ -52,7 +52,7 @@ function ProtectedPnp() {
   return (
     <AppShell
       title="Citation Monitoring"
-      subtitle="Read-only command view · live feed from field units"
+      subtitle="Read-only citation and endorsement monitoring"
       operator={user.name}
       unit={user.unit}
       accessLabel="PNP"

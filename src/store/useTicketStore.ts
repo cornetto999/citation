@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import type { Payment, Ticket, TicketStatus, ViolationCode } from "@/types";
-import { supabase } from "@/lib/supabase";
-
+import { workflowRequest } from "@/lib/workflow-client";
 export interface NewTicketInput {
+  ruleVersion?: number;
   plateNo: string;
   vehicleType: string;
   violatorName: string;
@@ -12,350 +12,170 @@ export interface NewTicketInput {
   remarks?: string | undefined;
   photoData?: string | undefined;
   issuedBy: string;
+  clientRequestId?: string;
 }
-
-interface PaymentRow {
-  id: string;
-  ticket_id: string;
-  amount: number;
-  channel: string;
-  paid_at: string;
-  received_by: string;
-  or_number: string;
-}
-
 interface TicketState {
   tickets: Ticket[];
-  /** True while a fetch is in flight. */
+  total: number;
   loading: boolean;
-  /** True once the first fetch has completed (success or failure). */
   loaded: boolean;
-  /** Last error message from fetching, if any. */
   error: string | null;
-  /** ISO timestamp of the last successful sync. */
   lastSyncedAt: string | null;
   fetchTickets: () => Promise<void>;
   addTicket: (input: NewTicketInput) => Promise<Ticket>;
   payTicket: (
-    ticketId: string,
+    id: string,
     channel: Payment["channel"],
     receivedBy: string,
-    manualOrNumber?: string,
+    orNumber?: string,
   ) => Promise<Payment | undefined>;
-  setStatus: (ticketId: string, status: TicketStatus) => Promise<void>;
-  /** Flag an overdue citation for PNP enforcement. */
-  endorseToPnp: (ticketId: string, endorsedBy: string) => Promise<void>;
-  /** Remove a previous PNP endorsement. */
-  withdrawEndorsement: (ticketId: string) => Promise<void>;
-  getTicket: (ticketId: string) => Ticket | undefined;
-  subscribeToRealtime: () => void;
+  setStatus: (id: string, status: TicketStatus) => Promise<void>;
+  endorseToPnp: (id: string, by: string, note?: string) => Promise<void>;
+  withdrawEndorsement: (id: string) => Promise<void>;
+  getTicket: (id: string) => Ticket | undefined;
+  subscribeToRealtime: () => () => void;
+  clear: () => void;
 }
-
-const paymentsInFlight = new Set<string>();
-
-/** Turn a missing-column error into an actionable message. */
-const endorsementError = (error: { message?: string; code?: string }) => {
-  const msg = error.message ?? "";
-  if (
-    error.code === "PGRST204" ||
-    error.code === "42703" ||
-    msg.includes("endorsed_")
-  ) {
-    return new Error(
-      "PNP endorsement columns are missing. Run overdue_endorsement.sql on the database.",
-    );
-  }
-  return new Error(msg || "Unable to update PNP endorsement.");
-};
-
-const pad = (n: number) => String(n).padStart(4, "0");
-
-const nextTicketId = (tickets: Ticket[]) => {
-  const year = new Date().getFullYear();
-  const max = tickets.reduce((acc, t) => {
-    const n = Number(t.id.split("-").pop());
-    return Number.isFinite(n) && n > acc ? n : acc;
-  }, 0);
-  return `CTN-${year}-${pad(max + 1)}`;
-};
-
+let generation = 0;
+const requests = new Map<string, { orNumber: string; requestId: string }>();
+const post = <T>(url: string, body: unknown) =>
+  workflowRequest<T>(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+const path = (id: string, action: string) =>
+  `/api/workflow/tickets/${encodeURIComponent(id)}/${action}`;
+export function announceWorkflowChange() {
+  if (typeof window !== "undefined")
+    window.dispatchEvent(new Event("citation-data-changed"));
+}
 export const useTicketStore = create<TicketState>((set, get) => ({
   tickets: [],
+  total: 0,
   loading: false,
   loaded: false,
   error: null,
   lastSyncedAt: null,
-
+  clear: () => {
+    generation++;
+    requests.clear();
+    set({
+      tickets: [],
+      total: 0,
+      loading: false,
+      loaded: false,
+      error: null,
+      lastSyncedAt: null,
+    });
+  },
   fetchTickets: async () => {
     if (get().loading) return;
+    const started = generation;
     set({ loading: true, error: null });
     try {
-      const { data: ticketsData, error: ticketsError } = await supabase
-        .from("tickets")
-        .select("*")
-        .order("issued_at", { ascending: false });
-
-      if (ticketsError) {
-        console.error("Error fetching tickets:", ticketsError);
-        set({ loading: false, loaded: true, error: ticketsError.message });
-        return;
-      }
-
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from("payments")
-        .select("*");
-
-      if (paymentsError) {
-        console.error("Error fetching payments:", paymentsError);
-        set({ loading: false, loaded: true, error: paymentsError.message });
-        return;
-      }
-
-      const paymentsMap = new Map<string, PaymentRow>();
-      for (const p of (paymentsData ?? []) as PaymentRow[]) {
-        paymentsMap.set(p.ticket_id, p);
-      }
-
-      const tickets: Ticket[] = (ticketsData ?? []).map((t) => {
-        const paymentData = paymentsMap.get(t.id);
-        let payment: Payment | undefined;
-        if (paymentData) {
-          payment = {
-            id: paymentData.id,
-            ticketId: paymentData.ticket_id,
-            amount: paymentData.amount,
-            channel: paymentData.channel as Payment["channel"],
-            paidAt: paymentData.paid_at,
-            receivedBy: paymentData.received_by,
-            orNumber: paymentData.or_number,
-          };
-        }
-
-        return {
-          id: t.id,
-          plateNo: t.plate_no,
-          vehicleType: t.vehicle_type,
-          violatorName: t.violator_name,
-          licenseNo: t.license_no,
-          violations: t.violations as ViolationCode[],
-          totalFine: t.total_fine,
-          location: t.location,
-          remarks: t.remarks || undefined,
-          photoData: t.photo_name || undefined,
-          status:
-            t.status === "Unpaid" && new Date(t.due_date) < new Date()
-              ? "Overdue"
-              : (t.status as TicketStatus),
-          issuedAt: t.issued_at,
-          dueDate: t.due_date,
-          issuedBy: t.issued_by,
-          payment,
-          endorsedAt: t.endorsed_at || undefined,
-          endorsedBy: t.endorsed_by || undefined,
-        };
-      });
-
-      set({
-        tickets,
-        loading: false,
-        loaded: true,
-        error: null,
-        lastSyncedAt: new Date().toISOString(),
-      });
-    } catch (error) {
-      set({
-        loading: false,
-        loaded: true,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to load tickets. Please retry.",
-      });
+      const result = await workflowRequest<{
+        tickets: Ticket[];
+        total: number;
+      }>("/api/workflow/tickets?pageSize=100");
+      if (started === generation)
+        set({
+          ...result,
+          loading: false,
+          loaded: true,
+          lastSyncedAt: new Date().toISOString(),
+        });
+    } catch (e) {
+      if (started === generation)
+        set({
+          loading: false,
+          loaded: true,
+          error:
+            e instanceof Error ? e.message : "Unable to refresh citations.",
+        });
     }
   },
-
   addTicket: async (input) => {
-    const tickets = get().tickets;
-    const issuedAt = new Date();
-    const due = new Date(issuedAt);
-    due.setDate(due.getDate() + 7);
-
-    const ticket: Ticket = {
+    const started = generation;
+    const { ticket } = await post<{ ticket: Ticket }>("/api/workflow/tickets", {
       ...input,
-      id: nextTicketId(tickets),
-      totalFine: input.violations.reduce((sum, v) => sum + v.fine, 0),
-      status: "Unpaid",
-      issuedAt: issuedAt.toISOString(),
-      dueDate: due.toISOString(),
-    };
-
-    const { error } = await supabase.from("tickets").insert({
-      id: ticket.id,
-      plate_no: ticket.plateNo,
-      vehicle_type: ticket.vehicleType,
-      violator_name: ticket.violatorName,
-      license_no: ticket.licenseNo,
-      violations: ticket.violations,
-      total_fine: ticket.totalFine,
-      location: ticket.location,
-      remarks: ticket.remarks,
-      photo_name: ticket.photoData,
-      status: ticket.status,
-      issued_at: ticket.issuedAt,
-      due_date: ticket.dueDate,
-      issued_by: ticket.issuedBy,
+      clientRequestId: input.clientRequestId ?? crypto.randomUUID(),
     });
-
-    if (error) {
-      console.error("Error inserting ticket:", error);
-      throw error;
-    }
-
-    set({ tickets: [ticket, ...get().tickets] });
+    if (started !== generation) return ticket;
+    set({
+      tickets: [
+        ticket,
+        ...get().tickets.filter((t) => t.id !== ticket.id),
+      ].slice(0, 100),
+    });
+    announceWorkflowChange();
     return ticket;
   },
-
-  payTicket: async (ticketId, channel, receivedBy, manualOrNumber) => {
-    const ticket = get().tickets.find((t) => t.id === ticketId);
-    if (!ticket || ticket.status === "Paid") return undefined;
-
-    if (paymentsInFlight.has(ticketId)) {
-      throw new Error("A payment for this ticket is already being processed.");
+  payTicket: async (id, channel, _receivedBy, orNumber) => {
+    const started = generation;
+    if (channel !== "Cash (Over-the-counter)")
+      throw new Error(
+        "Online payments must be verified by the payment provider.",
+      );
+    const receipt = orNumber?.trim();
+    if (!receipt) throw new Error("Enter the official receipt number.");
+    let request = requests.get(id);
+    if (!request || request.orNumber !== receipt) {
+      request = { orNumber: receipt, requestId: crypto.randomUUID() };
+      requests.set(id, request);
     }
-    paymentsInFlight.add(ticketId);
-    try {
-      const payment: Payment = {
-        id: `PMT-${Date.now().toString().slice(-6)}`,
-        ticketId,
-        amount: ticket.totalFine,
-        channel,
-        paidAt: new Date().toISOString(),
-        receivedBy,
-        orNumber:
-          manualOrNumber ||
-          `OR-${new Date().getFullYear()}-${pad(
-            Math.floor(Math.random() * 9000) + 1000,
-          )}`,
-      };
-
-      const { error: paymentError } = await supabase.from("payments").insert({
-        id: payment.id,
-        ticket_id: payment.ticketId,
-        amount: payment.amount,
-        channel: payment.channel,
-        paid_at: payment.paidAt,
-        received_by: payment.receivedBy,
-        or_number: payment.orNumber,
-      });
-
-      if (paymentError) {
-        console.error("Error inserting payment:", paymentError);
-        throw paymentError;
-      }
-
-      const { error: ticketError } = await supabase
-        .from("tickets")
-        .update({ status: "Paid" })
-        .eq("id", ticketId);
-
-      if (ticketError) {
-        console.error("Error updating ticket status:", ticketError);
-        throw ticketError;
-      }
-
-      set({
-        tickets: get().tickets.map((t) =>
-          t.id === ticketId
-            ? { ...t, status: "Paid" as TicketStatus, payment }
-            : t,
-        ),
-      });
-      return payment;
-    } finally {
-      paymentsInFlight.delete(ticketId);
-    }
-  },
-
-  setStatus: async (ticketId, status) => {
-    const { error } = await supabase
-      .from("tickets")
-      .update({ status })
-      .eq("id", ticketId);
-
-    if (error) {
-      console.error("Error updating ticket status:", error);
-      throw error;
-    }
-
+    const { payment } = await post<{ payment: Payment }>(
+      path(id, "pay"),
+      request,
+    );
+    if (started !== generation) return payment;
     set({
       tickets: get().tickets.map((t) =>
-        t.id === ticketId ? { ...t, status } : t,
+        t.id === id ? { ...t, status: "Paid", payment } : t,
       ),
     });
+    announceWorkflowChange();
+    return payment;
   },
-
-  endorseToPnp: async (ticketId, endorsedBy) => {
-    const endorsedAt = new Date().toISOString();
-    const { error } = await supabase
-      .from("tickets")
-      .update({ endorsed_at: endorsedAt, endorsed_by: endorsedBy })
-      .eq("id", ticketId);
-
-    if (error) {
-      console.error("Error endorsing ticket to PNP:", error);
-      throw endorsementError(error);
-    }
-
-    set({
-      tickets: get().tickets.map((t) =>
-        t.id === ticketId ? { ...t, endorsedAt, endorsedBy } : t,
-      ),
+  setStatus: async (id, status) => {
+    const started = generation;
+    const { ticket } = await post<{ ticket: Ticket }>(path(id, "status"), {
+      status,
     });
+    if (started !== generation) return;
+    set({ tickets: get().tickets.map((t) => (t.id === id ? ticket : t)) });
+    announceWorkflowChange();
   },
-
-  withdrawEndorsement: async (ticketId) => {
-    const { error } = await supabase
-      .from("tickets")
-      .update({ endorsed_at: null, endorsed_by: null })
-      .eq("id", ticketId);
-
-    if (error) {
-      console.error("Error withdrawing PNP endorsement:", error);
-      throw endorsementError(error);
-    }
-
-    set({
-      tickets: get().tickets.map((t) =>
-        t.id === ticketId
-          ? { ...t, endorsedAt: undefined, endorsedBy: undefined }
-          : t,
-      ),
+  endorseToPnp: async (id, _by, note) => {
+    const started = generation;
+    const { ticket } = await post<{ ticket: Ticket }>(path(id, "endorse"), {
+      endorsementNote: note?.trim(),
     });
+    if (started !== generation) return;
+    set({ tickets: get().tickets.map((t) => (t.id === id ? ticket : t)) });
+    announceWorkflowChange();
   },
-
-  getTicket: (ticketId) =>
-    get().tickets.find(
-      (t) => t.id.toLowerCase() === ticketId.trim().toLowerCase(),
-    ),
-
+  withdrawEndorsement: async (id) => {
+    const started = generation;
+    const { ticket } = await post<{ ticket: Ticket }>(path(id, "withdraw"), {});
+    if (started !== generation) return;
+    set({ tickets: get().tickets.map((t) => (t.id === id ? ticket : t)) });
+    announceWorkflowChange();
+  },
+  getTicket: (id) =>
+    get().tickets.find((t) => t.id.toLowerCase() === id.trim().toLowerCase()),
+  // Signed sessions cannot authorize Supabase Realtime directly. Poll while visible and refresh on local writes/focus.
   subscribeToRealtime: () => {
-    const existingChannel = supabase
-      .getChannels()
-      .find((c) => c.topic === "realtime:schema-db-changes");
-    if (existingChannel) return;
-
-    supabase
-      .channel("schema-db-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-        },
-        () => {
-          get().fetchTickets(); // Refetch whenever any ticket or payment changes
-        },
-      )
-      .subscribe();
+    const refresh = () => {
+      if (document.visibilityState === "visible") void get().fetchTickets();
+    };
+    const timer = window.setInterval(refresh, 60000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("citation-data-changed", refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("citation-data-changed", refresh);
+    };
   },
 }));

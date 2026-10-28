@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { clearCitationDrafts } from "@/lib/citation-drafts";
+import { useTicketStore } from "./useTicketStore";
 import type { Role } from "@/types";
 
 export interface SessionUser {
@@ -20,11 +22,17 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      signIn: (user) => set({ user }),
+      signIn: (user) => {
+        clearCitationDrafts();
+        useTicketStore.getState().clear();
+        set({ user });
+      },
       signOut: async () => {
         const response = await fetch("/api/auth/logout", { method: "POST" });
         if (!response.ok)
           throw new Error("Unable to sign out. Please try again.");
+        clearCitationDrafts();
+        useTicketStore.getState().clear();
         set({ user: null });
       },
     }),

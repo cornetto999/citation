@@ -1,16 +1,20 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { useAuthStore } from "@/store/useAuthStore";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Banknote,
   Check,
-  Printer,
+  ChevronRight,
+  LoaderCircle,
   Search,
   X,
-  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useTicketStore } from "@/store/useTicketStore";
+import { StatusBadge } from "@/components/StatusBadge";
+import { ReceiptView } from "@/components/ReceiptView";
+import { CashierShiftPanel } from "@/components/CashierShiftPanel";
 import {
   Dialog,
   DialogContent,
@@ -19,15 +23,17 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { StatusBadge } from "@/components/StatusBadge";
-import { useTicketStore } from "@/store/useTicketStore";
-import { dateTime, peso, shortDate } from "@/lib/format";
-import type { Payment, Ticket } from "@/types";
+import { peso, shortDate } from "@/lib/format";
+import {
+  treasuryRequest,
+  useCashierShifts,
+  useDebouncedSearch,
+  type TicketPage,
+} from "@/lib/treasury-client";
+import type { Ticket } from "@/types";
 
 export const Route = createFileRoute("/treasury/cashier")({
-  head: () => ({
-    meta: [{ title: "Cashier Window | Municipal Treasury" }],
-  }),
+  head: () => ({ meta: [{ title: "Cashier Window | Municipal Treasury" }] }),
   validateSearch: (
     search: Record<string, unknown>,
   ): { ticket?: string | undefined } => ({
@@ -38,343 +44,500 @@ export const Route = createFileRoute("/treasury/cashier")({
 
 function TreasuryCashierPage() {
   const user = useAuthStore((s) => s.user);
-  const navigate = useNavigate();
-  const tickets = useTicketStore((s) => s.tickets);
   const payTicket = useTicketStore((s) => s.payTicket);
-
-  useEffect(() => {
-    if (!user || user.role !== "treasury") {
-      navigate({ to: "/login" });
-    }
-  }, [user, navigate]);
-
+  const queryClient = useQueryClient();
+  const shifts = useCashierShifts();
+  const navigate = Route.useNavigate();
+  const { ticket: ticketParam } = Route.useSearch();
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Ticket | null>(null);
+  const [selectedId, setSelectedId] = useState(ticketParam ?? "");
   const [tendered, setTendered] = useState("");
   const [manualOrNumber, setManualOrNumber] = useState("");
-  const [receipt, setReceipt] = useState<Payment | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const { ticket: ticketParam } = Route.useSearch();
+  const [posting, setPosting] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
+  const paymentInFlight = useRef(false);
+  const search = useDebouncedSearch(query);
+  const authorized = user?.role === "treasury";
+  const results = useQuery({
+    queryKey: ["treasury", "cashier-search", search],
+    queryFn: ({ signal }) =>
+      treasuryRequest<TicketPage>(
+        `tickets?${new URLSearchParams({ query: search, status: search ? "" : "outstanding", pageSize: "15" })}`,
+        { signal },
+      ),
+    enabled: authorized,
+  });
+  const details = useQuery({
+    queryKey: ["treasury", "ticket", selectedId],
+    queryFn: ({ signal }) =>
+      treasuryRequest<{ ticket: Ticket }>(
+        `tickets/${encodeURIComponent(selectedId)}`,
+        { signal },
+      ),
+    enabled: authorized && Boolean(selectedId),
+  });
+  const current = details.data?.ticket;
+  const cash = Number(tendered);
+  const cashValid =
+    tendered !== "" &&
+    Number.isFinite(cash) &&
+    cash >= (current?.totalFine ?? Infinity);
+  const change =
+    current && cashValid
+      ? Math.round((cash - current.totalFine) * 100) / 100
+      : 0;
+  const blocked = current?.status === "Contested" || Boolean(current?.payment);
 
-  // Preselect a citation handed off from another page (e.g. Overdue → Collect)
   useEffect(() => {
-    if (!ticketParam) return;
-    const match = tickets.find((t) => t.id === ticketParam);
-    if (!match) return;
-    setQuery(match.id);
-    setSelected(match);
-    setReceipt(null);
+    setSelectedId(ticketParam ?? "");
     setTendered("");
-    void navigate({
-      to: "/treasury/cashier",
-      search: {},
-      replace: true,
-    });
-  }, [ticketParam, tickets, navigate]);
+    setManualOrNumber("");
+    setPaymentError("");
+  }, [ticketParam]);
 
-  const current = selected
-    ? (tickets.find((t) => t.id === selected.id) ?? null)
-    : null;
-  const results = query.trim()
-    ? tickets.filter(
-        (t) =>
-          t.id.toLowerCase().includes(query.trim().toLowerCase()) ||
-          t.plateNo.toLowerCase().includes(query.trim().toLowerCase()),
-      )
-    : tickets.filter((t) => t.status !== "Paid").slice(0, 6);
-
-  const cash = Number(tendered) || 0;
-  const change = current ? cash - current.totalFine : 0;
-
+  const selectTicket = (ticket: Ticket) => {
+    if (posting) return;
+    setSelectedId(ticket.id);
+    setTendered("");
+    setManualOrNumber("");
+    setPaymentError("");
+    void navigate({ search: { ticket: ticket.id }, replace: true });
+  };
+  const reset = () => {
+    setSelectedId("");
+    setTendered("");
+    setManualOrNumber("");
+    setPaymentError("");
+    setQuery("");
+    void navigate({ search: {}, replace: true });
+    searchInput.current?.focus();
+  };
   const process = async () => {
-    if (!user) {
-      toast.error("Please sign in again before posting a payment.");
+    if (
+      !user ||
+      !current ||
+      !shifts.data?.current ||
+      paymentInFlight.current ||
+      !cashValid ||
+      !manualOrNumber.trim() ||
+      blocked ||
+      current.status === "Paid"
+    )
       return;
-    }
-    if (!current || current.status === "Paid") {
-      toast.error("This citation is already paid or is no longer available.");
-      return;
-    }
-    if (!Number.isFinite(cash) || cash < current.totalFine) {
-      toast.error("Enter enough cash to cover the citation fine.");
-      return;
-    }
+    paymentInFlight.current = true;
+    setPosting(true);
+    setPaymentError("");
     try {
       const payment = await payTicket(
         current.id,
         "Cash (Over-the-counter)",
         user.name,
-        manualOrNumber.trim() || undefined,
+        manualOrNumber.trim(),
       );
-      if (!payment) {
-        toast.error("This citation is already paid or is no longer available.");
-        return;
-      }
-      setReceipt(payment);
-      toast.success(`Payment posted for ${current.id}`, {
-        description: `OR ${payment.orNumber}`,
+      if (!payment)
+        throw new Error(
+          "This citation has changed. Refresh and check whether it is already paid.",
+        );
+      queryClient.setQueryData(["treasury", "ticket", current.id], {
+        ticket: { ...current, status: "Paid", payment },
       });
-    } catch {
-      toast.error("Failed to post payment");
+      setConfirmOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["treasury"] });
+      await queryClient.invalidateQueries({ queryKey: ["workflow"] });
+      toast.success(`Payment posted · OR ${payment.orNumber}`);
+    } catch (error) {
+      setPaymentError(
+        error instanceof Error
+          ? error.message
+          : "Unable to post payment. Your entries have been kept; check the payment status before retrying.",
+      );
+      void details.refetch();
+    } finally {
+      paymentInFlight.current = false;
+      setPosting(false);
     }
   };
-
-  const newTransaction = () => {
-    setSelected(null);
-    setReceipt(null);
-    setTendered("");
-    setManualOrNumber("");
-    setQuery("");
-  };
-
-  if (!user || user.role !== "treasury") return null;
+  if (!authorized) return null;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
-      {/* Left panel: search + ticket list */}
-      <div className="flex flex-col">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search Ticket No. or Plate"
-            className="h-12 w-full rounded-2xl border border-border bg-card pl-10 pr-10 text-sm outline-none shadow-panel transition-all placeholder:text-muted-foreground/70 focus:border-ring focus:ring-2 focus:ring-ring/20"
-          />
-          {query && (
-            <button
-              onClick={() => setQuery("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="size-4" />
-            </button>
-          )}
-        </div>
-        <h3 className="mt-6 mb-3 text-sm font-bold text-foreground">
-          Active Citations ({results.length})
-        </h3>
-
-        <div className="max-h-[28rem] space-y-3 overflow-y-auto pb-4 pr-2">
-          {results.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => {
-                setSelected(t);
-                setReceipt(t.payment ?? null);
-                setTendered("");
-                setManualOrNumber("");
-              }}
-              className={`w-full rounded-2xl border bg-card p-4 text-left shadow-panel transition-all hover:shadow-lift hover:-translate-y-0.5 ${
-                current?.id === t.id
-                  ? "ring-2 ring-primary border-primary"
-                  : "border-border"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <p className="font-bold text-sm">{t.id}</p>
-                <p className="font-bold tabular text-sm">{peso(t.totalFine)}</p>
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">
-                  {t.plateNo} • {t.violatorName}
-                </p>
-                <div className="flex items-center gap-1.5">
-                  <StatusBadge status={t.status} />
-                  <ChevronRight className="size-4 text-muted-foreground/50" />
-                </div>
-              </div>
-            </button>
-          ))}
-          {results.length === 0 && (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              No citation found.
-            </p>
-          )}
-        </div>
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-xl font-bold">Cashier window</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Find a citation, verify the amount, then post one payment.
+        </p>
       </div>
-
-      {/* Right panel: payment processing */}
-      <section className="rounded-2xl border border-border bg-card p-6 shadow-panel sm:p-8">
-        {!current ? (
-          <div className="flex h-full min-h-[400px] flex-col items-center justify-center text-center">
-            <div className="flex size-20 items-center justify-center rounded-2xl bg-muted/50 text-muted-foreground">
-              <Banknote className="size-10" />
-            </div>
-            <h2 className="mt-6 font-display text-xl font-bold text-foreground">
-              No Transaction Open
-            </h2>
-            <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-              Search for a ticket number in the left panel to begin an
-              over-the-counter payment.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="font-mono text-sm text-muted-foreground">
-                  {current.id}
-                </p>
-                <h2 className="font-display text-2xl font-bold">
-                  {current.violatorName}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {current.plateNo} · {current.vehicleType} · issued{" "}
-                  {shortDate(current.issuedAt)}
-                </p>
-              </div>
-              <StatusBadge status={current.status} />
-            </div>
-
-            <div className="rounded-2xl border border-border overflow-hidden">
-              {current.violations.map((v) => (
-                <div
-                  key={v.code}
-                  className="flex items-center justify-between border-b border-border px-4 py-3 text-sm last:border-0"
+      <CashierShiftPanel compact />
+      <div className="grid gap-5 xl:grid-cols-[320px_1fr]">
+        <section aria-label="Find a citation">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (
+                !results.isFetching &&
+                query.trim() === search &&
+                results.data?.tickets[0]
+              )
+                selectTicket(results.data.tickets[0]);
+            }}
+          >
+            <label
+              htmlFor="cashier-search"
+              className="mb-2 block text-sm font-semibold"
+            >
+              Citation, plate, name, or license
+            </label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-4 size-4 text-muted-foreground" />
+              <input
+                ref={searchInput}
+                id="cashier-search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                disabled={posting}
+                placeholder="Search citations…"
+                className="h-12 w-full rounded-xl border border-input bg-card pl-10 pr-10 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              {query && (
+                <button
+                  type="button"
+                  disabled={posting}
+                  aria-label="Clear search"
+                  onClick={() => setQuery("")}
+                  className="absolute right-3 top-4 text-muted-foreground"
                 >
-                  <span>
-                    <span className="font-medium">{v.label}</span>
-                    <span className="ml-2 font-mono text-xs text-muted-foreground">
-                      {v.code}
-                    </span>
-                  </span>
-                  <span className="font-semibold tabular">{peso(v.fine)}</span>
-                </div>
-              ))}
-              <div className="flex items-center justify-between bg-primary/5 px-4 py-3">
-                <span className="text-sm font-bold uppercase tracking-wider">
-                  Amount due
-                </span>
-                <span className="font-display text-2xl font-bold tabular text-primary">
-                  {peso(current.totalFine)}
-                </span>
-              </div>
+                  <X className="size-4" />
+                </button>
+              )}
             </div>
-
-            {current.status === "Paid" ? (
-              <div className="animate-scale-in rounded-2xl border border-paid-foreground/30 bg-paid p-5 text-paid-foreground">
-                <div className="flex items-center gap-2 font-semibold">
-                  <Check className="size-5" /> Settled
-                </div>
-                <div className="mt-3 space-y-1 text-sm">
-                  <p>
-                    OR No.:{" "}
-                    <span className="font-mono">
-                      {(receipt ?? current.payment)?.orNumber}
+            <p className="mt-2 text-xs text-muted-foreground">
+              Press Enter to open the first matching citation.
+              {Boolean(results.data && results.data.total > 15) &&
+                " Showing the first 15 matches; narrow your search to find a specific citation."}
+            </p>
+          </form>
+          <div className="my-4 flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              {search
+                ? `${results.data?.total ?? 0} matches`
+                : "Outstanding citations"}
+            </span>
+            {results.isFetching && (
+              <span role="status" className="inline-flex items-center gap-1">
+                <LoaderCircle className="size-3 animate-spin" /> Searching
+              </span>
+            )}
+          </div>
+          {results.isError ? (
+            <div
+              role="alert"
+              className="rounded-xl border border-destructive/30 p-4 text-sm"
+            >
+              <p>{results.error.message}</p>
+              <button
+                onClick={() => void results.refetch()}
+                className="mt-2 font-bold text-foreground"
+              >
+                Retry search
+              </button>
+            </div>
+          ) : (
+            <div className="max-h-[36rem] space-y-3 overflow-y-auto p-0.5">
+              {results.data?.tickets.map((ticket) => (
+                <button
+                  disabled={posting}
+                  key={ticket.id}
+                  onClick={() => selectTicket(ticket)}
+                  className={`w-full rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary/40 disabled:opacity-60 ${selectedId === ticket.id ? "border-primary ring-1 ring-primary" : "border-border"}`}
+                >
+                  <div className="flex justify-between gap-2">
+                    <span className="font-mono text-xs font-bold">
+                      {ticket.id}
                     </span>
+                    <span className="text-sm font-bold">
+                      {peso(ticket.totalFine)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold">
+                    {ticket.violatorName}
                   </p>
-                  <p>Channel: {(receipt ?? current.payment)?.channel}</p>
-                  <p>Received by: {(receipt ?? current.payment)?.receivedBy}</p>
-                  <p>
-                    Posted: {dateTime((receipt ?? current.payment)!.paidAt)}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {ticket.plateNo} ·{" "}
+                    {ticket.licenseNo || "No license recorded"}
+                  </p>
+                  <div className="mt-3 flex items-center justify-between">
+                    <StatusBadge status={ticket.status} />
+                    <ChevronRight className="size-4 text-muted-foreground" />
+                  </div>
+                </button>
+              ))}
+              {results.data?.tickets.length === 0 && (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  No citations match. Try a plate number or a shorter name.
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+        <div>
+          {!selectedId ? (
+            <section className="flex min-h-96 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card p-8 text-center">
+              <Banknote className="mb-4 size-12 text-primary/50" />
+              <h2 className="text-lg font-bold">Ready for the next payment</h2>
+              <p className="mt-2 max-w-xs text-sm text-muted-foreground">
+                Select a citation to review its violations and amount due.
+              </p>
+            </section>
+          ) : details.isLoading ? (
+            <div
+              role="status"
+              className="p-12 text-center text-sm text-muted-foreground"
+            >
+              Loading citation…
+            </div>
+          ) : details.isError ? (
+            <div
+              role="alert"
+              className="rounded-xl border border-destructive/30 p-6"
+            >
+              <p>{details.error.message}</p>
+              <button
+                onClick={() => void details.refetch()}
+                className="mt-3 font-bold text-foreground"
+              >
+                Retry citation
+              </button>
+            </div>
+          ) : current?.status === "Paid" ? (
+            <div className="space-y-4">
+              <ReceiptView ticket={current} />
+              <button
+                onClick={reset}
+                className="min-h-11 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground"
+              >
+                New transaction
+              </button>
+            </div>
+          ) : current ? (
+            <section className="space-y-6 rounded-2xl border border-border bg-card p-5 shadow-panel sm:p-7">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {current.id}
+                  </p>
+                  <h2 className="mt-1 text-2xl font-bold">
+                    {current.violatorName}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {current.plateNo} · {current.vehicleType}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    License {current.licenseNo || "not recorded"} · Due{" "}
+                    {shortDate(current.dueDate)}
                   </p>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => window.print()}
-                    className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
+                <StatusBadge status={current.status} />
+              </div>
+              <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+                {current.violations.map((v) => (
+                  <div
+                    key={v.code}
+                    className="flex justify-between gap-4 px-4 py-3 text-sm"
                   >
-                    <Printer className="size-4" /> Print e-OR
-                  </button>
-                  <button
-                    onClick={newTransaction}
-                    className="h-11 rounded-xl border border-border bg-card px-4 text-sm font-bold text-card-foreground transition-all hover:bg-muted active:scale-[0.98]"
-                  >
-                    New transaction
-                  </button>
+                    <span>
+                      {v.label}
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {v.code}
+                      </span>
+                    </span>
+                    <strong className="shrink-0">{peso(v.fine)}</strong>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between bg-primary/5 px-4 py-4">
+                  <strong>Amount due</strong>
+                  <strong className="text-3xl text-foreground">
+                    {peso(current.totalFine)}
+                  </strong>
                 </div>
               </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="text-sm font-bold">Cash tendered</label>
-                  <input
-                    value={tendered}
-                    onChange={(e) =>
-                      setTendered(e.target.value.replace(/[^0-9.]/g, ""))
-                    }
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    className="mt-1.5 h-14 w-full rounded-2xl border-2 border-input bg-background px-4 text-right font-display text-2xl font-bold tabular outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
-                  />
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {[current.totalFine, 1000, 2000, 5000].map((amt, i) => (
-                      <button
-                        key={`${amt}-${i}`}
-                        onClick={() => setTendered(String(amt))}
-                        className="h-9 rounded-xl bg-secondary px-3 text-xs font-bold text-secondary-foreground transition-all hover:bg-muted active:scale-[0.97]"
-                      >
-                        {i === 0 ? "Exact" : peso(amt)}
-                      </button>
-                    ))}
-                  </div>
+              {blocked ? (
+                <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+                  {current.payment
+                    ? "A payment already exists. Review this citation in payment exceptions before accepting any money."
+                    : "This citation is contested. An administrator must complete the review before payment can be accepted."}
+                  <Link
+                    to="/treasury/transactions"
+                    search={{ exceptions: true }}
+                    className="mt-2 block font-bold underline"
+                  >
+                    View payment exceptions
+                  </Link>
                 </div>
-                <div className="rounded-2xl bg-muted/60 p-4">
-                  <p className="text-sm text-muted-foreground">Change due</p>
-                  <p className="font-display text-3xl font-bold tabular">
-                    {peso(Math.max(change, 0))}
-                  </p>
-                  {cash > 0 && change < 0 && (
-                    <p className="mt-2 text-sm font-bold text-destructive animate-scale-in">
-                      Short by {peso(Math.abs(change))}
+              ) : (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label
+                        htmlFor="cash-tendered"
+                        className="text-sm font-bold"
+                      >
+                        Cash tendered
+                      </label>
+                      <input
+                        id="cash-tendered"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        inputMode="decimal"
+                        disabled={posting}
+                        value={tendered}
+                        onChange={(e) => setTendered(e.target.value)}
+                        placeholder="0.00"
+                        className="mt-2 h-14 w-full rounded-xl border border-input bg-background px-4 text-right text-2xl font-bold outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {[...new Set([current.totalFine, 1000, 2000, 5000])]
+                          .filter((amount) => amount >= current.totalFine)
+                          .map((amount) => (
+                            <button
+                              key={amount}
+                              onClick={() => setTendered(String(amount))}
+                              className="min-h-9 rounded-lg bg-secondary px-3 text-xs font-bold"
+                            >
+                              {amount === current.totalFine
+                                ? "Exact amount"
+                                : peso(amount)}
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-muted/50 p-4">
+                      <p className="text-xs text-muted-foreground">
+                        Change due
+                      </p>
+                      <p className="mt-2 text-3xl font-bold">{peso(change)}</p>
+                      {tendered &&
+                        Number.isFinite(cash) &&
+                        cash < current.totalFine && (
+                          <p className="mt-2 text-sm text-destructive">
+                            Short by {peso(current.totalFine - cash)}
+                          </p>
+                        )}
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="receipt-number"
+                      className="text-sm font-bold"
+                    >
+                      Official Receipt number{" "}
+                      <span className="text-destructive">*</span>
+                    </label>
+                    <input
+                      id="receipt-number"
+                      disabled={posting}
+                      maxLength={100}
+                      value={manualOrNumber}
+                      onChange={(e) => setManualOrNumber(e.target.value)}
+                      placeholder="Enter the issued OR number"
+                      className="mt-2 h-12 w-full rounded-xl border border-input bg-background px-4 font-mono text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Use the OR assigned under your Treasury's receipt
+                      numbering process.
+                    </p>
+                  </div>
+                  {paymentError && (
+                    <p
+                      role="alert"
+                      className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive"
+                    >
+                      {paymentError}
                     </p>
                   )}
                   <button
+                    disabled={
+                      !cashValid ||
+                      !manualOrNumber.trim() ||
+                      posting ||
+                      !shifts.data?.current
+                    }
                     onClick={() => setConfirmOpen(true)}
-                    disabled={cash < current.totalFine}
-                    className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-40 active:scale-[0.98]"
+                    className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 font-bold text-primary-foreground disabled:opacity-40"
                   >
-                    <Banknote className="size-5" /> Post payment
+                    <Banknote className="size-5" />{" "}
+                    {shifts.data?.current
+                      ? "Review payment"
+                      : "Open your shift to accept payment"}
                   </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-
+                </>
+              )}
+            </section>
+          ) : null}
+        </div>
+      </div>
       {current && (
-        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <Dialog
+          open={confirmOpen}
+          onOpenChange={(open) => {
+            if (!posting) setConfirmOpen(open);
+          }}
+        >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Confirm Payment</DialogTitle>
+              <DialogTitle>Review and post payment</DialogTitle>
               <DialogDescription>
-                You are about to post a payment of {peso(current.totalFine)} for
-                Ticket {current.id}.
+                Check the citation and issued receipt number before posting.
               </DialogDescription>
             </DialogHeader>
-            <div className="py-4">
-              <label className="text-sm font-bold">
-                Manual OR Number{" "}
-                <span className="text-muted-foreground font-normal">
-                  (Optional)
-                </span>
-              </label>
-              <input
-                value={manualOrNumber}
-                onChange={(e) => setManualOrNumber(e.target.value)}
-                placeholder="e.g. OR-2026-1234"
-                className="mt-1.5 h-11 w-full rounded-xl border-2 border-input bg-background px-4 font-mono text-sm outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
-              />
-              <p className="mt-2 text-xs text-muted-foreground">
-                Leave blank to auto-generate an Official Receipt number.
+            <dl className="grid grid-cols-2 gap-3 py-3 text-sm">
+              {[
+                ["Citation", current.id],
+                ["Violator", current.violatorName],
+                ["Plate", current.plateNo],
+                ["Amount received", peso(current.totalFine)],
+                ["Cash tendered", peso(cash)],
+                ["Change due", peso(change)],
+                ["OR number", manualOrNumber.trim()],
+                ["Cashier", user.name],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-xs text-muted-foreground">{label}</dt>
+                  <dd className="mt-1 break-words font-semibold">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            {paymentError && (
+              <p role="alert" className="text-sm text-destructive">
+                {paymentError}
               </p>
-            </div>
+            )}
             <DialogFooter>
               <button
+                disabled={posting}
                 onClick={() => setConfirmOpen(false)}
-                className="h-10 rounded-xl border border-border px-4 text-sm font-bold hover:bg-muted transition-colors"
+                className="min-h-11 rounded-xl border border-border px-4 text-sm font-bold"
               >
-                Cancel
+                Back to edit
               </button>
               <button
-                onClick={() => {
-                  setConfirmOpen(false);
-                  process();
-                }}
-                className="h-10 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground transition-all hover:brightness-110 active:scale-[0.98]"
+                disabled={
+                  posting ||
+                  current.status === "Paid" ||
+                  blocked ||
+                  !shifts.data?.current
+                }
+                onClick={() => void process()}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50"
               >
-                Settle Transaction
+                {posting ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <Check className="size-4" />
+                )}
+                {posting ? "Posting payment…" : "Post payment"}
               </button>
             </DialogFooter>
           </DialogContent>

@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { workflowRequest } from "@/lib/workflow-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
   Camera,
@@ -15,9 +17,15 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { EnforcerSidebar } from "@/components/EnforcerSidebar";
 import { useTicketStore } from "@/store/useTicketStore";
-import { VEHICLE_TYPES, VIOLATION_CODES } from "@/lib/mockData";
+
 import { peso } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import {
+  readCitationDraft,
+  saveCitationDraft,
+  removeCitationDraft,
+  type CitationDraft,
+} from "@/lib/citation-drafts";
+import { CitationSlipButton } from "@/components/CitationSlipButton";
 import type { Ticket, ViolationCode } from "@/types";
 
 export const Route = createFileRoute("/enforcer/new")({
@@ -115,6 +123,31 @@ function EnforcerPage() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const addTicket = useTicketStore((s) => s.addTicket);
+  const recentCitations = useQuery({
+    queryKey: ["workflow", "field-shortcuts", user?.key],
+    queryFn: ({ signal }) =>
+      workflowRequest<{ tickets: Ticket[] }>(
+        "/api/workflow/tickets?page=1&pageSize=100",
+        { signal },
+      ),
+    enabled: user?.role === "enforcer",
+    staleTime: 60_000,
+  });
+  const rules = useQuery({
+    queryKey: ["workflow", "enforcer-rules", user?.key],
+    queryFn: ({ signal }) =>
+      workflowRequest<{
+        settings: {
+          version: number;
+          dueDays: number;
+          catalog: ViolationCode[];
+        }[];
+      }>("/api/workflow/settings", { signal }),
+    enabled: user?.role === "enforcer",
+    staleTime: 60_000,
+  });
+  const currentRules = rules.data?.settings[0];
+  const catalog = currentRules?.catalog;
 
   useEffect(() => {
     if (!user || user.role !== "enforcer") {
@@ -132,6 +165,136 @@ function EnforcerPage() {
   const [showMissingDetails, setShowMissingDetails] = useState(false);
   const submittingRef = useRef(false);
   const plateRef = useRef<HTMLInputElement>(null);
+  const requestIdRef = useRef<string>(crypto.randomUUID());
+  const [draftConsent, setDraftConsent] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState<CitationDraft | null>(null);
+  const [draftMessage, setDraftMessage] = useState("");
+  const [online, setOnline] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    setPendingDraft(readCitationDraft(user.key));
+    setDraftReady(true);
+  }, [user]);
+
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
+
+  const hasDraft = Boolean(
+    Object.values(form).some((value) => value.trim()) ||
+    picked.length ||
+    photoData,
+  );
+  useEffect(() => {
+    if (!user || !draftReady || !draftConsent || pendingDraft || issued) return;
+    if (!hasDraft) {
+      removeCitationDraft(user.key);
+      setDraftMessage("");
+      return;
+    }
+    const saved = saveCitationDraft(
+      {
+        ownerId: user.key,
+        savedAt: Date.now(),
+        requestId: requestIdRef.current,
+        form,
+        violationCodes: picked.map((violation) => violation.code),
+        photoData,
+      },
+      draftConsent,
+    );
+    setDraftMessage(
+      saved
+        ? "Draft saved on this device. It has not been issued."
+        : "Draft could not be saved on this device. Keep this page open.",
+    );
+  }, [
+    form,
+    picked,
+    photoData,
+    draftConsent,
+    draftReady,
+    pendingDraft,
+    issued,
+    hasDraft,
+    user,
+  ]);
+
+  useEffect(() => {
+    if (!hasDraft || issued || draftConsent) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasDraft, issued, draftConsent]);
+
+  const myRecentTickets = useMemo(
+    () =>
+      (recentCitations.data?.tickets ?? [])
+        .filter((ticket) => ticket.issuedById === user?.key)
+        .sort((a, b) => b.issuedAt.localeCompare(a.issuedAt)),
+    [recentCitations.data?.tickets, user?.key],
+  );
+  const recentLocations = useMemo(
+    () =>
+      [
+        ...new Set(
+          myRecentTickets
+            .map((ticket) => ticket.location.trim())
+            .filter(Boolean),
+        ),
+      ].slice(0, 4),
+    [myRecentTickets],
+  );
+  const frequentViolations = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const ticket of myRecentTickets.slice(0, 100)) {
+      for (const violation of ticket.violations)
+        counts.set(violation.code, (counts.get(violation.code) ?? 0) + 1);
+    }
+    return (catalog ?? [])
+      .filter(
+        (violation) =>
+          counts.has(violation.code) &&
+          !picked.some((selected) => selected.code === violation.code),
+      )
+      .sort((a, b) => (counts.get(b.code) ?? 0) - (counts.get(a.code) ?? 0))
+      .slice(0, 4);
+  }, [myRecentTickets, picked, catalog]);
+
+  const resumeDraft = () => {
+    if (!pendingDraft) return;
+    setForm(
+      Object.fromEntries(
+        Object.keys(emptyForm).map((key) => [
+          key,
+          pendingDraft.form[key] ?? "",
+        ]),
+      ) as typeof emptyForm,
+    );
+    setPicked(
+      (catalog ?? []).filter((violation) =>
+        pendingDraft.violationCodes.includes(violation.code),
+      ),
+    );
+    setPhotoData(pendingDraft.photoData);
+    requestIdRef.current = pendingDraft.requestId;
+    setDraftConsent(true);
+    setPendingDraft(null);
+    toast.info(
+      "Draft resumed. Review violations and current fines before issuing.",
+    );
+  };
 
   const set = (key: keyof typeof emptyForm, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -139,15 +302,17 @@ function EnforcerPage() {
   const violationMatches = useMemo(() => {
     const q = violationQuery.trim().toLowerCase();
     if (!q) return [];
-    return VIOLATION_CODES.filter(
-      (v) =>
-        !picked.some((p) => p.code === v.code) &&
-        (v.label.toLowerCase().includes(q) ||
-          v.code.toLowerCase().includes(q) ||
-          v.category.toLowerCase().includes(q) ||
-          v.fine.toString().includes(q)),
-    ).slice(0, 6);
-  }, [violationQuery, picked]);
+    return (catalog ?? [])
+      .filter(
+        (v) =>
+          !picked.some((p) => p.code === v.code) &&
+          (v.label.toLowerCase().includes(q) ||
+            v.code.toLowerCase().includes(q) ||
+            v.category.toLowerCase().includes(q) ||
+            v.fine.toString().includes(q)),
+      )
+      .slice(0, 6);
+  }, [violationQuery, picked, catalog]);
 
   const total = picked.reduce((sum, v) => sum + v.fine, 0);
   const missingDetails = [
@@ -156,6 +321,7 @@ function EnforcerPage() {
     !form.vehicleType && "vehicle type",
     !form.brand && "brand",
     !form.color && "color",
+    !form.location.trim() && "location",
     picked.length === 0 && "at least one violation",
   ].filter((detail): detail is string => Boolean(detail));
   const displayedError =
@@ -169,7 +335,10 @@ function EnforcerPage() {
   }, [showMissingDetails, missingDetails.length]);
 
   const reset = () => {
-    setForm(emptyForm);
+    if (user) removeCitationDraft(user.key);
+    requestIdRef.current = crypto.randomUUID();
+    setPendingDraft(null);
+    setForm({ ...emptyForm, location: issued ? form.location : "" });
     setViolationQuery("");
     setPicked([]);
     setPhotoData(undefined);
@@ -181,6 +350,37 @@ function EnforcerPage() {
 
   const submit = async () => {
     if (submittingRef.current) return;
+    if (!navigator.onLine) {
+      setSubmissionError(
+        "You are offline. This is still a draft. Reconnect before issuing.",
+      );
+      return;
+    }
+    if (!currentRules || rules.isError) {
+      setSubmissionError(
+        "The approved citation rules could not be verified. Refresh the rules before issuing.",
+      );
+      return;
+    }
+    const currentPicks = picked
+      .map((selected) =>
+        currentRules.catalog.find((entry) => entry.code === selected.code),
+      )
+      .filter((entry): entry is ViolationCode => !!entry);
+    if (
+      currentPicks.length !== picked.length ||
+      currentPicks.some(
+        (entry, index) =>
+          entry.fine !== picked[index]?.fine ||
+          entry.label !== picked[index]?.label,
+      )
+    ) {
+      setPicked(currentPicks);
+      setSubmissionError(
+        "The approved violation catalog changed. Review the updated selections and fine, then issue again.",
+      );
+      return;
+    }
     if (missingDetails.length > 0) {
       const message = `Please complete: ${missingDetails.join(", ")}.`;
       setSubmissionError("");
@@ -237,12 +437,18 @@ function EnforcerPage() {
         remarks: payload.remarks,
         photoData: payload.photoData,
         issuedBy: payload.issuedBy,
+        clientRequestId: requestIdRef.current,
+        ruleVersion: currentRules.version,
       });
+      removeCitationDraft(user.key);
       setIssued(ticket);
+      void recentCitations.refetch();
       toast.success(`Citation ${ticket.id} issued successfully.`);
-    } catch {
+    } catch (error) {
       const message =
-        "Citation was not saved. Your details are still here. Check your connection and tap Issue citation to retry.";
+        error instanceof Error
+          ? `${error.message} Your details are still here. Retry this citation before starting another.`
+          : "Issuance could not be confirmed. Your details are still here. Check your connection and retry this citation.";
       setSubmissionError(message);
       toast.error("Could not issue citation", { description: message });
     } finally {
@@ -268,7 +474,7 @@ function EnforcerPage() {
           <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-paid text-paid-foreground">
             <Check className="size-7" />
           </div>
-          <p role="status" className="mt-4 text-base font-semibold text-white">
+          <p role="status" className="mt-4 text-base font-semibold">
             Citation issued successfully
           </p>
           <p className="mt-4 text-sm text-muted-foreground">Ticket number</p>
@@ -290,8 +496,11 @@ function EnforcerPage() {
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
             Motorist may settle at the Municipal Treasury or online via QRPh
-            using this ticket number.
+            using the secure link on the citation slip.
           </p>
+          <div className="mt-5">
+            <CitationSlipButton ticket={issued} />
+          </div>
           <button
             onClick={reset}
             className="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-primary text-base font-semibold text-primary-foreground active:scale-[0.99]"
@@ -306,7 +515,7 @@ function EnforcerPage() {
   return (
     <AppShell
       title="Fast Citation Entry"
-      subtitle="Roadside issuance · offline-ready"
+      subtitle="Roadside issuance · draft recovery"
       operator={officer.name}
       unit={`Badge ${officer.credential}`}
       accessLabel="Enforcer"
@@ -314,6 +523,109 @@ function EnforcerPage() {
       sidebar={<EnforcerSidebar />}
     >
       <fieldset disabled={isSubmitting} className="space-y-5">
+        {rules.isError ? (
+          <div
+            role="alert"
+            className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm"
+          >
+            <p>{rules.error.message}</p>
+            <button
+              type="button"
+              onClick={() => void rules.refetch()}
+              className="mt-3 min-h-11 rounded-lg border border-border px-3 font-semibold"
+            >
+              Retry approved rules
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {currentRules
+              ? `Approved rules v${currentRules.version} · Payment due in ${currentRules.dueDays} days`
+              : "Loading approved citation rules…"}
+          </p>
+        )}
+        <section className="rounded-xl border border-border bg-card p-4 text-sm shadow-panel">
+          <p className="font-semibold">
+            {online ? "Draft — not issued" : "Offline · Draft — not issued"}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            A ticket number is assigned only after the server confirms issuance.
+          </p>
+          {pendingDraft ? (
+            <div className="mt-3 space-y-3">
+              <p>
+                A saved draft from{" "}
+                {new Date(pendingDraft.savedAt).toLocaleString("en-PH", {
+                  timeZone: "Asia/Manila",
+                })}{" "}
+                is available on this device.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Resume only on your private device. Saved identity and evidence
+                are removed on sign-out; drafts expire after 24 hours.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={resumeDraft}
+                  disabled={!catalog}
+                  className="min-h-11 rounded-lg bg-primary px-4 font-semibold text-primary-foreground"
+                >
+                  Resume draft
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    removeCitationDraft(officer.key);
+                    setPendingDraft(null);
+                  }}
+                  className="min-h-11 rounded-lg border border-border px-4"
+                >
+                  Discard saved draft
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <label className="mt-3 flex min-h-11 items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4"
+                  checked={draftConsent}
+                  onChange={(event) => {
+                    setDraftConsent(event.target.checked);
+                    if (!event.target.checked) {
+                      removeCitationDraft(officer.key);
+                      setDraftMessage("");
+                    }
+                  }}
+                />
+                <span>
+                  Save drafts on my private device
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    This stores driver details and evidence in this browser. Use
+                    only on a secured personal device. Removed on sign-out;
+                    expires after 24 hours.
+                  </span>
+                </span>
+              </label>
+              <p role="status" className="mt-2 text-xs text-muted-foreground">
+                {draftConsent
+                  ? draftMessage
+                  : "Draft is kept only on this open page. Enable saving to recover after refresh."}
+              </p>
+              {hasDraft && (
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="mt-2 min-h-11 rounded-lg border border-border px-3 text-xs font-semibold"
+                >
+                  Clear current draft
+                </button>
+              )}
+            </>
+          )}
+        </section>
         <Field label="Plate number" hint="Required">
           <input
             ref={plateRef}
@@ -476,6 +788,27 @@ function EnforcerPage() {
         )}
 
         <Field label="Violations" hint={`${picked.length} selected`}>
+          {frequentViolations.length > 0 && (
+            <div className="mb-3">
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">
+                Frequently used
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {frequentViolations.map((violation) => (
+                  <button
+                    type="button"
+                    key={violation.code}
+                    onClick={() =>
+                      setPicked((current) => [...current, violation])
+                    }
+                    className="min-h-11 rounded-lg border border-border bg-muted/50 px-3 text-left text-xs font-medium"
+                  >
+                    {violation.label} · {peso(violation.fine)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {picked.length > 0 && (
             <div className="mb-3 space-y-2">
               {picked.map((v) => (
@@ -563,6 +896,23 @@ function EnforcerPage() {
               placeholder="Street / barangay"
               className="h-14 w-full rounded-lg border-2 border-input bg-card px-4 text-base outline-none focus:border-ring"
             />
+            {recentLocations.length > 0 && (
+              <div
+                className="mt-2 flex flex-wrap gap-2"
+                aria-label="Recent locations"
+              >
+                {recentLocations.map((location) => (
+                  <button
+                    type="button"
+                    key={location}
+                    onClick={() => set("location", location)}
+                    className="min-h-11 rounded-lg border border-border px-3 text-xs"
+                  >
+                    {location}
+                  </button>
+                ))}
+              </div>
+            )}
           </Field>
           <Field label="Remarks" hint="Optional">
             <textarea
@@ -668,7 +1018,13 @@ function EnforcerPage() {
           <button
             onClick={submit}
             type="button"
-            disabled={isSubmitting}
+            disabled={
+              isSubmitting ||
+              Boolean(pendingDraft) ||
+              !online ||
+              !currentRules ||
+              rules.isError
+            }
             aria-busy={isSubmitting}
             className="flex h-14 flex-1 items-center justify-center gap-2 rounded-lg bg-primary text-base font-semibold text-primary-foreground transition-opacity active:scale-[0.99] disabled:opacity-40 sm:max-w-xs sm:flex-none sm:px-8"
           >

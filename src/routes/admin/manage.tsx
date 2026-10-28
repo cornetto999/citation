@@ -1,17 +1,38 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  type SearchSchemaInput,
+} from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Users, Shield, BadgeCheck, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { UserDetailsDialog } from "@/components/UserDetailsDialog";
 import { useAuthStore } from "@/store/useAuthStore";
+import { SearchInput } from "@/components/kit";
 import type { User, Role } from "@/types";
 
 export const Route = createFileRoute("/admin/manage")({
+  validateSearch: (raw: Record<string, unknown> & SearchSchemaInput) => ({
+    query: typeof raw["query"] === "string" ? raw["query"] : "",
+    role: typeof raw["role"] === "string" ? raw["role"] : "all",
+    unit: typeof raw["unit"] === "string" ? raw["unit"] : "all",
+    verification:
+      typeof raw["verification"] === "string" ? raw["verification"] : "all",
+    access: typeof raw["access"] === "string" ? raw["access"] : "all",
+  }),
   component: AdminManageUsers,
 });
 
 function AdminManageUsers() {
+  const filters = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const changeFilter = (next: Partial<typeof filters>) =>
+    void navigate({
+      search: { ...filters, ...next },
+      replace: true,
+      resetScroll: false,
+    });
   const currentUser = useAuthStore((state) => state.user);
   const signIn = useAuthStore((state) => state.signIn);
   const [users, setUsers] = useState<User[]>([]);
@@ -29,6 +50,32 @@ function AdminManageUsers() {
   const resendingRef = useRef(false);
   const detailsTriggerRef = useRef<HTMLTableRowElement | null>(null);
   const addUserButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  const query = filters.query.trim().toLowerCase();
+  const filteredUsers = users.filter((user) => {
+    const verification = user.emailVerifiedAt
+      ? "verified"
+      : user.emailVerificationRequired
+        ? "pending"
+        : "legacy";
+    return (
+      (!query ||
+        [user.name, user.credential, user.unit].some((value) =>
+          value.toLowerCase().includes(query),
+        )) &&
+      (filters.role === "all" || user.role === filters.role) &&
+      (filters.unit === "all" || user.unit === filters.unit) &&
+      (filters.verification === "all" ||
+        verification === filters.verification) &&
+      (filters.access === "all" ||
+        (filters.access === "inactive"
+          ? user.active === false
+          : user.active !== false))
+    );
+  });
+  const units = [
+    ...new Set(users.map((user) => user.unit).filter(Boolean)),
+  ].sort();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -295,8 +342,97 @@ function AdminManageUsers() {
         )}
         <p className="text-sm text-muted-foreground">
           Select any user row to view details, edit their account, update their
-          password, or delete the user.
+          password, or deactivate access while preserving their history.
         </p>
+        <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+          <SearchInput
+            value={filters.query}
+            onChange={(query) => changeFilter({ query })}
+            placeholder="Find staff by name, email, badge or unit"
+            hotkey
+          />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <label className="space-y-1 text-xs font-semibold text-muted-foreground">
+              Role
+              <select
+                value={filters.role}
+                onChange={(e) => changeFilter({ role: e.target.value })}
+                className="min-h-11 w-full rounded-lg border border-input bg-card px-3 text-sm"
+              >
+                <option value="all">All roles</option>
+                {["admin", "treasury", "enforcer", "pnp", "violator"].map(
+                  (role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <label className="space-y-1 text-xs font-semibold text-muted-foreground">
+              Assigned unit
+              <select
+                value={filters.unit}
+                onChange={(e) => changeFilter({ unit: e.target.value })}
+                className="min-h-11 w-full rounded-lg border border-input bg-card px-3 text-sm"
+              >
+                <option value="all">All units</option>
+                {units.map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1 text-xs font-semibold text-muted-foreground">
+              Verification
+              <select
+                value={filters.verification}
+                onChange={(e) => changeFilter({ verification: e.target.value })}
+                className="min-h-11 w-full rounded-lg border border-input bg-card px-3 text-sm"
+              >
+                <option value="all">All verification states</option>
+                <option value="pending">Pending verification</option>
+                <option value="verified">Verified</option>
+                <option value="legacy">Legacy accounts</option>
+              </select>
+            </label>
+            <label className="space-y-1 text-xs font-semibold text-muted-foreground">
+              Account access
+              <select
+                value={filters.access}
+                onChange={(e) => changeFilter({ access: e.target.value })}
+                className="min-h-11 w-full rounded-lg border border-input bg-card px-3 text-sm"
+              >
+                <option value="all">All accounts</option>
+                <option value="active">Active</option>
+                <option value="inactive">Deactivated</option>
+              </select>
+            </label>
+          </div>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              {loading
+                ? "Refreshing staff…"
+                : `${filteredUsers.length} of ${users.length} staff accounts`}
+            </span>
+            <button
+              type="button"
+              className="min-h-9 px-2 font-semibold text-primary hover:underline"
+              onClick={() =>
+                changeFilter({
+                  query: "",
+                  role: "all",
+                  unit: "all",
+                  verification: "all",
+                  access: "all",
+                })
+              }
+            >
+              Clear filters
+            </button>
+          </div>
+        </div>
         <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
           {loading && users.length === 0 ? (
             <div role="status" className="flex justify-center p-12">
@@ -319,7 +455,7 @@ function AdminManageUsers() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {users.map((user) => (
+                  {filteredUsers.map((user) => (
                     <tr
                       key={user.id}
                       tabIndex={
@@ -353,6 +489,11 @@ function AdminManageUsers() {
                           </div>
                           <span className="font-medium text-foreground">
                             {user.name}
+                            {user.active === false && (
+                              <span className="ml-2 rounded-full bg-muted px-2 py-1 text-[10px] font-semibold text-muted-foreground">
+                                Deactivated
+                              </span>
+                            )}
                           </span>
                         </div>
                       </td>
@@ -422,13 +563,13 @@ function AdminManageUsers() {
                       </td>
                     </tr>
                   ))}
-                  {users.length === 0 && !loadError && (
+                  {filteredUsers.length === 0 && !loadError && (
                     <tr>
                       <td
                         colSpan={5}
                         className="px-6 py-8 text-center text-muted-foreground"
                       >
-                        No users found.
+                        No users match these filters.
                       </td>
                     </tr>
                   )}

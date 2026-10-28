@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { AppShell } from "@/components/AppShell";
 import { TreasurySidebar } from "@/components/TreasurySidebar";
-import { useTicketStore } from "@/store/useTicketStore";
+import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { peso } from "@/lib/format";
 
 import { ClientOnly } from "@/components/ClientOnly";
@@ -41,7 +41,7 @@ function TreasuryLayout() {
 function ProtectedTreasury() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
-  const tickets = useTicketStore((s) => s.tickets);
+  const metrics = useDashboardMetrics();
 
   useEffect(() => {
     if (!user || user.role !== "treasury") {
@@ -49,21 +49,18 @@ function ProtectedTreasury() {
     }
   }, [user, navigate]);
 
-  const collectedToday = tickets
-    .filter(
-      (t) =>
-        t.status === "Paid" &&
-        t.payment &&
-        new Date(t.payment.paidAt).toDateString() === new Date().toDateString(),
-    )
-    .reduce((s, t) => s + t.payment!.amount, 0);
-
   if (!user || user.role !== "treasury") return null;
 
   return (
     <AppShell
-      title="Cashier Window 3"
-      subtitle={`Shift collection today: ${peso(collectedToday)}`}
+      title="Municipal Treasury"
+      subtitle={
+        metrics.error
+          ? "Collection summary unavailable"
+          : metrics.loading
+            ? "Loading municipal collections…"
+            : `Municipal collections today: ${peso(metrics.revenueToday)}`
+      }
       operator={user.name}
       unit={user.unit}
       accessLabel="Treasury"

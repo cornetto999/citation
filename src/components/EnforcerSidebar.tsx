@@ -97,7 +97,9 @@ export function EnforcerSidebar() {
                 Are you sure you want to sign out?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                You will need to log in again to access the enforcer portal.
+                Signing out removes private-device citation drafts. Issue or
+                review any unfinished citation first. You will need to log in
+                again to return.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

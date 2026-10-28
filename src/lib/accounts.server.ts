@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { supabase } from "./supabase";
 
-class AccountError extends Error {
+export class AccountError extends Error {
   constructor(
     message: string,
     readonly status = 400,
@@ -29,7 +29,7 @@ const inviteInput = z.object({
   unit: z.string().trim().min(1).max(200),
 });
 const profileColumns =
-  "id,name,credential,role,unit,auth_user_id,email_verification_required,email_verified_at";
+  "id,name,credential,role,unit,auth_user_id,email_verification_required,email_verified_at,active,disabled_reason";
 
 function adminKey() {
   return (
@@ -80,16 +80,20 @@ function sign(value: string) {
     .digest("base64url");
 }
 
-function sessionCookie(request: Request, id?: string) {
+function sessionCookie(request: Request, id?: string, version = 0) {
   const value = id
     ? Buffer.from(
-        JSON.stringify({ id, expires: Date.now() + sessionLifetime * 1000 }),
+        JSON.stringify({
+          id,
+          version,
+          expires: Date.now() + sessionLifetime * 1000,
+        }),
       ).toString("base64url")
     : "";
   return `${cookieName}=${id ? `${value}.${sign(value)}` : ""}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${id ? sessionLifetime : 0}${new URL(request.url).protocol === "https:" ? "; Secure" : ""}`;
 }
 
-function readSession(request: Request): string | null {
+function readSession(request: Request): { id: string; version: number } | null {
   const cookie = request.headers
     .get("cookie")
     ?.split(";")
@@ -108,7 +112,7 @@ function readSession(request: Request): string | null {
     return typeof parsed.id === "string" &&
       typeof parsed.expires === "number" &&
       parsed.expires > Date.now()
-      ? parsed.id
+      ? { id: parsed.id, version: Number(parsed.version ?? 0) }
       : null;
   } catch {
     return null;
@@ -117,6 +121,8 @@ function readSession(request: Request): string | null {
 
 function publicProfile(user: Record<string, unknown>) {
   return {
+    active: user["active"] !== false,
+    disabledReason: user["disabled_reason"] ?? undefined,
     id: user["id"],
     key: user["id"],
     name: user["name"],
@@ -132,7 +138,8 @@ function publicProfile(user: Record<string, unknown>) {
 }
 
 async function requireAdmin(request: Request) {
-  const id = readSession(request);
+  const session = readSession(request);
+  const id = session?.id;
   if (!id) throw new AccountError("Sign in again before managing users.", 401);
   const { data, error } = await database()
     .from("users")
@@ -146,6 +153,8 @@ async function requireAdmin(request: Request) {
     );
   if (
     !data ||
+    data.active === false ||
+    Number(data.session_version ?? 0) !== session?.version ||
     data.role !== "admin" ||
     (data.email_verification_required && !data.email_verified_at)
   ) {
@@ -218,7 +227,7 @@ async function login(body: Record<string, unknown>) {
       "Unable to look up your account. Please try again.",
       503,
     );
-  if (!user || !roles.includes(user.role))
+  if (!user || user.active === false || !roles.includes(user.role))
     throw new AccountError("Invalid email or password.", 401);
   if (user.auth_user_id || user.email_verification_required) {
     if (!user.auth_user_id)
@@ -577,7 +586,10 @@ export async function handleAccountRequest(
   try {
     const path = new URL(request.url).pathname;
     const method =
-      path === "/api/admin/users" && request.method === "GET" ? "GET" : "POST";
+      (path === "/api/admin/users" || path === "/api/auth/session") &&
+      request.method === "GET"
+        ? "GET"
+        : "POST";
     if (request.method !== method)
       return Response.json(
         { error: "Method not allowed." },
@@ -589,6 +601,12 @@ export async function handleAccountRequest(
       request.headers.get("sec-fetch-site") === "cross-site"
     )
       throw new AccountError("Invalid request origin.", 403);
+    if (path === "/api/auth/session") {
+      return Response.json(
+        { user: publicProfile(await requireWorkflowUser(request)) },
+        { headers },
+      );
+    }
     if (path === "/api/auth/logout") {
       headers["set-cookie"] = sessionCookie(request);
       return Response.json({ ok: true }, { headers });
@@ -600,9 +618,39 @@ export async function handleAccountRequest(
         "/api/admin/users/update",
         "/api/admin/users/password",
         "/api/admin/users/delete",
+        "/api/admin/users/status",
       ].includes(path)
     ) {
       const admin = await requireAdmin(request);
+      if (path === "/api/admin/users/status") {
+        const input = z
+          .object({
+            userId: z.string().uuid(),
+            active: z.boolean(),
+            reason: z.string().trim().min(3).max(2000),
+          })
+          .parse(await request.json());
+        if (input.userId === admin.id)
+          throw new AccountError(
+            "You cannot deactivate your own account.",
+            409,
+          );
+        const { data, error } = await workflowDatabase().rpc(
+          "workflow_user_status",
+          {
+            p_actor: admin.id,
+            p_user: input.userId,
+            p_active: input.active,
+            p_reason: input.reason,
+          },
+        );
+        if (error)
+          throw new AccountError(
+            "Unable to update account status. Check workflow migration and retry.",
+            503,
+          );
+        return Response.json({ user: publicProfile(data) }, { headers });
+      }
       if (path === "/api/admin/users/update") {
         const user = await editUser(
           await request.json().catch(() => null),
@@ -674,7 +722,11 @@ export async function handleAccountRequest(
     if (!body) throw new AccountError("Invalid request.");
     if (path === "/api/auth/login") {
       const user = await login(body);
-      headers["set-cookie"] = sessionCookie(request, user.id);
+      headers["set-cookie"] = sessionCookie(
+        request,
+        user.id,
+        user.session_version ?? 0,
+      );
       return Response.json({ user: publicProfile(user) }, { headers });
     }
     throw new AccountError("Not found.", 404);
@@ -689,4 +741,38 @@ export async function handleAccountRequest(
       { status: error instanceof AccountError ? error.status : 500, headers },
     );
   }
+}
+
+/** Workflow data never falls back to an anonymous database connection. */
+export function workflowDatabase() {
+  return requireAdminClient();
+}
+
+export async function requireWorkflowUser(
+  request: Request,
+  allowed: readonly string[] = roles,
+) {
+  const session = readSession(request);
+  if (!session)
+    throw new AccountError("Your session has expired. Sign in again.", 401);
+  const { data: user, error } = await workflowDatabase()
+    .from("users")
+    .select("*")
+    .eq("id", session.id)
+    .maybeSingle();
+  if (error)
+    throw new AccountError("Unable to verify your session. Please retry.", 503);
+  if (
+    !user ||
+    user.active === false ||
+    Number(user.session_version ?? 0) !== session.version ||
+    (user.email_verification_required && !user.email_verified_at)
+  )
+    throw new AccountError(
+      "Your account session is no longer active. Sign in again.",
+      401,
+    );
+  if (!allowed.includes(user.role))
+    throw new AccountError("Your role cannot perform this action.", 403);
+  return user;
 }
