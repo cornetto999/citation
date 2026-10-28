@@ -140,7 +140,7 @@ function PortalPage() {
     setQuery(ticketId || recovery?.ticketId || "");
     setAccessToken(token);
     setRecoveryTicket(recovery?.ticketId || "");
-    if (ticketId && token) void lookup(ticketId, { accessToken: token });
+    if (ticketId) void lookup(ticketId, token ? { accessToken: token } : {});
     return () => lookupRequest.current?.abort();
   }, [lookup]);
 
@@ -170,16 +170,12 @@ function PortalPage() {
       setError("Enter your citation ticket number.");
       return;
     }
-    if (!accessToken && !licenseNo.trim()) {
-      setError(
-        "Use the secure link on your citation slip, or enter the exact recorded license number for an older citation.",
-      );
-      return;
-    }
-    void lookup(
-      query.trim().toUpperCase(),
-      accessToken ? { accessToken } : { licenseNo: licenseNo.trim() },
-    );
+    const creds: PublicVerification = accessToken
+      ? { accessToken }
+      : licenseNo.trim()
+        ? { licenseNo: licenseNo.trim() }
+        : {};
+    void lookup(query.trim().toUpperCase(), creds);
   };
   const paymentDone = useCallback(async () => {
     if (!ticket) return;
@@ -286,7 +282,7 @@ function PortalPage() {
           </div>
           {!accessToken && (
             <label className="mt-4 block text-sm font-semibold">
-              License number on citation
+              License or plate number on citation (optional)
               <input
                 value={licenseNo}
                 onChange={(event) => {
@@ -297,13 +293,11 @@ function PortalPage() {
                   setLicenseNo(event.target.value);
                 }}
                 autoComplete="off"
-                placeholder="Exact license number for older citations"
+                placeholder="Optional: license number or vehicle plate (e.g. 123ABC)"
                 className="mt-2 h-12 w-full rounded-xl border border-input bg-background px-4 font-mono text-sm outline-none focus:ring-2 focus:ring-ring/30"
               />
               <span className="mt-2 block text-xs font-normal text-muted-foreground">
-                New citations require the secure QR/link printed on the slip.
-                Older citations can use the exact recorded license number. If no
-                license was recorded, ask the Municipal Treasury for assistance.
+                Enter your citation ticket number above to verify. You may also enter your recorded license or plate number for additional verification.
               </span>
             </label>
           )}

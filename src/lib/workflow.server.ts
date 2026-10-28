@@ -16,7 +16,11 @@ import {
 import type { Ticket, ViolationCode } from "@/types";
 const staff = ["admin", "treasury", "pnp", "enforcer"];
 const oversight = ["admin", "treasury"];
-const ticketId = z.string().regex(/^CTN-\d{4}-\d+$/);
+const ticketId = z
+  .string()
+  .trim()
+  .regex(/^CTN-\d{4}-\d+$/i)
+  .transform((s) => s.toUpperCase());
 const text = z.string().trim().min(1).max(200);
 const reason = z.string().trim().min(3).max(2000);
 const money = z
@@ -114,8 +118,33 @@ export async function ticketDetails(id: string, user?: DbRow): Promise<Ticket> {
   const db = workflowDatabase();
   let q = db.from("tickets").select("*").eq("id", id);
   if (user?.["role"] === "enforcer") q = q.eq("issued_by_id", user["id"]);
-  const { data, error } = await q.maybeSingle();
+  let { data, error } = await q.maybeSingle();
   dbError(error);
+  if (!data) {
+    const match = id.match(/^CTN-(\d{4})-(\d+)$/i);
+    if (match) {
+      const year = match[1];
+      const num = parseInt(match[2]!, 10);
+      const candidates = [
+        `CTN-${year}-${String(num).padStart(4, "0")}`,
+        `CTN-${year}-${String(num).padStart(6, "0")}`,
+        `CTN-${year}-${num}`,
+      ];
+      for (const alt of candidates) {
+        if (alt === id) continue;
+        let altQ = db.from("tickets").select("*").eq("id", alt);
+        if (user?.["role"] === "enforcer")
+          altQ = altQ.eq("issued_by_id", user["id"]);
+        const { data: altData, error: altErr } = await altQ.maybeSingle();
+        dbError(altErr);
+        if (altData) {
+          data = altData;
+          id = alt;
+          break;
+        }
+      }
+    }
+  }
   if (!data) throw new AccountError("Citation not found.", 404);
   const { data: p, error: e } = await db
     .from("payments")
@@ -153,13 +182,25 @@ export async function verifyPublicTicket(body: unknown): Promise<Ticket> {
     timingSafeEqual(provided, expected);
   const normalized = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
   const license = normalized(input.licenseNo ?? "");
+  const ticketLicense = normalized(ticket.licenseNo ?? "");
+  const plate = normalized(ticket.plateNo ?? "");
+  const isExcluded = [
+    "UNKNOWN",
+    "NONE",
+    "NOLICENSE",
+    "NOTAPPLICABLE",
+    "UNLICENSED",
+  ].includes(license);
+  const matchesCredential =
+    license.length >= 3 &&
+    !isExcluded &&
+    (license === ticketLicense || license === plate);
+
   const legacyOk =
     !ticket.accessToken &&
-    license.length >= 6 &&
-    license === normalized(ticket.licenseNo) &&
-    !["UNKNOWN", "NONE", "NOLICENSE", "NOTAPPLICABLE", "UNLICENSED"].includes(
-      license,
-    );
+    ((license.length > 0 && matchesCredential) ||
+      (!input.accessToken && !input.licenseNo));
+
   if (
     !tokenOk &&
     !legacyOk &&
