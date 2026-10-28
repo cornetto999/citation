@@ -169,10 +169,10 @@ function LoginPage() {
           <div className="mx-auto flex size-14 items-center justify-center rounded-2xl glass-dark shadow-glow">
             <ShieldCheck className="size-7 text-sidebar-primary" />
           </div>
-          <h1 className="mt-5 font-display text-xl font-bold tracking-tight text-primary-foreground sm:text-2xl">
+          <h1 className="mt-5 font-display text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             Sign in to your dashboard
           </h1>
-          <p className="mt-1.5 text-sm text-primary-foreground/60">
+          <p className="mt-1.5 text-sm text-foreground/80">
             Citation Ticket &amp; Payment System
           </p>
         </div>
@@ -182,7 +182,7 @@ function LoginPage() {
           className="mt-8 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06] p-6 shadow-lift backdrop-blur-sm sm:p-7"
         >
           <label
-            className="block text-sm font-semibold text-primary-foreground/90"
+            className="block text-sm font-semibold text-foreground/90"
             htmlFor="credential"
           >
             Badge no. / Email
@@ -194,11 +194,11 @@ function LoginPage() {
             onChange={(e) => setCredential(e.target.value)}
             autoComplete="username"
             placeholder="e.g. TE-2291"
-            className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-primary-foreground placeholder:text-primary-foreground/30 outline-none transition-all focus:border-sidebar-primary/50 focus:bg-white/10 focus:ring-2 focus:ring-sidebar-primary/20"
+            className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-foreground placeholder:text-foreground/80 outline-none transition-all focus:border-sidebar-primary/50 focus:bg-white/10 focus:ring-2 focus:ring-sidebar-primary/20"
           />
 
           <label
-            className="mt-5 block text-sm font-semibold text-primary-foreground/90"
+            className="mt-5 block text-sm font-semibold text-foreground/90"
             htmlFor="password"
           >
             Password
@@ -212,13 +212,13 @@ function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               placeholder="••••••••"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-11 text-sm text-primary-foreground placeholder:text-primary-foreground/30 outline-none transition-all focus:border-sidebar-primary/50 focus:bg-white/10 focus:ring-2 focus:ring-sidebar-primary/20"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-11 text-sm text-foreground placeholder:text-foreground/80 outline-none transition-all focus:border-sidebar-primary/50 focus:bg-white/10 focus:ring-2 focus:ring-sidebar-primary/20"
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-primary-foreground/40 hover:text-primary-foreground/70 transition-colors"
+              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-foreground/80 hover:text-foreground transition-colors"
             >
               {showPassword ? (
                 <EyeOff className="size-4" />
@@ -249,7 +249,7 @@ function LoginPage() {
         </form>
 
         <div className="mt-7">
-          <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-primary-foreground/40">
+          <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/80">
             Demo accounts — tap to autofill
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 stagger-children">
@@ -260,14 +260,14 @@ function LoginPage() {
                 onClick={() => fillAccount(a)}
                 className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-3 text-left backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-white/[0.15] hover:bg-white/[0.08]"
               >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-primary-foreground/70">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-foreground/70">
                   <a.icon className="size-4" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-primary-foreground">
+                  <span className="block truncate text-sm font-semibold text-foreground">
                     {a.label}
                   </span>
-                  <span className="block truncate text-xs text-primary-foreground/40">
+                  <span className="block truncate text-xs text-foreground/80">
                     {a.credential}
                   </span>
                 </span>
@@ -275,21 +275,21 @@ function LoginPage() {
             ))}
           </div>
           <div className="mt-4">
-            <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-primary-foreground/40">
+            <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/80">
               Public access
             </p>
             <Link
               to="/portal"
               className="mt-3 flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-3 text-left backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-white/[0.15] hover:bg-white/[0.08]"
             >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-primary-foreground/70">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-foreground/70">
                 <ShieldCheck className="size-4" />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold text-primary-foreground">
+                <span className="block truncate text-sm font-semibold text-foreground">
                   Violator (Public)
                 </span>
-                <span className="block truncate text-xs text-primary-foreground/40">
+                <span className="block truncate text-xs text-foreground/80">
                   No sign-in required
                 </span>
               </span>

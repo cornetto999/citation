@@ -1244,9 +1244,7 @@ export function OverdueBoard({ role }: { role: OverdueBoardRole }) {
                   <p
                     key={result.ticketId}
                     className={
-                      result.ok
-                        ? "text-emerald-700 dark:text-emerald-300"
-                        : "text-destructive"
+                      result.ok ? "text-emerald-200" : "text-destructive"
                     }
                   >
                     <strong className="font-mono">{result.ticketId}</strong> ·{" "}

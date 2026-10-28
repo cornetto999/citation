@@ -104,7 +104,7 @@ function AdminDashboard() {
           search={{ status: "Overdue", flagged: "no" }}
           className="rounded-xl border border-border p-4 transition-colors hover:bg-muted"
         >
-          <AlertTriangle className="size-5 text-amber-600" />
+          <AlertTriangle className="size-5 text-amber-200" />
           <p className="mt-3 text-2xl font-bold">
             {count(metrics.unflaggedOverdueCount)}
           </p>
@@ -119,7 +119,7 @@ function AdminDashboard() {
           search={{ view: "contested" }}
           className="rounded-xl border border-border p-4 transition-colors hover:bg-muted"
         >
-          <ClipboardCheck className="size-5 text-indigo-600" />
+          <ClipboardCheck className="size-5 text-indigo-200" />
           <p className="mt-3 text-2xl font-bold">
             {count(metrics.contestedCount)}
           </p>
@@ -134,7 +134,7 @@ function AdminDashboard() {
           search={{ verification: "pending" }}
           className="rounded-xl border border-border p-4 transition-colors hover:bg-muted"
         >
-          <Users className="size-5 text-blue-600" />
+          <Users className="size-5 text-blue-200" />
           <p className="mt-3 text-2xl font-bold">
             {count(metrics.pendingInvitations)}
           </p>
@@ -149,7 +149,7 @@ function AdminDashboard() {
           search={{ view: "exceptions" }}
           className="rounded-xl border border-border p-4 transition-colors hover:bg-muted"
         >
-          <ShieldAlert className="size-5 text-rose-600" />
+          <ShieldAlert className="size-5 text-rose-200" />
           <p className="mt-3 text-2xl font-bold">
             {count(metrics.paymentExceptions)}
           </p>
@@ -173,33 +173,47 @@ function AdminDashboard() {
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={metrics.trendData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <CartesianGrid
+                    stroke="var(--border)"
+                    strokeDasharray="3 3"
+                    vertical={false}
+                  />
                   <XAxis
                     dataKey="name"
                     tickLine={false}
                     axisLine={false}
                     fontSize={12}
+                    tick={{ fill: "var(--muted-foreground)" }}
                   />
                   <YAxis
                     allowDecimals={false}
                     tickLine={false}
                     axisLine={false}
                     fontSize={12}
+                    tick={{ fill: "var(--muted-foreground)" }}
                   />
-                  <Tooltip />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "var(--popover)",
+                      borderColor: "var(--border)",
+                      borderRadius: 12,
+                    }}
+                    labelStyle={{ color: "var(--foreground)" }}
+                    itemStyle={{ color: "var(--foreground)" }}
+                  />
                   <Legend />
                   <Line
                     type="monotone"
                     name="Issued"
                     dataKey="issued"
-                    stroke="#6366f1"
+                    stroke="var(--primary-text)"
                     strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     name="Paid"
                     dataKey="paid"
-                    stroke="#10b981"
+                    stroke="var(--paid)"
                     strokeWidth={2}
                   />
                 </LineChart>
@@ -254,7 +268,7 @@ function AdminDashboard() {
           <Link
             to="/admin/citations"
             search={{}}
-            className="text-sm font-semibold text-primary hover:underline"
+            className="text-sm font-semibold text-primary-text hover:underline"
           >
             Open register
           </Link>
@@ -291,7 +305,7 @@ function AdminDashboard() {
                     <td className="px-5 py-3">
                       <button
                         onClick={() => setSelected(ticket.id)}
-                        className="min-h-11 text-left font-semibold text-primary hover:underline"
+                        className="min-h-11 text-left font-semibold text-primary-text hover:underline"
                       >
                         <span className="block font-mono text-xs">
                           {ticket.id}

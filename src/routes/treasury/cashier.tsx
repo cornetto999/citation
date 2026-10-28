@@ -284,7 +284,7 @@ function TreasuryCashierPage() {
         <div>
           {!selectedId ? (
             <section className="flex min-h-96 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card p-8 text-center">
-              <Banknote className="mb-4 size-12 text-primary/50" />
+              <Banknote className="mb-4 size-12 text-primary-text/70" />
               <h2 className="text-lg font-bold">Ready for the next payment</h2>
               <p className="mt-2 max-w-xs text-sm text-muted-foreground">
                 Select a citation to review its violations and amount due.

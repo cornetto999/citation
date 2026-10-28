@@ -341,7 +341,7 @@ export function CashierShiftPanel({ compact = false }: { compact?: boolean }) {
             </div>
             {countedCash !== "" && (
               <p
-                className={`text-sm font-semibold ${difference ? "text-destructive" : "text-emerald-700"}`}
+                className={`text-sm font-semibold ${difference ? "text-destructive" : "text-emerald-200"}`}
               >
                 {difference === 0
                   ? "Balanced"

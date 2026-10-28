@@ -117,7 +117,7 @@ export function FollowUpQueue() {
         className="rounded-2xl border border-border bg-card p-5 shadow-panel"
       >
         <h2 className="mb-4 flex items-center gap-2 text-sm font-bold">
-          <Plus className="size-4 text-primary" />
+          <Plus className="size-4 text-primary-text" />
           Schedule a follow-up
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -218,7 +218,7 @@ export function FollowUpQueue() {
             <p>{tasks.error.message}</p>
             <button
               onClick={() => void tasks.refetch()}
-              className="mt-2 font-bold text-primary"
+              className="mt-2 font-bold text-primary-text"
             >
               Retry
             </button>
@@ -255,7 +255,7 @@ export function FollowUpQueue() {
                       <Link
                         to="/admin/citations"
                         search={{ citation: task.ticketId }}
-                        className="inline-flex min-h-10 items-center rounded-xl border border-border px-3 text-xs font-semibold text-primary"
+                        className="inline-flex min-h-10 items-center rounded-xl border border-border px-3 text-xs font-semibold text-primary-text"
                       >
                         Review citation
                       </Link>
@@ -263,7 +263,7 @@ export function FollowUpQueue() {
                       <Link
                         to="/treasury/cashier"
                         search={{ ticket: task.ticketId }}
-                        className="inline-flex min-h-10 items-center rounded-xl border border-border px-3 text-xs font-semibold text-primary"
+                        className="inline-flex min-h-10 items-center rounded-xl border border-border px-3 text-xs font-semibold text-primary-text"
                       >
                         Review citation
                       </Link>
@@ -272,7 +272,7 @@ export function FollowUpQueue() {
                       <button
                         disabled={Boolean(completing)}
                         onClick={() => void complete(task)}
-                        className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-primary/5 px-3 text-xs font-bold text-primary disabled:opacity-40"
+                        className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-primary/5 px-3 text-xs font-bold text-primary-text disabled:opacity-40"
                       >
                         {completing === task.id ? (
                           <LoaderCircle className="size-3.5 animate-spin" />
@@ -287,7 +287,7 @@ export function FollowUpQueue() {
               ))}
               {rows.length === 0 && (
                 <div className="p-12 text-center">
-                  <ClipboardList className="mx-auto mb-3 size-8 text-primary/50" />
+                  <ClipboardList className="mx-auto mb-3 size-8 text-primary-text/70" />
                   <p className="font-semibold">
                     No {view === "open" ? "open" : "completed"} follow-ups
                   </p>

@@ -56,7 +56,7 @@ export function AppShell({
               className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 shadow-sm backdrop-blur-sm transition-all hover:bg-white/20 hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary md:hidden"
               aria-label="Open menu"
             >
-              <Menu className="size-4 text-primary-foreground" />
+              <Menu className="size-4 text-sidebar-foreground" />
             </button>
           )}
 
@@ -77,10 +77,10 @@ export function AppShell({
 
           {/* Title block */}
           <div className="min-w-0 flex-1">
-            <p className="truncate font-display text-sm font-bold leading-tight tracking-tight text-primary-foreground sm:text-base">
+            <p className="truncate font-display text-sm font-bold leading-tight tracking-tight text-sidebar-foreground sm:text-base">
               {title}
             </p>
-            <p className="truncate text-[11px] text-primary-foreground/60 sm:text-xs">
+            <p className="truncate text-[11px] text-sidebar-foreground/80 sm:text-xs">
               {subtitle}
             </p>
           </div>
@@ -91,10 +91,10 @@ export function AppShell({
               {accessLabel}
             </span>
             <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium leading-tight text-primary-foreground">
+              <p className="text-sm font-medium leading-tight text-sidebar-foreground">
                 {operator}
               </p>
-              <p className="text-xs text-primary-foreground/60">{unit}</p>
+              <p className="text-xs text-sidebar-foreground/80">{unit}</p>
             </div>
           </div>
         </div>
@@ -129,12 +129,12 @@ export function AppShell({
           >
             <div className="flex h-full flex-col bg-authority">
               <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
-                <span className="font-display text-base font-bold text-primary-foreground">
+                <span className="font-display text-base font-bold text-sidebar-foreground">
                   Menu
                 </span>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex size-9 items-center justify-center rounded-xl text-primary-foreground/70 transition-colors hover:bg-white/10 hover:text-primary-foreground"
+                  className="flex size-9 items-center justify-center rounded-xl text-sidebar-foreground/70 transition-colors hover:bg-white/10 hover:text-sidebar-foreground"
                   aria-label="Close menu"
                 >
                   <X className="size-5" />

@@ -173,7 +173,7 @@ export function TicketDetailsDialog({
                   {ticket.endorsementNote || "No endorsement note recorded."}
                 </p>
                 {ticket.status === "Paid" && (
-                  <p className="mt-2 font-medium text-emerald-700">
+                  <p className="mt-2 font-medium text-emerald-200">
                     Cleared from the active hotlist after payment.
                   </p>
                 )}

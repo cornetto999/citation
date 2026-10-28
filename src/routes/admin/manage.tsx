@@ -418,7 +418,7 @@ function AdminManageUsers() {
             </span>
             <button
               type="button"
-              className="min-h-9 px-2 font-semibold text-primary hover:underline"
+              className="min-h-9 px-2 font-semibold text-primary-text hover:underline"
               onClick={() =>
                 changeFilter({
                   query: "",
@@ -438,7 +438,7 @@ function AdminManageUsers() {
             <div role="status" className="flex justify-center p-12">
               <Loader2
                 aria-hidden="true"
-                className="size-8 animate-spin text-primary/50"
+                className="size-8 animate-spin text-primary-text/70"
               />
               <span className="sr-only">Loading users</span>
             </div>

@@ -381,7 +381,7 @@ function AdminReports() {
                       <td className="px-5 py-3">
                         <button
                           onClick={() => setSelected(ticket.id)}
-                          className="min-h-11 text-left text-primary hover:underline"
+                          className="min-h-11 text-left text-primary-text hover:underline"
                         >
                           <span className="block font-mono text-xs font-semibold">
                             {ticket.id}

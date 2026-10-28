@@ -196,7 +196,7 @@ function EnforcerCitationsPage() {
                       onClick={() => change({ citation: ticket.id })}
                       className="min-h-11 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      <p className="font-mono text-xs text-primary">
+                      <p className="font-mono text-xs text-primary-text">
                         {ticket.id}
                       </p>
                       <h3 className="mt-1 text-lg font-bold">

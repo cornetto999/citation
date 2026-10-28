@@ -322,7 +322,7 @@ export function TreasuryLedger({
               <p>{exceptions.error.message}</p>
               <button
                 onClick={() => void exceptions.refetch()}
-                className="mt-2 font-bold text-primary"
+                className="mt-2 font-bold text-primary-text"
               >
                 Retry
               </button>
@@ -361,7 +361,7 @@ export function TreasuryLedger({
                           <button
                             disabled={Boolean(checking)}
                             onClick={() => void checkProvider(item)}
-                            className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary/5 px-4 text-sm font-semibold text-primary disabled:opacity-40"
+                            className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary/5 px-4 text-sm font-semibold text-primary-text disabled:opacity-40"
                           >
                             {checking === item.id ? (
                               <LoaderCircle className="size-4 animate-spin" />
@@ -377,7 +377,7 @@ export function TreasuryLedger({
                         <Link
                           to="/treasury/cashier"
                           search={{ ticket: item.ticketId }}
-                          className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 text-sm font-semibold text-primary"
+                          className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 text-sm font-semibold text-primary-text"
                         >
                           Review citation
                         </Link>
@@ -387,7 +387,7 @@ export function TreasuryLedger({
                 ))}
                 {openExceptions.length === 0 && (
                   <div className="p-12 text-center">
-                    <ReceiptText className="mx-auto mb-3 size-8 text-primary/50" />
+                    <ReceiptText className="mx-auto mb-3 size-8 text-primary-text/70" />
                     <p className="font-semibold">No open payment exceptions</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Payment reconciliation issues will appear here for review.
@@ -541,7 +541,7 @@ export function TreasuryLedger({
                 className="rounded-2xl border border-border bg-card p-5 shadow-panel"
               >
                 <p className="text-xs text-muted-foreground">{label}</p>
-                <p className="mt-2 text-2xl font-bold text-primary">
+                <p className="mt-2 text-2xl font-bold text-primary-text">
                   {dateValid && amount !== undefined
                     ? peso(Number(amount))
                     : "—"}
@@ -565,7 +565,7 @@ export function TreasuryLedger({
                 <p>{ledger.error.message}</p>
                 <button
                   onClick={() => void ledger.refetch()}
-                  className="mt-2 font-bold text-primary"
+                  className="mt-2 font-bold text-primary-text"
                 >
                   Retry payments
                 </button>
@@ -629,7 +629,7 @@ export function TreasuryLedger({
                             <Link
                               to="/treasury/receipts"
                               search={{ ticket: ticket.id }}
-                              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-primary/5 px-3 text-xs font-bold text-primary"
+                              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-primary/5 px-3 text-xs font-bold text-primary-text"
                             >
                               <ReceiptText className="size-4" />
                               Receipt

@@ -66,7 +66,7 @@ export function PageHeader({
 /* ─── StatCard ───────────────────────────────────────────────────── */
 
 const toneStyles = {
-  primary: "bg-primary/10 text-primary",
+  primary: "bg-primary/10 text-primary-text",
   success: "bg-paid text-paid-foreground",
   warning: "bg-unpaid text-unpaid-foreground",
   danger: "bg-overdue text-overdue-foreground",

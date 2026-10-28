@@ -48,6 +48,7 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-text: var(--primary-text);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -90,11 +91,13 @@
   --popover: oklch(0.27 0.1 288 / 90%);
   --popover-foreground: oklch(0.98 0.01 290);
   --primary: oklch(0.4 0.18 290);
+  /* Standalone links and totals need a lighter ink than filled buttons. */
+  --primary-text: oklch(0.92 0.04 290);
   --primary-foreground: oklch(0.985 0.005 250);
   --secondary: oklch(1 0 0 / 12%);
   --secondary-foreground: oklch(0.98 0.01 290);
   --muted: oklch(1 0 0 / 8%);
-  --muted-foreground: oklch(0.82 0.025 290);
+  --muted-foreground: oklch(0.88 0.018 290);
   --accent: oklch(0.78 0.16 74);
   --accent-foreground: oklch(0.24 0.05 258);
   --destructive: oklch(0.78 0.14 27);
@@ -167,8 +170,7 @@
     0 2px 8px oklch(0.22 0.035 258 / 0.06);
   --shadow-glow: 0 0 24px oklch(0.78 0.16 74 / 0.2);
   --shadow-glass:
-    0 1px 2px oklch(0 0 0 / 0.04),
-    inset 0 1px 0 oklch(1 0 0 / 0.08);
+    0 1px 2px oklch(0 0 0 / 0.04), inset 0 1px 0 oklch(1 0 0 / 0.08);
 }
 
 .dark {
@@ -179,11 +181,12 @@
   --popover: oklch(0.208 0.042 265.755);
   --popover-foreground: oklch(0.984 0.003 247.858);
   --primary: oklch(0.929 0.013 255.508);
+  --primary-text: oklch(0.92 0.04 290);
   --primary-foreground: oklch(0.208 0.042 265.755);
   --secondary: oklch(0.279 0.041 260.031);
   --secondary-foreground: oklch(0.984 0.003 247.858);
   --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
+  --muted-foreground: oklch(0.82 0.025 256.788);
   --accent: oklch(0.279 0.041 260.031);
   --accent-foreground: oklch(0.984 0.003 247.858);
   --destructive: oklch(0.704 0.191 22.216);
@@ -240,7 +243,7 @@
   /* Glass panels retain light text on the purple brand backdrop. */
   .on-brand {
     --foreground: oklch(0.98 0.01 290);
-    --muted-foreground: oklch(0.82 0.025 290);
+    --muted-foreground: oklch(0.88 0.018 290);
     color: var(--foreground);
   }
   .on-brand
@@ -255,7 +258,7 @@
       .glass
     ) {
     --foreground: oklch(0.98 0.01 290);
-    --muted-foreground: oklch(0.82 0.025 290);
+    --muted-foreground: oklch(0.88 0.018 290);
   }
 
   input::placeholder,
@@ -451,20 +454,37 @@
   & > * {
     animation: fade-in-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
-  & > *:nth-child(1) { animation-delay: 0ms; }
-  & > *:nth-child(2) { animation-delay: 60ms; }
-  & > *:nth-child(3) { animation-delay: 120ms; }
-  & > *:nth-child(4) { animation-delay: 180ms; }
-  & > *:nth-child(5) { animation-delay: 240ms; }
-  & > *:nth-child(6) { animation-delay: 300ms; }
-  & > *:nth-child(7) { animation-delay: 360ms; }
-  & > *:nth-child(8) { animation-delay: 420ms; }
+  & > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+  & > *:nth-child(2) {
+    animation-delay: 60ms;
+  }
+  & > *:nth-child(3) {
+    animation-delay: 120ms;
+  }
+  & > *:nth-child(4) {
+    animation-delay: 180ms;
+  }
+  & > *:nth-child(5) {
+    animation-delay: 240ms;
+  }
+  & > *:nth-child(6) {
+    animation-delay: 300ms;
+  }
+  & > *:nth-child(7) {
+    animation-delay: 360ms;
+  }
+  & > *:nth-child(8) {
+    animation-delay: 420ms;
+  }
 }
 
 /* ─── Transition Utilities ──────────────────────────────────────── */
 
 @utility transition-lift {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+  transition:
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -502,7 +522,7 @@
 /* Standard content card used across all dashboards */
 @utility card-surface {
   --foreground: var(--card-foreground);
-  --muted-foreground: oklch(0.82 0.025 290);
+  --muted-foreground: oklch(0.88 0.018 290);
   border-radius: var(--radius-2xl);
   border: 1px solid var(--color-border);
   background-color: var(--color-card);
@@ -615,13 +635,22 @@
   }
 
   .print-area,
-  .print-area :is(.card-surface, .glass, .bg-card, .bg-background, .bg-popover, .bg-white) {
+  .print-area
+    :is(
+      .card-surface,
+      .glass,
+      .bg-card,
+      .bg-background,
+      .bg-popover,
+      .bg-white
+    ) {
     background-color: white !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     color: black !important;
     --foreground: oklch(0.22 0.035 258);
     --card-foreground: oklch(0.22 0.035 258);
+    --primary-text: oklch(0.3 0.1 290);
     --muted-foreground: oklch(0.52 0.028 256);
   }
 

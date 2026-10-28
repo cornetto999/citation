@@ -231,7 +231,7 @@ function AdminCases() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <button
                         onClick={() => setSelectedTicket(item.ticketId)}
-                        className="min-h-9 font-mono text-sm font-semibold text-primary hover:underline"
+                        className="min-h-9 font-mono text-sm font-semibold text-primary-text hover:underline"
                       >
                         {item.ticketId}
                       </button>
@@ -312,7 +312,7 @@ function AdminCases() {
                     <div>
                       <button
                         onClick={() => setSelectedTicket(ticket.id)}
-                        className="min-h-9 font-mono text-sm font-semibold text-primary hover:underline"
+                        className="min-h-9 font-mono text-sm font-semibold text-primary-text hover:underline"
                       >
                         {ticket.id}
                       </button>
@@ -375,7 +375,7 @@ function AdminCases() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <button
                         onClick={() => setSelectedTicket(item.ticketId)}
-                        className="min-h-9 font-mono text-sm font-semibold text-primary hover:underline"
+                        className="min-h-9 font-mono text-sm font-semibold text-primary-text hover:underline"
                       >
                         {item.ticketId}
                       </button>

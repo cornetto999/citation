@@ -221,7 +221,7 @@ function PortalPage() {
             <p className="font-display text-sm font-bold leading-tight text-primary-foreground sm:text-base">
               Online Pay
             </p>
-            <p className="text-[11px] text-primary-foreground/60 sm:text-xs">
+            <p className="text-[11px] text-primary-foreground/80 sm:text-xs">
               Public access — look up and settle your citation
             </p>
           </div>
@@ -297,7 +297,9 @@ function PortalPage() {
                 className="mt-2 h-12 w-full rounded-xl border border-input bg-background px-4 font-mono text-sm outline-none focus:ring-2 focus:ring-ring/30"
               />
               <span className="mt-2 block text-xs font-normal text-muted-foreground">
-                Enter your citation ticket number above to verify. You may also enter your recorded license or plate number for additional verification.
+                Enter your citation ticket number above to verify. You may also
+                enter your recorded license or plate number for additional
+                verification.
               </span>
             </label>
           )}
@@ -422,7 +424,7 @@ function TicketCard({
 
       {ticket.status === "Paid" ? (
         <div className="mt-5 space-y-3">
-          <p className="flex items-center gap-2 rounded-xl bg-paid/20 border border-paid/30 px-4 py-3 text-sm font-medium text-paid-foreground">
+          <p className="flex items-center gap-2 rounded-xl bg-paid border border-paid px-4 py-3 text-sm font-medium text-paid-foreground">
             <CheckCircle2 className="size-4 shrink-0" />
             This citation has been settled.
             {ticket.payment &&
@@ -450,7 +452,7 @@ function TicketCard({
           )}
         </div>
       ) : ticket.status === "Contested" ? (
-        <p className="mt-5 flex items-center gap-2 rounded-xl bg-contested/20 border border-contested/30 px-4 py-3 text-sm font-medium text-contested-foreground">
+        <p className="mt-5 flex items-center gap-2 rounded-xl bg-contested border border-contested px-4 py-3 text-sm font-medium text-contested-foreground">
           <AlertTriangle className="size-4 shrink-0" />
           This citation is under contest. Please appear at the Traffic
           Management Office.
@@ -680,7 +682,7 @@ function Receipt({ ticket, onReset }: { ticket: Ticket; onReset: () => void }) {
   if (!p) return null;
   return (
     <section className="mt-6 animate-fade-in-up rounded-2xl border border-border bg-card p-5 shadow-panel sm:p-6 print:m-0 print:animate-none print:border-0 print:p-0 print:shadow-none">
-      <div className="no-print flex items-center gap-2 text-paid-foreground">
+      <div className="no-print flex items-center gap-2 text-emerald-200">
         <CheckCircle2 className="size-6" />
         <h2 className="font-display text-lg font-bold">Payment successful</h2>
       </div>

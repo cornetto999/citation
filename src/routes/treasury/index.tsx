@@ -40,7 +40,7 @@ function TreasuryDashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary-text">
             Revenue desk
           </p>
           <h1 className="mt-1 text-2xl font-bold">Treasury overview</h1>
@@ -65,7 +65,7 @@ function TreasuryDashboardPage() {
           <p>{metrics.error.message}</p>
           <button
             onClick={() => void metrics.refresh()}
-            className="mt-2 font-bold text-primary"
+            className="mt-2 font-bold text-primary-text"
           >
             Retry summary
           </button>
@@ -85,7 +85,9 @@ function TreasuryDashboardPage() {
             <h2 className="text-xs font-semibold text-muted-foreground">
               {label}
             </h2>
-            <p className="mt-2 text-3xl font-bold text-primary">{amount}</p>
+            <p className="mt-2 text-3xl font-bold text-primary-text">
+              {amount}
+            </p>
             <p className="mt-2 text-xs text-muted-foreground">
               {String(label).includes("today")
                 ? "Philippine calendar day"
@@ -101,17 +103,17 @@ function TreasuryDashboardPage() {
           search={{ exceptions: true }}
           className="rounded-2xl border border-border bg-card p-5 shadow-panel transition-colors hover:border-primary/40"
         >
-          <TriangleAlert className="size-5 text-amber-600" />
+          <TriangleAlert className="size-5 text-amber-200" />
           <h2 className="mt-3 font-bold">
             Payment exceptions{" "}
-            <span className="ml-1 text-primary">
+            <span className="ml-1 text-primary-text">
               {value(metrics.paymentExceptionCount)}
             </span>
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Check incomplete payments and records that need reconciliation.
           </p>
-          <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary">
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary-text">
             Review queue <ArrowRight className="size-3" />
           </span>
         </Link>
@@ -119,12 +121,12 @@ function TreasuryDashboardPage() {
           to="/treasury/overdue"
           className="rounded-2xl border border-border bg-card p-5 shadow-panel transition-colors hover:border-primary/40"
         >
-          <AlarmClock className="size-5 text-primary" />
+          <AlarmClock className="size-5 text-primary-text" />
           <h2 className="mt-3 font-bold">Overdue follow-up</h2>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Review overdue citations and endorse eligible cases to PNP.
           </p>
-          <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary">
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary-text">
             Open overdue board <ArrowRight className="size-3" />
           </span>
         </Link>
@@ -132,13 +134,13 @@ function TreasuryDashboardPage() {
           to="/treasury/reports"
           className="rounded-2xl border border-border bg-card p-5 shadow-panel transition-colors hover:border-primary/40"
         >
-          <FileChartColumn className="size-5 text-primary" />
+          <FileChartColumn className="size-5 text-primary-text" />
           <h2 className="mt-3 font-bold">Collection reports</h2>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Filter by payment date, channel, and cashier. Export matching
             records.
           </p>
-          <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary">
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary-text">
             View collections <ArrowRight className="size-3" />
           </span>
         </Link>
@@ -147,12 +149,12 @@ function TreasuryDashboardPage() {
         <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-panel">
           <div className="flex items-center justify-between gap-3 border-b border-border p-5">
             <h2 className="flex items-center gap-2 text-sm font-bold">
-              <ClipboardList className="size-4 text-primary" />
+              <ClipboardList className="size-4 text-primary-text" />
               Outstanding citations
             </h2>
             <Link
               to="/treasury/cashier"
-              className="text-xs font-bold text-primary"
+              className="text-xs font-bold text-primary-text"
             >
               Find a citation
             </Link>
@@ -162,7 +164,7 @@ function TreasuryDashboardPage() {
               <p>{pending.error.message}</p>
               <button
                 onClick={() => void pending.refetch()}
-                className="mt-2 font-semibold text-primary"
+                className="mt-2 font-semibold text-primary-text"
               >
                 Retry
               </button>
@@ -192,7 +194,7 @@ function TreasuryDashboardPage() {
                     <Link
                       to="/treasury/cashier"
                       search={{ ticket: ticket.id }}
-                      className="mt-2 inline-flex min-h-9 items-center gap-1 rounded-lg bg-primary/5 px-3 text-xs font-bold text-primary"
+                      className="mt-2 inline-flex min-h-9 items-center gap-1 rounded-lg bg-primary/5 px-3 text-xs font-bold text-primary-text"
                     >
                       Collect <ArrowRight className="size-3" />
                     </Link>
@@ -212,12 +214,12 @@ function TreasuryDashboardPage() {
         <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-panel">
           <div className="flex items-center justify-between gap-3 border-b border-border p-5">
             <h2 className="flex items-center gap-2 text-sm font-bold">
-              <ReceiptText className="size-4 text-primary" />
+              <ReceiptText className="size-4 text-primary-text" />
               Recent payments
             </h2>
             <Link
               to="/treasury/transactions"
-              className="text-xs font-bold text-primary"
+              className="text-xs font-bold text-primary-text"
             >
               View all
             </Link>

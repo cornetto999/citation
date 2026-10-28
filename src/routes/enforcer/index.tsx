@@ -91,7 +91,7 @@ function EnforcerDashboardPage() {
         <section className="rounded-2xl border border-border bg-card p-5 shadow-panel sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-start gap-3">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary-text">
                 <ClipboardList className="size-5" />
               </span>
               <div>

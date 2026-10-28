@@ -137,7 +137,7 @@ function AdminAudit() {
                     <button
                       type="button"
                       onClick={() => setSelected(event.ticketId!)}
-                      className="min-h-9 font-mono text-xs font-semibold text-primary hover:underline"
+                      className="min-h-9 font-mono text-xs font-semibold text-primary-text hover:underline"
                     >
                       {event.ticketId}
                     </button>

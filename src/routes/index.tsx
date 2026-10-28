@@ -97,13 +97,13 @@ function RoleSelect() {
           </span>
         </div>
         <h1
-          className="animate-fade-in-up mt-4 max-w-3xl font-display text-3xl font-bold tracking-tight text-primary-foreground sm:mt-5 sm:text-4xl lg:text-5xl"
+          className="animate-fade-in-up mt-4 max-w-3xl font-display text-3xl font-bold tracking-tight text-foreground sm:mt-5 sm:text-4xl lg:text-5xl"
           style={{ animationDelay: "80ms" }}
         >
           Citation Ticket &amp; Payment System
         </h1>
         <p
-          className="animate-fade-in-up mt-3 max-w-2xl text-sm leading-relaxed text-primary-foreground/65 sm:mt-4 sm:text-base"
+          className="animate-fade-in-up mt-3 max-w-2xl text-sm leading-relaxed text-foreground/80 sm:mt-4 sm:text-base"
           style={{ animationDelay: "160ms" }}
         >
           One shared record of every citation — issued on the road, watched by
@@ -122,17 +122,17 @@ function RoleSelect() {
               <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-sidebar-primary/0 to-sidebar-primary/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:from-sidebar-primary/5 group-hover:to-transparent" />
 
               <div className="relative flex items-start justify-between gap-3">
-                <div className="flex size-11 items-center justify-center rounded-xl bg-white/10 text-primary-foreground transition-all duration-300 group-hover:bg-sidebar-primary/20 group-hover:text-sidebar-primary group-hover:shadow-glow">
+                <div className="flex size-11 items-center justify-center rounded-xl bg-white/10 text-foreground transition-all duration-300 group-hover:bg-sidebar-primary/20 group-hover:text-sidebar-primary group-hover:shadow-glow">
                   <r.icon className="size-5" />
                 </div>
-                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-primary-foreground/60">
+                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground/80">
                   {r.access}
                 </span>
               </div>
-              <h2 className="relative mt-4 font-display text-lg font-semibold text-primary-foreground">
+              <h2 className="relative mt-4 font-display text-lg font-semibold text-foreground">
                 {r.name}
               </h2>
-              <p className="relative mt-1 text-sm leading-relaxed text-primary-foreground/50">
+              <p className="relative mt-1 text-sm leading-relaxed text-foreground/80">
                 {r.blurb}
               </p>
               <span className="relative mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-sidebar-primary">
@@ -144,7 +144,7 @@ function RoleSelect() {
         </div>
 
         <p
-          className="animate-fade-in mt-8 text-xs text-primary-foreground/40 sm:mt-10"
+          className="animate-fade-in mt-8 text-xs text-foreground/80 sm:mt-10"
           style={{ animationDelay: "500ms" }}
         >
           Demo environment — sample records only. Data is shared live across all

@@ -29,7 +29,7 @@ function NotFoundComponent() {
         <h2 className="mt-3 text-xl font-semibold text-primary-foreground/90">
           Page not found
         </h2>
-        <p className="mt-2 text-sm text-primary-foreground/60">
+        <p className="mt-2 text-sm text-primary-foreground/80">
           The page you're looking for doesn't exist or has been moved.
         </p>
         <div className="mt-8">
@@ -59,7 +59,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
         <h1 className="font-display text-xl font-bold tracking-tight text-primary-foreground">
           Something went wrong
         </h1>
-        <p className="mt-2 text-sm text-primary-foreground/60">
+        <p className="mt-2 text-sm text-primary-foreground/80">
           An unexpected error occurred. You can try refreshing or head back
           home.
         </p>
@@ -98,8 +98,8 @@ function PendingComponent() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Loader2 className="size-4 animate-spin text-primary-foreground/60" />
-          <p className="text-sm font-medium text-primary-foreground/60">
+          <Loader2 className="size-4 animate-spin text-primary-foreground/80" />
+          <p className="text-sm font-medium text-primary-foreground/80">
             Loading…
           </p>
         </div>

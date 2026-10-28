@@ -197,7 +197,7 @@ function CitationRegister() {
                   page: 1,
                 })
               }
-              className="min-h-10 px-3 text-sm font-medium text-primary hover:underline"
+              className="min-h-10 px-3 text-sm font-medium text-primary-text hover:underline"
             >
               Clear filters
             </button>
@@ -246,7 +246,7 @@ function CitationRegister() {
                         <button
                           type="button"
                           onClick={() => change({ citation: ticket.id })}
-                          className="min-h-11 text-left font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="min-h-11 text-left font-semibold text-primary-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           <span className="block font-mono text-xs">
                             {ticket.id}
@@ -256,7 +256,7 @@ function CitationRegister() {
                           </span>
                         </button>
                         {ticket.endorsedAt && ticket.status !== "Paid" ? (
-                          <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-rose-600">
+                          <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-rose-200">
                             <ShieldAlert className="size-3" /> Flagged to PNP
                           </span>
                         ) : null}

@@ -247,7 +247,7 @@ function VerifyEmailPage() {
             <ShieldCheck className="size-7 text-sidebar-primary" />
           )}
         </div>
-        <h1 className="mt-5 text-center font-display text-xl font-bold tracking-tight text-primary-foreground sm:text-2xl">
+        <h1 className="mt-5 text-center font-display text-xl font-bold tracking-tight text-foreground sm:text-2xl">
           {verification.status === "success"
             ? "Your account is ready"
             : "Verify your email"}
@@ -256,7 +256,7 @@ function VerifyEmailPage() {
         {verification.status === "loading" && (
           <p
             role="status"
-            className="mt-6 flex items-center justify-center gap-2 text-sm text-primary-foreground/70"
+            className="mt-6 flex items-center justify-center gap-2 text-sm text-foreground/70"
           >
             <Loader2 aria-hidden="true" className="size-4 animate-spin" />
             Checking your verification link…
@@ -274,7 +274,7 @@ function VerifyEmailPage() {
 
         {verification.status === "ready" && (
           <>
-            <p className="mt-3 text-center text-sm text-primary-foreground/70">
+            <p className="mt-3 text-center text-sm text-foreground/70">
               Your email{" "}
               <span className="break-all font-semibold">
                 {verification.email}
@@ -284,7 +284,7 @@ function VerifyEmailPage() {
             <form onSubmit={onSubmit} className="mt-6">
               <label
                 htmlFor="new-password"
-                className="block text-sm font-semibold text-primary-foreground/90"
+                className="block text-sm font-semibold text-foreground/90"
               >
                 New password
               </label>
@@ -298,17 +298,14 @@ function VerifyEmailPage() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 aria-describedby="password-help verification-error"
-                className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-primary-foreground outline-none transition-all focus:border-sidebar-primary/50 focus:ring-2 focus:ring-sidebar-primary/20 disabled:opacity-60"
+                className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-foreground outline-none transition-all focus:border-sidebar-primary/50 focus:ring-2 focus:ring-sidebar-primary/20 disabled:opacity-60"
               />
-              <p
-                id="password-help"
-                className="mt-2 text-xs text-primary-foreground/60"
-              >
+              <p id="password-help" className="mt-2 text-xs text-foreground/80">
                 Use at least 8 characters.
               </p>
               <label
                 htmlFor="confirm-password"
-                className="mt-5 block text-sm font-semibold text-primary-foreground/90"
+                className="mt-5 block text-sm font-semibold text-foreground/90"
               >
                 Confirm password
               </label>
@@ -323,7 +320,7 @@ function VerifyEmailPage() {
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 aria-describedby="verification-error"
                 aria-invalid={Boolean(error)}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-primary-foreground outline-none transition-all focus:border-sidebar-primary/50 focus:ring-2 focus:ring-sidebar-primary/20 disabled:opacity-60"
+                className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-foreground outline-none transition-all focus:border-sidebar-primary/50 focus:ring-2 focus:ring-sidebar-primary/20 disabled:opacity-60"
               />
 
               <p
@@ -360,7 +357,7 @@ function VerifyEmailPage() {
         {verification.status === "success" && (
           <p
             role="status"
-            className="mt-4 text-center text-sm text-primary-foreground/70"
+            className="mt-4 text-center text-sm text-foreground/70"
           >
             Your email is verified and your password has been created. Sign in
             with your email and new password.
@@ -370,7 +367,7 @@ function VerifyEmailPage() {
         {verification.status !== "loading" && (
           <Link
             to="/login"
-            className="mt-6 flex justify-center rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-primary-foreground transition-all hover:bg-white/10"
+            className="mt-6 flex justify-center rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-foreground transition-all hover:bg-white/10"
           >
             {verification.status === "success"
               ? "Go to sign in"
