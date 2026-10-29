@@ -106,6 +106,7 @@ function PortalPage() {
         );
         if (controller.signal.aborted) return;
         setTicket(result.ticket);
+        setQuery(result.ticket.id);
         setVerification(credentials);
         const saved = readPaymentRecovery();
         if (
@@ -140,7 +141,7 @@ function PortalPage() {
     setQuery(ticketId || recovery?.ticketId || "");
     setAccessToken(token);
     setRecoveryTicket(recovery?.ticketId || "");
-    if (ticketId) void lookup(ticketId, token ? { accessToken: token } : {});
+    if (ticketId && token) void lookup(ticketId, { accessToken: token });
     return () => lookupRequest.current?.abort();
   }, [lookup]);
 
@@ -168,6 +169,12 @@ function PortalPage() {
     event.preventDefault();
     if (!query.trim()) {
       setError("Enter your citation ticket number.");
+      return;
+    }
+    if (!accessToken && !licenseNo.trim()) {
+      setError(
+        "Enter the license or plate number printed on this citation, or scan its secure QR code.",
+      );
       return;
     }
     const creds: PublicVerification = accessToken
@@ -257,6 +264,7 @@ function PortalPage() {
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
               id="ticket-id"
+              required
               value={query}
               onChange={(e) => {
                 lookupRequest.current?.abort();
@@ -282,8 +290,10 @@ function PortalPage() {
           </div>
           {!accessToken && (
             <label className="mt-4 block text-sm font-semibold">
-              License or plate number on citation (optional)
+              License or plate number on citation
               <input
+                id="citation-verification"
+                required
                 value={licenseNo}
                 onChange={(event) => {
                   lookupRequest.current?.abort();
@@ -291,22 +301,50 @@ function PortalPage() {
                   setTicket(null);
                   setStage("lookup");
                   setLicenseNo(event.target.value);
+                  setVerification({});
+                  setError("");
                 }}
                 autoComplete="off"
-                placeholder="Optional: license number or vehicle plate (e.g. 123ABC)"
+                aria-describedby="citation-verification-help"
+                placeholder="License number or vehicle plate (e.g. 123ABC)"
                 className="mt-2 h-12 w-full rounded-xl border border-input bg-background px-4 font-mono text-sm outline-none focus:ring-2 focus:ring-ring/30"
               />
-              <span className="mt-2 block text-xs font-normal text-muted-foreground">
-                Enter your citation ticket number above to verify. You may also
-                enter your recorded license or plate number for additional
-                verification.
+              <span
+                id="citation-verification-help"
+                className="mt-2 block text-xs font-normal text-muted-foreground"
+              >
+                Enter either number exactly as printed on the citation. A ticket
+                number alone cannot verify your record. You can also scan the
+                secure QR code on your slip.
               </span>
             </label>
           )}
           {accessToken && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Secure citation link detected. Keep this link private.
-            </p>
+            <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+              <p>Secure citation link detected. Keep this link private.</p>
+              <button
+                type="button"
+                className="min-h-10 font-semibold text-primary-text underline underline-offset-4"
+                onClick={() => {
+                  lookupRequest.current?.abort();
+                  setLoading(false);
+                  setTicket(null);
+                  setStage("lookup");
+                  setAccessToken("");
+                  setVerification({});
+                  setError("");
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete("access");
+                  window.history.replaceState(
+                    null,
+                    "",
+                    url.pathname + url.search,
+                  );
+                }}
+              >
+                Use license or plate instead
+              </button>
+            </div>
           )}
           {recoveryTicket && !ticket && (
             <p className="mt-3 rounded-xl border border-border bg-muted/40 p-3 text-sm">

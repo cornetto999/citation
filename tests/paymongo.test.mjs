@@ -251,6 +251,64 @@ test("online payments use durable checkout claims and atomic settlement", async 
       },
     );
     await t.test(
+      "citation number aliases share the verified record's checkout claim and provider description",
+      async () => {
+        const { call, state } = await setup();
+        const aliasInput = {
+          ...verifiedInput,
+          ticketId: "CTN-2026-009999",
+        };
+        const first = await call("link", aliasInput);
+        assert.equal(first.status, 200);
+        assert.deepEqual(await first.json(), { linkId, checkoutUrl });
+        assert.equal(state.publicChecks[0].ticketId, aliasInput.ticketId);
+        assert.equal(state.attempt.ticket_id, ticketId);
+        assert.equal(state.writes[0].values.ticket_id, ticketId);
+        assert.equal(
+          JSON.parse(state.providerCalls[0].options.body).data.attributes
+            .description,
+          `Citation Ticket ${ticketId}`,
+        );
+
+        for (const input of [verifiedInput, aliasInput]) {
+          const repeated = await call("link", input);
+          assert.equal(repeated.status, 200);
+          assert.deepEqual(await repeated.json(), { linkId, checkoutUrl });
+        }
+        assert.equal(state.providerCalls.length, 1);
+        assert.equal(
+          state.writes.filter((write) => write.operation === "insert").length,
+          1,
+        );
+      },
+    );
+    await t.test(
+      "payment status resolves citation aliases before checking link association and settlement",
+      async () => {
+        const { call, state } = await setup();
+        const aliasInput = {
+          ...verifiedInput,
+          ticketId: "CTN-2026-009999",
+        };
+        state.attempt = persistedAttempt();
+        state.provider = () => Response.json(providerLink(paidAttributes()));
+        const result = await call("status", { ...aliasInput, linkId });
+        assert.equal(result.status, 200);
+        assert.deepEqual(await result.json(), { paid: true });
+        assert.equal(state.publicChecks[0].ticketId, aliasInput.ticketId);
+        assert.equal(state.settlements[0].p_data.ticketId, ticketId);
+        assert.equal(state.attempt.status, "paid");
+
+        assert.equal(
+          (await call("status", { ...aliasInput, linkId: "link_other" }))
+            .status,
+          400,
+        );
+        assert.equal(state.providerCalls.length, 1);
+        assert.equal(state.settlements.length, 1);
+      },
+    );
+    await t.test(
       "concurrent checkout requests create only one external link",
       async () => {
         const { call, state } = await setup();

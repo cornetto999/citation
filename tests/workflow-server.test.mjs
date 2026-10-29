@@ -399,14 +399,56 @@ test("workflow API enforces roles, scope, authoritative data and public verifica
     },
   );
   await t.test(
-    "token-issued citations cannot fall back to a known license",
+    "manual lookup accepts a matching license or plate for a citation that also has a QR token",
+    async () => {
+      const { state, call } = await setup();
+      state.user = null;
+      for (const licenseNo of [" a01 123456 ", " abc-123 "]) {
+        const response = await call("/api/public/ticket", {
+          method: "POST",
+          body: { ticketId, licenseNo },
+        });
+        assert.equal(response.status, 200);
+        const { ticket } = await response.json();
+        assert.equal(ticket.id, ticketId);
+        assert.equal(ticket.violatorName, "M••• S•••");
+        assert.equal(ticket.accessToken, undefined);
+      }
+      assert.equal(state.limitAttempts, 0);
+    },
+  );
+  await t.test(
+    "ticket number alone never verifies a citation and explains the required credential",
+    async () => {
+      const { state, call } = await setup();
+      for (const token of [accessToken, null]) {
+        state.tables.tickets[0].access_token = token;
+        for (const licenseNo of [undefined, "", "   "]) {
+          const response = await call("/api/public/ticket", {
+            method: "POST",
+            body: { ticketId, licenseNo },
+          });
+          assert.equal(response.status, 400);
+          assert.match((await response.json()).error, /license or plate/);
+        }
+      }
+      assert.equal(state.queries.length, 0);
+      assert.equal(state.limitAttempts, 0);
+    },
+  );
+  await t.test(
+    "invalid QR tokens require an explicit switch to manual verification",
     async () => {
       const { call } = await setup();
       assert.equal(
         (
           await call("/api/public/ticket", {
             method: "POST",
-            body: { ticketId, licenseNo: rawTicket.license_no },
+            body: {
+              ticketId,
+              accessToken: "wrong-but-long-enough-token",
+              licenseNo: rawTicket.license_no,
+            },
           })
         ).status,
         403,
@@ -423,7 +465,7 @@ test("workflow API enforces roles, scope, authoritative data and public verifica
     },
   );
   await t.test(
-    "legacy lookup requires a meaningful exact normalized license",
+    "manual lookup rejects mismatches and placeholder licenses or plates",
     async () => {
       const { state, call } = await setup();
       delete state.tables.tickets[0].access_token;
@@ -447,11 +489,18 @@ test("workflow API enforces roles, scope, authoritative data and public verifica
       );
       for (const licenseNo of [
         "UNKNOWN",
+        "NONE",
+        "N/A",
         "NO LICENSE",
         "NOT APPLICABLE",
         "UNLICENSED",
+        "NO PLATE",
+        "FOR REGISTRATION",
+        "TEMPORARY",
+        "000000",
       ]) {
         state.tables.tickets[0].license_no = licenseNo;
+        state.tables.tickets[0].plate_no = licenseNo;
         assert.equal(
           (
             await call("/api/public/ticket", {
@@ -462,6 +511,71 @@ test("workflow API enforces roles, scope, authoritative data and public verifica
           403,
         );
       }
+    },
+  );
+  await t.test(
+    "missing citations and incorrect credentials have the same public error and both count as failures",
+    async () => {
+      const { state, call } = await setup();
+      const wrong = await call("/api/public/ticket", {
+        method: "POST",
+        body: { ticketId, licenseNo: "WRONG999" },
+      });
+      const missing = await call("/api/public/ticket", {
+        method: "POST",
+        body: { ticketId: "CTN-2026-999999", licenseNo: "WRONG999" },
+      });
+      assert.equal(wrong.status, 403);
+      assert.equal(missing.status, 403);
+      assert.deepEqual(await wrong.json(), await missing.json());
+      assert.equal(state.limitAttempts, 2);
+    },
+  );
+  await t.test(
+    "printed citation number aliases resolve to the stored ID and share verification throttling",
+    async () => {
+      const { state, call } = await setup();
+      for (const alias of ["ctn-2026-1", "CTN-2026-0001", ticketId]) {
+        const response = await call("/api/public/ticket", {
+          method: "POST",
+          body: { ticketId: alias, licenseNo: "abc 123" },
+        });
+        assert.equal(response.status, 200);
+        assert.equal((await response.json()).ticket.id, ticketId);
+        assert.equal(
+          (
+            await call("/api/public/ticket", {
+              method: "POST",
+              body: { ticketId: alias, licenseNo: "WRONG999" },
+            })
+          ).status,
+          403,
+        );
+      }
+      const keys = state.calls
+        .filter((c) => c.name.startsWith("workflow_lookup_"))
+        .map((c) => c.args.p_key);
+      assert.equal(new Set(keys).size, 1);
+      assert.equal(state.limitAttempts, 3);
+    },
+  );
+  await t.test(
+    "large citation numbers are matched as exact digit strings without numeric rounding",
+    async () => {
+      const { state, call } = await setup();
+      state.tables.tickets[0].id = "CTN-2026-9007199254740993";
+      const response = await call("/api/public/ticket", {
+        method: "POST",
+        body: {
+          ticketId: "CTN-2026-009007199254740993",
+          licenseNo: "ABC123",
+        },
+      });
+      assert.equal(response.status, 200);
+      assert.equal(
+        (await response.json()).ticket.id,
+        "CTN-2026-9007199254740993",
+      );
     },
   );
   await t.test(

@@ -19,6 +19,7 @@ const oversight = ["admin", "treasury"];
 const ticketId = z
   .string()
   .trim()
+  .max(80)
   .regex(/^CTN-\d{4}-\d+$/i)
   .transform((s) => s.toUpperCase());
 const text = z.string().trim().min(1).max(200);
@@ -118,16 +119,17 @@ export async function ticketDetails(id: string, user?: DbRow): Promise<Ticket> {
   const db = workflowDatabase();
   let q = db.from("tickets").select("*").eq("id", id);
   if (user?.["role"] === "enforcer") q = q.eq("issued_by_id", user["id"]);
-  let { data, error } = await q.maybeSingle();
-  dbError(error);
+  const result = await q.maybeSingle();
+  dbError(result.error);
+  let data = result.data;
   if (!data) {
     const match = id.match(/^CTN-(\d{4})-(\d+)$/i);
     if (match) {
       const year = match[1];
-      const num = parseInt(match[2]!, 10);
+      const num = match[2]!.replace(/^0+(?=\d)/, "");
       const candidates = [
-        `CTN-${year}-${String(num).padStart(4, "0")}`,
-        `CTN-${year}-${String(num).padStart(6, "0")}`,
+        `CTN-${year}-${num.padStart(4, "0")}`,
+        `CTN-${year}-${num.padStart(6, "0")}`,
         `CTN-${year}-${num}`,
       ];
       for (const alt of candidates) {
@@ -162,57 +164,74 @@ export async function verifyPublicTicket(body: unknown): Promise<Ticket> {
       licenseNo: z.string().trim().max(100).optional(),
     })
     .parse(body);
+  if (!input.accessToken && !input.licenseNo)
+    throw new AccountError(
+      "Enter the license or plate number printed on this citation, or use its secure QR link.",
+      400,
+    );
   // Persistent per-citation limit covers every worker and verification path. Keys contain no raw license/token.
-  const key = createHash("sha256").update(input.ticketId).digest("hex");
+  // Printed 4/6-digit and unpadded aliases must share the same attempt budget.
+  const normalizedId = input.ticketId.replace(
+    /-(\d+)$/,
+    (_, number: string) =>
+      `-${number.replace(/^0+(?=\d)/, "").padStart(6, "0")}`,
+  );
+  const key = createHash("sha256").update(normalizedId).digest("hex");
   if (!(await rpc("workflow_lookup_allowed", { p_key: key })))
     throw new AccountError(
       "Too many verification attempts. Wait 15 minutes or contact Treasury.",
       429,
     );
   const ticket = await ticketDetails(input.ticketId).catch((e) => {
-    if (e instanceof AccountError && e.status === 404)
-      throw new AccountError("Citation details could not be verified.", 403);
+    if (e instanceof AccountError && e.status === 404) return null;
     throw e;
   });
   const provided = Buffer.from(input.accessToken ?? "");
-  const expected = Buffer.from(ticket.accessToken ?? "");
+  const expected = Buffer.from(ticket?.accessToken ?? "");
   const tokenOk =
     expected.length > 0 &&
     provided.length === expected.length &&
     timingSafeEqual(provided, expected);
   const normalized = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
   const license = normalized(input.licenseNo ?? "");
-  const ticketLicense = normalized(ticket.licenseNo ?? "");
-  const plate = normalized(ticket.plateNo ?? "");
+  const ticketLicense = normalized(ticket?.licenseNo ?? "");
+  const plate = normalized(ticket?.plateNo ?? "");
   const isExcluded = [
     "UNKNOWN",
     "NONE",
     "NOLICENSE",
     "NOTAPPLICABLE",
     "UNLICENSED",
+    "NOPLATE",
+    "TEMPORARY",
+    "FORREGISTRATION",
+    "NOTAVAILABLE",
+    "NOTASSIGNED",
+    "NULL",
+    "UNDEFINED",
   ].includes(license);
   const matchesCredential =
     license.length >= 3 &&
     !isExcluded &&
+    !/^0+$/.test(license) &&
     (license === ticketLicense || license === plate);
 
-  const legacyOk =
-    !ticket.accessToken &&
-    ((license.length > 0 && matchesCredential) ||
-      (!input.accessToken && !input.licenseNo));
+  // A matching printed credential is also available for citations with QR links.
+  // An invalid supplied token must be explicitly cleared before manual lookup.
+  const manualOk = !input.accessToken && matchesCredential;
 
   if (
     !tokenOk &&
-    !legacyOk &&
+    !manualOk &&
     !(await rpc("workflow_lookup_limit", { p_key: key }))
   )
     throw new AccountError(
       "Too many verification attempts. Wait 15 minutes or contact Treasury.",
       429,
     );
-  if (!tokenOk && !legacyOk)
+  if (!ticket || (!tokenOk && !manualOk))
     throw new AccountError(
-      "Citation details could not be verified. Use the QR link on your slip or contact Treasury.",
+      "The ticket number and license or plate did not match, or the QR link is invalid. Check the printed citation and try again, or contact Treasury.",
       403,
     );
   return ticket;

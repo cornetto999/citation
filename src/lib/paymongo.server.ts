@@ -348,12 +348,12 @@ export async function handlePaymentRequest(
         { headers },
       );
     }
-    await verifyPublicTicket(body);
+    const ticket = await verifyPublicTicket(body);
     if (path === "/api/payments/link")
-      return Response.json(await createLink(input.ticketId), { headers });
+      return Response.json(await createLink(ticket.id), { headers });
     if (path !== "/api/payments/status" || !input.linkId)
       throw new PaymentError("Invalid payment link.", 400);
-    return Response.json(await confirmPayment(input.ticketId, input.linkId), {
+    return Response.json(await confirmPayment(ticket.id, input.linkId), {
       headers,
     });
   } catch (error) {

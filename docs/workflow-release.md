@@ -10,7 +10,7 @@ Prepared October 28, 2026. Implementation is available in this checkout. The mun
 | Treasury | Search by citation, plate, name, license, or receipt; active shift requirement; manual official receipt entry; tender/change and confirmation; original receipt reprint; shift close and cash difference; ledger/report filters; payment exceptions and reconciliation; follow-ups; single and reviewed batch PNP endorsement |
 | Enforcer | Stable officer ownership; opt-in drafts with 24-hour retention and logout cleanup; frequent violations and recent locations; duplicate-safe submission; printable citation slip with secure portal QR |
 | PNP | Read-only monitoring with full-dataset counts; flagged/unflagged filters; overdue aging; citation details and history; full hotlist print/CSV independent of current filters; last successful refresh time |
-| Public | Secure-link verification for new citations; exact meaningful license verification for legacy citations without a token; masked personal information; pending-checkout recovery; recorded payment display |
+| Public | Secure QR-link verification or ticket number plus matching printed license/plate; masked personal information; pending-checkout recovery; recorded payment display |
 
 Search and totals run on the server. Lists are paginated, evidence is fetched on demand, and the root application no longer downloads the entire municipal register. Dates use Philippine time. Batch endorsement accepts at most 50 reviewed citations and reports each result separately, allowing failed items to be retried.
 
@@ -43,7 +43,7 @@ This release retains the application's existing legacy PayMongo `/v1/links` inte
 
 Provider sessions are stored durably. Repeated checkout requests reuse the saved session. If provider creation has an uncertain result, the system retains it for Treasury review instead of blindly creating another payable link. Reconciliation verifies provider state; it does not fabricate success. A conflicting online payment after a cash settlement becomes an exception for accounting review, not a second valid settlement. Refunds and adjustments require a separate approved process.
 
-For new citations, the printed secure QR/link grants access to that citation and must be kept private. Older citations without a token require the exact recorded license. Placeholder or missing license values are not accepted as public verification; Treasury assistance is required. Failed public lookup attempts are rate limited. Recovery storage retains the citation/link reference, not a cached identity dossier; verification is required again.
+The printed secure QR/link grants access to its citation and must be kept private. Manual lookup accepts the ticket number plus either the matching recorded license or plate, including citations that also have QR links. A ticket number alone, placeholders, and missing credentials do not grant public access; Treasury assistance is required if neither printed credential is available. Failed public lookups are rate limited, and zero-padded aliases share the same attempt allowance. Payment creation and status checks use the verified record's stored ID. Recovery storage retains the citation/link reference, not a cached identity dossier; verification is required again.
 
 ## Verification and practical limits
 
