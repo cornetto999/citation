@@ -77,6 +77,7 @@ test("account invitations require verified email and authenticated administratio
   let authLookupResult;
   let invitationResult;
   let listError;
+  let lookupError;
   const reset = () => {
     users = [admin, staff, invited].map((user) => ({ ...user }));
     queries = [];
@@ -107,6 +108,7 @@ test("account invitations require verified email and authenticated administratio
       error: null,
     };
     listError = null;
+    lookupError = null;
     process.env.SUPABASE_SERVICE_ROLE_KEY = "server-only-admin-test-key";
     delete process.env.SUPABASE_SECRET_KEY;
     process.env.AUTH_SESSION_SECRET = "isolated-session-signing-test-secret";
@@ -136,6 +138,7 @@ test("account invitations require verified email and authenticated administratio
           return builder;
         },
         async maybeSingle() {
+          if (lookupError) return { data: null, error: lookupError };
           return {
             data:
               users.find(
@@ -291,6 +294,109 @@ test("account invitations require verified email and authenticated administratio
       const logout = await call("/api/auth/logout", {});
       assert.match(logout.headers.get("set-cookie"), /Max-Age=0/);
     });
+    for (const role of ["admin", "treasury", "enforcer", "pnp"]) {
+      await run(
+        `${role} restores the authenticated profile using only its session cookie`,
+        async () => {
+          const user = users.find((entry) => entry.id === admin.id);
+          Object.assign(user, { role, session_version: 3 });
+          const cookie = await cookieFor(user);
+          for (let refresh = 0; refresh < 2; refresh++) {
+            const response = await call("/api/auth/session", undefined, {
+              method: "GET",
+              cookie,
+            });
+            assert.equal(response.status, 200);
+            assert.equal(response.headers.get("cache-control"), "no-store");
+            const result = await response.json();
+            assert.equal(result.user.key, user.id);
+            assert.equal(result.user.role, role);
+            assert.equal(result.user.name, user.name);
+            assert.equal(result.user.credential, user.credential);
+            assert.equal(result.user.password, undefined);
+            assert.equal(result.user.auth_user_id, undefined);
+            assert.equal(result.user.session_version, undefined);
+            assert.equal(response.headers.get("set-cookie"), null);
+          }
+        },
+      );
+    }
+    await run(
+      "session restoration rejects missing or forged cookies",
+      async () => {
+        const cookie = await cookieFor();
+        const forgedCookie = cookie.replace(/.$/, (character) =>
+          character === "A" ? "B" : "A",
+        );
+        for (const invalidCookie of [undefined, forgedCookie]) {
+          const response = await call("/api/auth/session", undefined, {
+            method: "GET",
+            cookie: invalidCookie,
+          });
+          assert.equal(response.status, 401);
+          assert.equal((await response.json()).user, undefined);
+        }
+      },
+    );
+    await run("session restoration rejects expired cookies", async () => {
+      const cookie = await cookieFor();
+      const originalNow = Date.now;
+      const afterExpiry = originalNow() + 8 * 60 * 60 * 1000 + 1;
+      try {
+        Date.now = () => afterExpiry;
+        const response = await call("/api/auth/session", undefined, {
+          method: "GET",
+          cookie,
+        });
+        assert.equal(response.status, 401);
+        assert.equal((await response.json()).user, undefined);
+      } finally {
+        Date.now = originalNow;
+      }
+    });
+    for (const [reason, update] of [
+      ["deactivated", { active: false }],
+      ["revoked", { session_version: 1 }],
+      [
+        "unverified",
+        { email_verification_required: true, email_verified_at: null },
+      ],
+    ]) {
+      await run(`session restoration rejects ${reason} accounts`, async () => {
+        const cookie = await cookieFor();
+        Object.assign(
+          users.find((user) => user.id === admin.id),
+          update,
+        );
+        const response = await call("/api/auth/session", undefined, {
+          method: "GET",
+          cookie,
+        });
+        assert.equal(response.status, 401);
+        assert.equal((await response.json()).user, undefined);
+      });
+    }
+    await run(
+      "session verification failure permits retry with the same cookie",
+      async () => {
+        const cookie = await cookieFor();
+        lookupError = { message: "Database temporarily unavailable" };
+        const unavailable = await call("/api/auth/session", undefined, {
+          method: "GET",
+          cookie,
+        });
+        assert.equal(unavailable.status, 503);
+        assert.equal(unavailable.headers.get("set-cookie"), null);
+        assert.equal((await unavailable.json()).user, undefined);
+        lookupError = null;
+        const restored = await call("/api/auth/session", undefined, {
+          method: "GET",
+          cookie,
+        });
+        assert.equal(restored.status, 200);
+        assert.equal((await restored.json()).user.key, admin.id);
+      },
+    );
     await run(
       "invited accounts authenticate against Supabase Auth",
       async () => {

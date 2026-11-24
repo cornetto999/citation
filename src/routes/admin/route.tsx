@@ -1,21 +1,22 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { AppShell } from "@/components/AppShell";
 import { useAuthStore } from "@/store/useAuthStore";
+import { RequireRole } from "@/components/RequireRole";
 
 export const Route = createFileRoute("/admin")({
-  beforeLoad: () => {
-    const auth = useAuthStore.getState();
-    if (!auth.user || auth.user.role !== "admin") {
-      throw redirect({
-        to: "/login",
-      });
-    }
-  },
   component: AdminLayout,
 });
 
 function AdminLayout() {
+  return (
+    <RequireRole role="admin">
+      <AdminDashboard />
+    </RequireRole>
+  );
+}
+
+function AdminDashboard() {
   const { user } = useAuthStore();
   return (
     <AppShell

@@ -1,12 +1,11 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/useAuthStore";
 import { AppShell } from "@/components/AppShell";
 import { TreasurySidebar } from "@/components/TreasurySidebar";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { peso } from "@/lib/format";
 
-import { ClientOnly } from "@/components/ClientOnly";
+import { RequireRole } from "@/components/RequireRole";
 
 export const Route = createFileRoute("/treasury")({
   head: () => ({
@@ -32,22 +31,15 @@ export const Route = createFileRoute("/treasury")({
 
 function TreasuryLayout() {
   return (
-    <ClientOnly>
+    <RequireRole role="treasury">
       <ProtectedTreasury />
-    </ClientOnly>
+    </RequireRole>
   );
 }
 
 function ProtectedTreasury() {
   const user = useAuthStore((s) => s.user);
-  const navigate = useNavigate();
   const metrics = useDashboardMetrics();
-
-  useEffect(() => {
-    if (!user || user.role !== "treasury") {
-      navigate({ to: "/login" });
-    }
-  }, [user, navigate]);
 
   if (!user || user.role !== "treasury") return null;
 

@@ -211,7 +211,7 @@ function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              placeholder="••••••••"
+              placeholder="Enter your password"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-11 text-sm text-foreground placeholder:text-foreground/80 outline-none transition-all focus:border-sidebar-primary/50 focus:bg-white/10 focus:ring-2 focus:ring-sidebar-primary/20"
             />
             <button

@@ -161,7 +161,12 @@ async function setup() {
     },
     verifyPublicTicket: async (input) => {
       state.publicChecks.push(input);
-      if (input.accessToken !== "verified-test-token")
+      if (
+        ![ticketId, "CTN-2026-009999"].includes(input.ticketId) ||
+        (input.accessToken
+          ? input.accessToken !== "verified-test-token"
+          : input.licenseNo?.trim() && input.licenseNo !== "ABC123")
+      )
         throw new AccountError("Citation verification failed.", 403);
       return state.ticket;
     },
@@ -212,8 +217,17 @@ test("online payments use durable checkout claims and atomic settlement", async 
           ).status,
           403,
         );
-        assert.equal((await call("link", { ticketId })).status, 403);
-        assert.equal((await call("status", { ticketId, linkId })).status, 403);
+        for (const input of [
+          { ticketId, accessToken: "invalid-test-token-long-enough" },
+          { ticketId, licenseNo: "WRONG999" },
+          { ticketId: "CTN-2026-888888" },
+        ]) {
+          assert.equal((await call("link", input)).status, 403);
+          assert.equal(
+            (await call("status", { ...input, linkId })).status,
+            403,
+          );
+        }
         assert.equal(state.providerCalls.length, 0);
         assert.equal(state.writes.length, 0);
       },
@@ -251,11 +265,10 @@ test("online payments use durable checkout claims and atomic settlement", async 
       },
     );
     await t.test(
-      "citation number aliases share the verified record's checkout claim and provider description",
+      "bare citation number aliases share the canonical checkout claim and provider description",
       async () => {
         const { call, state } = await setup();
         const aliasInput = {
-          ...verifiedInput,
           ticketId: "CTN-2026-009999",
         };
         const first = await call("link", aliasInput);
@@ -270,7 +283,12 @@ test("online payments use durable checkout claims and atomic settlement", async 
           `Citation Ticket ${ticketId}`,
         );
 
-        for (const input of [verifiedInput, aliasInput]) {
+        for (const input of [
+          { ticketId },
+          { ...aliasInput, licenseNo: "" },
+          { ...aliasInput, licenseNo: "   " },
+          verifiedInput,
+        ]) {
           const repeated = await call("link", input);
           assert.equal(repeated.status, 200);
           assert.deepEqual(await repeated.json(), { linkId, checkoutUrl });
@@ -283,11 +301,10 @@ test("online payments use durable checkout claims and atomic settlement", async 
       },
     );
     await t.test(
-      "payment status resolves citation aliases before checking link association and settlement",
+      "bare payment status lookup resolves citation aliases before checking link association and settlement",
       async () => {
         const { call, state } = await setup();
         const aliasInput = {
-          ...verifiedInput,
           ticketId: "CTN-2026-009999",
         };
         state.attempt = persistedAttempt();

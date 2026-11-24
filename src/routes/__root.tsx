@@ -12,8 +12,6 @@ import { useEffect, type ReactNode } from "react";
 import { Loader2, ShieldCheck, Home, RefreshCw } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useTicketStore } from "@/store/useTicketStore";
-import { clearCitationDrafts } from "@/lib/citation-drafts";
 
 import appCss from "../styles.css?url";
 function NotFoundComponent() {
@@ -163,34 +161,15 @@ function RootComponent() {
   const userKey = useAuthStore((s) => s.user?.key);
   useEffect(() => {
     queryClient.clear();
-    let active = true;
-
-    if (!userKey) return;
-    fetch("/api/auth/session", { credentials: "same-origin" })
-      .then(async (response) => {
-        if (!active) return;
-        if (response.status === 401 || response.status === 403) {
-          clearCitationDrafts();
-          useTicketStore.getState().clear();
-          useAuthStore.setState({ user: null });
-          return;
-        }
-        if (!response.ok) return;
-        const { user } = await response.json();
-        if (!active) return;
-        useAuthStore.setState({ user });
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
   }, [userKey, queryClient]);
 
   useEffect(() => {
+    void useAuthStore.getState().restoreSession();
+  }, []);
+
+  useEffect(() => {
     const expire = () => {
-      clearCitationDrafts();
-      useTicketStore.getState().clear();
-      useAuthStore.setState({ user: null });
+      useAuthStore.getState().expireSession();
       queryClient.clear();
     };
     const refresh = () => {

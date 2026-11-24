@@ -100,13 +100,48 @@ async function setup() {
         range: null,
         columns: null,
         limit: null,
+        or: null,
+        bounds: [],
+        orders: [],
       };
       state.queries.push(record);
       let countOptions;
       const result = (single = false) => {
-        let rows = state.tables[table].filter((row) =>
-          record.filters.every(([field, value]) => row[field] === value),
-        );
+        let rows = state.tables[table].filter((row) => {
+          if (!record.filters.every(([field, value]) => row[field] === value))
+            return false;
+          if (
+            !record.bounds.every(([operator, field, value]) =>
+              operator === "gte"
+                ? Date.parse(row[field]) >= Date.parse(value)
+                : Date.parse(row[field]) < Date.parse(value),
+            )
+          )
+            return false;
+          return (
+            !record.or ||
+            record.or.split(",").some((condition) => {
+              const match = condition.match(/^([a-z_]+)\.ilike\.(.*)$/);
+              assert.ok(match, `Unsupported OR condition: ${condition}`);
+              const [, field, pattern] = match;
+              const expression = pattern
+                .split("%")
+                .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+                .join(".*");
+              return (
+                row[field] != null &&
+                new RegExp(`^${expression}$`, "iu").test(row[field])
+              );
+            })
+          );
+        });
+        rows.sort((a, b) => {
+          for (const [field, ascending] of record.orders) {
+            const comparison = String(a[field]).localeCompare(String(b[field]));
+            if (comparison) return ascending ? comparison : -comparison;
+          }
+          return 0;
+        });
         const count = rows.length;
         if (record.range)
           rows = rows.slice(record.range[0], record.range[1] + 1);
@@ -131,7 +166,20 @@ async function setup() {
           record.filters.push([field, value]);
           return query;
         },
-        order() {
+        or(expression) {
+          record.or = expression;
+          return query;
+        },
+        gte(field, value) {
+          record.bounds.push(["gte", field, value]);
+          return query;
+        },
+        lt(field, value) {
+          record.bounds.push(["lt", field, value]);
+          return query;
+        },
+        order(field, options = {}) {
+          record.orders.push([field, options.ascending !== false]);
           return query;
         },
         limit(value) {
@@ -223,6 +271,19 @@ const issueInput = {
   clientRequestId: requestId,
   ruleVersion: 1,
 };
+
+const auditEvent = (id, values = {}) => ({
+  id,
+  ticket_id: ticketId,
+  actor_id: userId,
+  actor_name: "Officer Koy",
+  action: "payment.settle",
+  reason: "Cash payment received",
+  created_at: "2026-10-20T01:00:00Z",
+  before_data: null,
+  after_data: null,
+  ...values,
+});
 
 test("workflow API enforces roles, scope, authoritative data and public verification", async (t) => {
   await t.test(
@@ -362,6 +423,187 @@ test("workflow API enforces roles, scope, authoritative data and public verifica
     },
   );
   await t.test(
+    "audit search trims staff queries and searches citation, reason, and Unicode names",
+    async () => {
+      const { state, call } = await setup();
+      state.tables.workflow_events = [
+        auditEvent("event-match", {
+          actor_name: "Officer Koy",
+          reason: "Follow-up completed",
+        }),
+        auditEvent("event-unicode", {
+          actor_name: "José Reyes",
+          ticket_id: "CTN-2026-000002",
+        }),
+        auditEvent("event-other", {
+          actor_name: "Other Officer",
+          ticket_id: "CTN-2026-000003",
+          reason: "Notice sent",
+        }),
+      ];
+      for (const [query, expected] of [
+        [" koy ", "event-match"],
+        ["  OFFICER   KOY  ", "event-match"],
+        [ticketId, "event-match"],
+        ["Follow-up completed", "event-match"],
+        ["José", "event-unicode"],
+      ]) {
+        const response = await call(
+          `/api/workflow/audit?query=${encodeURIComponent(query)}`,
+        );
+        assert.equal(response.status, 200);
+        const result = await response.json();
+        assert.deepEqual(
+          result.events.map((event) => event.id),
+          [expected],
+        );
+        assert.equal(result.total, 1);
+      }
+    },
+  );
+  await t.test(
+    "whitespace-only audit search returns the unfiltered history",
+    async () => {
+      const { state, call } = await setup();
+      state.tables.workflow_events = [
+        auditEvent("event-1"),
+        auditEvent("event-2"),
+      ];
+      const response = await call("/api/workflow/audit?query=%20%20%20");
+      assert.equal(response.status, 200);
+      const result = await response.json();
+      assert.equal(result.total, 2);
+      assert.equal(result.events.length, 2);
+      assert.equal(state.queries[0].or, null);
+    },
+  );
+  await t.test(
+    "audit action search accepts displayed labels and stored action names",
+    async () => {
+      const { state, call } = await setup();
+      state.tables.workflow_events = [
+        auditEvent("settled"),
+        auditEvent("opened", { action: "shift.open" }),
+      ];
+      for (const query of [
+        "payment settle",
+        "payment.settle",
+        "PAYMENT_SETTLE",
+      ]) {
+        const response = await call(
+          `/api/workflow/audit?query=${encodeURIComponent(query)}`,
+        );
+        assert.equal(response.status, 200);
+        const result = await response.json();
+        assert.deepEqual(
+          result.events.map((event) => event.id),
+          ["settled"],
+        );
+        assert.equal(result.total, 1);
+      }
+    },
+  );
+  await t.test(
+    "audit punctuation cannot inject OR syntax or broaden a query to all history",
+    async () => {
+      const { state, call } = await setup();
+      state.tables.workflow_events = [
+        auditEvent("event-1"),
+        auditEvent("event-2"),
+      ];
+      const response = await call(
+        `/api/workflow/audit?query=${encodeURIComponent('missing,actor_name.ilike.%),("\\')}&pageSize=1`,
+      );
+      assert.equal(response.status, 200);
+      const result = await response.json();
+      assert.equal(result.total, 0);
+      assert.deepEqual(result.events, []);
+      const query = state.queries[0];
+      assert.equal(query.or.split(",").length, 4);
+      for (const condition of query.or.split(",")) {
+        assert.match(
+          condition,
+          /^(ticket_id|actor_name|action|reason)\.ilike\.%missing%actor%name%ilike%$/,
+        );
+      }
+      assert.deepEqual(query.range, [0, 0]);
+      for (const invalid of ["%_.,()", '"\\']) {
+        const rejected = await call(
+          `/api/workflow/audit?query=${encodeURIComponent(invalid)}`,
+        );
+        assert.equal(rejected.status, 400);
+        assert.match((await rejected.json()).error, /letters or numbers/);
+      }
+    },
+  );
+  await t.test(
+    "audit pagination retains the filtered total and stable newest-first order",
+    async () => {
+      const { state, call } = await setup();
+      state.tables.workflow_events = [
+        auditEvent("old", { created_at: "2026-10-19T01:00:00Z" }),
+        auditEvent("new-b", { created_at: "2026-10-21T01:00:00Z" }),
+        auditEvent("unmatched", { actor_name: "Another Officer" }),
+        auditEvent("new-a", { created_at: "2026-10-21T01:00:00Z" }),
+      ];
+      for (const [page, expected] of [
+        [1, ["new-a", "new-b"]],
+        [2, ["old"]],
+      ]) {
+        const response = await call(
+          `/api/workflow/audit?query=koy&page=${page}&pageSize=2`,
+        );
+        assert.equal(response.status, 200);
+        const result = await response.json();
+        assert.equal(result.total, 3);
+        assert.equal(result.page, page);
+        assert.equal(result.pageSize, 2);
+        assert.deepEqual(
+          result.events.map((event) => event.id),
+          expected,
+        );
+      }
+    },
+  );
+  await t.test(
+    "audit date bounds include whole Philippine days while preserving search",
+    async () => {
+      const { state, call } = await setup();
+      state.tables.workflow_events = [
+        auditEvent("before", { created_at: "2026-10-19T15:59:59Z" }),
+        auditEvent("start", { created_at: "2026-10-19T16:00:00Z" }),
+        auditEvent("end", { created_at: "2026-10-21T15:59:59Z" }),
+        auditEvent("after", { created_at: "2026-10-21T16:00:00Z" }),
+        auditEvent("other-staff", { actor_name: "Another Officer" }),
+      ];
+      const response = await call(
+        "/api/workflow/audit?query=koy&from=2026-10-20&to=2026-10-21",
+      );
+      assert.equal(response.status, 200);
+      const result = await response.json();
+      assert.equal(result.total, 2);
+      assert.deepEqual(
+        result.events.map((event) => event.id),
+        ["end", "start"],
+      );
+      assert.deepEqual(state.queries[0].bounds, [
+        ["gte", "created_at", "2026-10-20T00:00:00+08:00"],
+        ["lt", "created_at", "2026-10-21T16:00:00.000Z"],
+      ]);
+    },
+  );
+  await t.test(
+    "audit searches remain restricted to administrators",
+    async () => {
+      const { state, call } = await setup();
+      for (const role of ["treasury", "enforcer", "pnp"]) {
+        state.user.role = role;
+        assert.equal((await call("/api/workflow/audit?query=koy")).status, 403);
+      }
+      assert.equal(state.queries.length, 0);
+    },
+  );
+  await t.test(
     "public lookup discloses only the verified citation with masked identity and no private staff data",
     async () => {
       const { state, call } = await setup();
@@ -418,9 +660,10 @@ test("workflow API enforces roles, scope, authoritative data and public verifica
     },
   );
   await t.test(
-    "ticket number alone never verifies a citation and explains the required credential",
+    "ticket number lookup accepts omitted, blank and whitespace credentials for QR and legacy citations",
     async () => {
       const { state, call } = await setup();
+      state.user = null;
       for (const token of [accessToken, null]) {
         state.tables.tickets[0].access_token = token;
         for (const licenseNo of [undefined, "", "   "]) {
@@ -428,11 +671,21 @@ test("workflow API enforces roles, scope, authoritative data and public verifica
             method: "POST",
             body: { ticketId, licenseNo },
           });
-          assert.equal(response.status, 400);
-          assert.match((await response.json()).error, /license or plate/);
+          assert.equal(response.status, 200);
+          const { ticket } = await response.json();
+          assert.equal(ticket.id, ticketId);
+          assert.equal(ticket.violatorName, "M••• S•••");
+          assert.equal(ticket.licenseNo, "••••3456");
+          for (const field of [
+            "accessToken",
+            "photoData",
+            "remarks",
+            "issuedById",
+            "endorsementNote",
+          ])
+            assert.equal(ticket[field], undefined, field);
         }
       }
-      assert.equal(state.queries.length, 0);
       assert.equal(state.limitAttempts, 0);
     },
   );
@@ -453,40 +706,47 @@ test("workflow API enforces roles, scope, authoritative data and public verifica
         ).status,
         403,
       );
-      assert.equal(
-        (
-          await call("/api/public/ticket", {
-            method: "POST",
-            body: { ticketId, accessToken: "wrong-but-long-enough-token" },
-          })
-        ).status,
-        403,
-      );
+      for (const licenseNo of [undefined, "", "   "])
+        assert.equal(
+          (
+            await call("/api/public/ticket", {
+              method: "POST",
+              body: {
+                ticketId,
+                accessToken: "wrong-but-long-enough-token",
+                licenseNo,
+              },
+            })
+          ).status,
+          403,
+        );
     },
   );
   await t.test(
     "manual lookup rejects mismatches and placeholder licenses or plates",
     async () => {
       const { state, call } = await setup();
-      delete state.tables.tickets[0].access_token;
-      assert.equal(
-        (
-          await call("/api/public/ticket", {
-            method: "POST",
-            body: { ticketId, licenseNo: " a01123456 " },
-          })
-        ).status,
-        200,
-      );
-      assert.equal(
-        (
-          await call("/api/public/ticket", {
-            method: "POST",
-            body: { ticketId, licenseNo: "A01-123457" },
-          })
-        ).status,
-        403,
-      );
+      for (const token of [accessToken, null]) {
+        state.tables.tickets[0].access_token = token;
+        assert.equal(
+          (
+            await call("/api/public/ticket", {
+              method: "POST",
+              body: { ticketId, licenseNo: " a01123456 " },
+            })
+          ).status,
+          200,
+        );
+        assert.equal(
+          (
+            await call("/api/public/ticket", {
+              method: "POST",
+              body: { ticketId, licenseNo: "A01-123457" },
+            })
+          ).status,
+          403,
+        );
+      }
       for (const licenseNo of [
         "UNKNOWN",
         "NONE",
@@ -521,14 +781,17 @@ test("workflow API enforces roles, scope, authoritative data and public verifica
         method: "POST",
         body: { ticketId, licenseNo: "WRONG999" },
       });
-      const missing = await call("/api/public/ticket", {
-        method: "POST",
-        body: { ticketId: "CTN-2026-999999", licenseNo: "WRONG999" },
-      });
       assert.equal(wrong.status, 403);
-      assert.equal(missing.status, 403);
-      assert.deepEqual(await wrong.json(), await missing.json());
-      assert.equal(state.limitAttempts, 2);
+      const error = await wrong.json();
+      for (const licenseNo of [undefined, "", "   ", "WRONG999"]) {
+        const missing = await call("/api/public/ticket", {
+          method: "POST",
+          body: { ticketId: "CTN-2026-999999", licenseNo },
+        });
+        assert.equal(missing.status, 403);
+        assert.deepEqual(await missing.json(), error);
+      }
+      assert.equal(state.limitAttempts, 5);
     },
   );
   await t.test(
@@ -536,12 +799,14 @@ test("workflow API enforces roles, scope, authoritative data and public verifica
     async () => {
       const { state, call } = await setup();
       for (const alias of ["ctn-2026-1", "CTN-2026-0001", ticketId]) {
-        const response = await call("/api/public/ticket", {
-          method: "POST",
-          body: { ticketId: alias, licenseNo: "abc 123" },
-        });
-        assert.equal(response.status, 200);
-        assert.equal((await response.json()).ticket.id, ticketId);
+        for (const licenseNo of [undefined, "abc 123"]) {
+          const response = await call("/api/public/ticket", {
+            method: "POST",
+            body: { ticketId: alias, licenseNo },
+          });
+          assert.equal(response.status, 200);
+          assert.equal((await response.json()).ticket.id, ticketId);
+        }
         assert.equal(
           (
             await call("/api/public/ticket", {
@@ -591,26 +856,28 @@ test("workflow API enforces roles, scope, authoritative data and public verifica
         assert.ok([403, 429].includes(response.status));
       }
       assert.equal(state.limitAttempts, 20);
-      assert.equal(
-        (
-          await call("/api/public/ticket", {
-            method: "POST",
-            body: { ticketId, licenseNo: rawTicket.license_no },
-          })
-        ).status,
-        429,
-      );
+      for (const licenseNo of [undefined, rawTicket.license_no])
+        assert.equal(
+          (
+            await call("/api/public/ticket", {
+              method: "POST",
+              body: { ticketId, licenseNo },
+            })
+          ).status,
+          429,
+        );
       state.limitAttempts = 0;
       state.tables.tickets[0].access_token = accessToken;
-      assert.equal(
-        (
-          await call("/api/public/ticket", {
-            method: "POST",
-            body: { ticketId, accessToken },
-          })
-        ).status,
-        200,
-      );
+      for (const token of [undefined, accessToken])
+        assert.equal(
+          (
+            await call("/api/public/ticket", {
+              method: "POST",
+              body: { ticketId, accessToken: token },
+            })
+          ).status,
+          200,
+        );
       assert.equal(state.limitAttempts, 0);
       assert.ok(
         state.calls

@@ -10,11 +10,13 @@ Prepared October 28, 2026. Implementation is available in this checkout. The mun
 | Treasury | Search by citation, plate, name, license, or receipt; active shift requirement; manual official receipt entry; tender/change and confirmation; original receipt reprint; shift close and cash difference; ledger/report filters; payment exceptions and reconciliation; follow-ups; single and reviewed batch PNP endorsement |
 | Enforcer | Stable officer ownership; opt-in drafts with 24-hour retention and logout cleanup; frequent violations and recent locations; duplicate-safe submission; printable citation slip with secure portal QR |
 | PNP | Read-only monitoring with full-dataset counts; flagged/unflagged filters; overdue aging; citation details and history; full hotlist print/CSV independent of current filters; last successful refresh time |
-| Public | Secure QR-link verification or ticket number plus matching printed license/plate; masked personal information; pending-checkout recovery; recorded payment display |
+| Public | QR-link or ticket-number lookup with optional matching license/plate; masked personal information; pending-checkout recovery; recorded payment display |
 
 Search and totals run on the server. Lists are paginated, evidence is fetched on demand, and the root application no longer downloads the entire municipal register. Dates use Philippine time. Batch endorsement accepts at most 50 reviewed citations and reports each result separately, allowing failed items to be retried.
 
 Cash settlement belongs to Treasury. PNP cannot collect, endorse, or alter citation records. Admin oversees records and hands collection to Treasury. A case decision records the administrative review; it does not automatically waive a fine, refund a payment, or change legal status. Paid citations leave the active hotlist while their audit history remains.
+
+Staff sessions restore from the server's HttpOnly cookie on refresh, including direct links to nested dashboards. Admin, Treasury, Enforcer, and PNP wait for verification before rendering records or redirecting to sign-in. Temporary connection failures offer a retry on the current page. The existing eight-hour session expiry and account deactivation/revocation checks remain enforced; browser-stored profiles are no longer used for authentication.
 
 ## Database rollout
 
@@ -43,7 +45,7 @@ This release retains the application's existing legacy PayMongo `/v1/links` inte
 
 Provider sessions are stored durably. Repeated checkout requests reuse the saved session. If provider creation has an uncertain result, the system retains it for Treasury review instead of blindly creating another payable link. Reconciliation verifies provider state; it does not fabricate success. A conflicting online payment after a cash settlement becomes an exception for accounting review, not a second valid settlement. Refunds and adjustments require a separate approved process.
 
-The printed secure QR/link grants access to its citation and must be kept private. Manual lookup accepts the ticket number plus either the matching recorded license or plate, including citations that also have QR links. A ticket number alone, placeholders, and missing credentials do not grant public access; Treasury assistance is required if neither printed credential is available. Failed public lookups are rate limited, and zero-padded aliases share the same attempt allowance. Payment creation and status checks use the verified record's stored ID. Recovery storage retains the citation/link reference, not a cached identity dossier; verification is required again.
+The public portal accepts a citation ticket number alone, including citations issued with a QR link. License or plate is optional; if supplied, it must match a recorded value and cannot be a placeholder. A supplied invalid QR token is rejected until the visitor explicitly switches to ticket-number lookup. Public results keep names and license numbers masked and omit photos, staff notes, and access tokens. Failed public lookups are rate limited, and zero-padded aliases share the same attempt allowance. Payment creation and status checks use the located record's stored ID. Recovery storage retains the citation/link reference, not a cached identity dossier; a new lookup is required to recover payment progress.
 
 ## Verification and practical limits
 
@@ -59,6 +61,8 @@ npm run build
 Automated tests cover account permissions, duplicate/retried payments, provider verification, session cache clearing, public lookup, batch endorsement, receipt rendering, export pagination, draft retention, and the actual SQL migration in isolated Postgres via PGlite. Database fixtures include 10,000 citations to check server pagination and complete aggregate totals. These tests do not replace a real multi-connection load test or provider webhook delivery test.
 
 Local release checks on October 28 passed: 171 tests, TypeScript, ESLint for changed source/test files, and the production build. Successful reconciliation now closes only its matching provider exception; a conflicting payment reference remains open for review.
+
+October 30 session and public-lookup checks passed: 230 tests, TypeScript, focused ESLint, and the production build. Browser checks against synthetic local data confirmed ticket-number-only lookup with the optional field empty and refresh restoration for all four staff roles, including a nested Admin page. Session tests also cover expiry, revocation, connection failure/retry, and stale responses arriving after sign-in or sign-out.
 
 The local browser fixture exercised Admin register search and citation details, Treasury cash confirmation and receipt recovery after a new sign-in, shift totals, payment-driven PNP hotlist clearing, and masked public access to the paid citation. It used synthetic data only. CSV/print generators and full-page export retrieval have automated coverage; final OS download and physical print behavior still need acceptance on the deployment browser and printer.
 

@@ -33,6 +33,15 @@ function AdminAudit() {
   const [draft, setDraft] = useState(search);
   const [selected, setSelected] = useState<string | null>(null);
   useEffect(() => setDraft(search), [search]);
+  const applySearch = (next: typeof search) => {
+    const normalized = {
+      ...next,
+      query: next.query.trim().replace(/\s+/g, " "),
+    };
+    setDraft(normalized);
+    void navigate({ search: normalized, resetScroll: false });
+  };
+  const hasFilters = Boolean(search.query || search.from || search.to);
   const result = useQuery({
     queryKey: ["workflow", "audit", search],
     queryFn: ({ signal }) =>
@@ -55,15 +64,13 @@ function AdminAudit() {
           className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_auto]"
           onSubmit={(event) => {
             event.preventDefault();
-            void navigate({
-              search: { ...draft, page: 1 },
-              resetScroll: false,
-            });
+            applySearch({ ...draft, page: 1 });
           }}
         >
           <SearchInput
             value={draft.query}
             onChange={(query) => setDraft({ ...draft, query })}
+            onClear={() => applySearch({ ...search, query: "", page: 1 })}
             placeholder="Citation, staff, action or reason"
             hotkey
           />
@@ -95,6 +102,26 @@ function AdminAudit() {
             Search history
           </button>
         </form>
+        {hasFilters && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+            <p className="text-muted-foreground" role="status">
+              {search.query
+                ? `Results for “${search.query.trim()}”`
+                : "Filtered activity"}
+              {search.from ? ` · From ${search.from}` : ""}
+              {search.to ? ` · Through ${search.to}` : ""}
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                applySearch({ query: "", from: "", to: "", page: 1 })
+              }
+              className="min-h-10 px-3 font-semibold text-primary-text hover:underline"
+            >
+              Clear filters
+            </button>
+          </div>
+        )}
       </SectionCard>
       <WorkflowFeedback
         error={result.error}

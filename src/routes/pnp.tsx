@@ -1,9 +1,8 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/useAuthStore";
 import { AppShell } from "@/components/AppShell";
 import { PnpSidebar } from "@/components/PnpSidebar";
-import { ClientOnly } from "@/components/ClientOnly";
+import { RequireRole } from "@/components/RequireRole";
 
 export const Route = createFileRoute("/pnp")({
   head: () => ({
@@ -31,21 +30,14 @@ export const Route = createFileRoute("/pnp")({
 
 function PnpLayout() {
   return (
-    <ClientOnly>
+    <RequireRole role="pnp">
       <ProtectedPnp />
-    </ClientOnly>
+    </RequireRole>
   );
 }
 
 function ProtectedPnp() {
   const user = useAuthStore((s) => s.user);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!user || user.role !== "pnp") {
-      navigate({ to: "/login" });
-    }
-  }, [user, navigate]);
 
   if (!user || user.role !== "pnp") return null;
 

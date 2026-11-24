@@ -243,6 +243,8 @@ export const SearchInput = forwardRef<
   {
     value: string;
     onChange: (v: string) => void;
+    /** Override the clear button/Escape to reset an applied search as well. */
+    onClear?: () => void;
     placeholder?: string;
     className?: string;
     inputClassName?: string;
@@ -257,6 +259,7 @@ export const SearchInput = forwardRef<
   {
     value,
     onChange,
+    onClear,
     placeholder = "Search…",
     className,
     inputClassName,
@@ -269,6 +272,11 @@ export const SearchInput = forwardRef<
   ref,
 ) {
   const inner = useRef<HTMLInputElement>(null);
+  const clear = () => {
+    if (onClear) onClear();
+    else onChange("");
+    inner.current?.focus();
+  };
   useImperativeHandle(ref, () => inner.current as HTMLInputElement);
 
   useEffect(() => {
@@ -303,7 +311,7 @@ export const SearchInput = forwardRef<
           if (e.key === "Enter") onEnter?.();
           if (e.key === "Escape" && value) {
             e.preventDefault();
-            onChange("");
+            clear();
           }
         }}
         placeholder={placeholder}
@@ -317,10 +325,7 @@ export const SearchInput = forwardRef<
         {value ? (
           <button
             type="button"
-            onClick={() => {
-              onChange("");
-              inner.current?.focus();
-            }}
+            onClick={clear}
             className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label="Clear search"
           >

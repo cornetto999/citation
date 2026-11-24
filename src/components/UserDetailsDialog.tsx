@@ -2,6 +2,8 @@ import { useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import {
+  Eye,
+  EyeOff,
   KeyRound,
   Loader2,
   Pencil,
@@ -73,6 +75,8 @@ export function UserDetailsDialog({
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [action, setAction] = useState<
     "save" | "password" | "delete" | "status" | null
   >(null);
@@ -171,6 +175,8 @@ export function UserDetailsDialog({
       );
       setPassword("");
       setConfirmPassword("");
+      setShowPassword(false);
+      setShowConfirmPassword(false);
       setIsPasswordFormOpen(false);
       const message = result.message || "Password updated successfully.";
       setSuccess(message);
@@ -552,6 +558,8 @@ export function UserDetailsDialog({
                   onClick={() => {
                     setError("");
                     setSuccess("");
+                    setShowPassword(false);
+                    setShowConfirmPassword(false);
                     setIsPasswordFormOpen(true);
                   }}
                   className={`${secondaryButtonClassName} mt-4`}
@@ -572,17 +580,37 @@ export function UserDetailsDialog({
                       >
                         New password
                       </label>
-                      <input
-                        id="user-new-password"
-                        type="password"
-                        autoComplete="new-password"
-                        required
-                        minLength={8}
-                        maxLength={128}
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        className={inputClassName}
-                      />
+                      <div className="relative">
+                        <input
+                          id="user-new-password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Enter your new password"
+                          autoComplete="new-password"
+                          required
+                          minLength={8}
+                          maxLength={128}
+                          value={password}
+                          onChange={(event) => setPassword(event.target.value)}
+                          className={`${inputClassName} min-h-11 pr-12`}
+                        />
+                        <button
+                          type="button"
+                          aria-label={
+                            showPassword
+                              ? "Hide new password"
+                              : "Show new password"
+                          }
+                          aria-controls="user-new-password"
+                          onClick={() => setShowPassword((shown) => !shown)}
+                          className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="size-4" aria-hidden="true" />
+                          ) : (
+                            <Eye className="size-4" aria-hidden="true" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <label
@@ -591,19 +619,41 @@ export function UserDetailsDialog({
                       >
                         Confirm new password
                       </label>
-                      <input
-                        id="user-confirm-password"
-                        type="password"
-                        autoComplete="new-password"
-                        required
-                        minLength={8}
-                        maxLength={128}
-                        value={confirmPassword}
-                        onChange={(event) =>
-                          setConfirmPassword(event.target.value)
-                        }
-                        className={inputClassName}
-                      />
+                      <div className="relative">
+                        <input
+                          id="user-confirm-password"
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Confirm your new password"
+                          autoComplete="new-password"
+                          required
+                          minLength={8}
+                          maxLength={128}
+                          value={confirmPassword}
+                          onChange={(event) =>
+                            setConfirmPassword(event.target.value)
+                          }
+                          className={`${inputClassName} min-h-11 pr-12`}
+                        />
+                        <button
+                          type="button"
+                          aria-label={
+                            showConfirmPassword
+                              ? "Hide password confirmation"
+                              : "Show password confirmation"
+                          }
+                          aria-controls="user-confirm-password"
+                          onClick={() =>
+                            setShowConfirmPassword((shown) => !shown)
+                          }
+                          className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="size-4" aria-hidden="true" />
+                          ) : (
+                            <Eye className="size-4" aria-hidden="true" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </fieldset>
                   <div className="mt-4 flex flex-wrap justify-end gap-3">
@@ -613,6 +663,8 @@ export function UserDetailsDialog({
                       onClick={() => {
                         setPassword("");
                         setConfirmPassword("");
+                        setShowPassword(false);
+                        setShowConfirmPassword(false);
                         setIsPasswordFormOpen(false);
                         setError("");
                       }}

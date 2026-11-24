@@ -291,6 +291,7 @@ function VerifyEmailPage() {
               <input
                 id="new-password"
                 type="password"
+                placeholder="Enter your new password"
                 autoComplete="new-password"
                 required
                 minLength={8}
@@ -312,6 +313,7 @@ function VerifyEmailPage() {
               <input
                 id="confirm-password"
                 type="password"
+                placeholder="Confirm your new password"
                 autoComplete="new-password"
                 required
                 minLength={8}

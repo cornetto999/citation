@@ -171,12 +171,6 @@ function PortalPage() {
       setError("Enter your citation ticket number.");
       return;
     }
-    if (!accessToken && !licenseNo.trim()) {
-      setError(
-        "Enter the license or plate number printed on this citation, or scan its secure QR code.",
-      );
-      return;
-    }
     const creds: PublicVerification = accessToken
       ? { accessToken }
       : licenseNo.trim()
@@ -290,10 +284,9 @@ function PortalPage() {
           </div>
           {!accessToken && (
             <label className="mt-4 block text-sm font-semibold">
-              License or plate number on citation
+              License or plate number on citation (optional)
               <input
                 id="citation-verification"
-                required
                 value={licenseNo}
                 onChange={(event) => {
                   lookupRequest.current?.abort();
@@ -306,16 +299,16 @@ function PortalPage() {
                 }}
                 autoComplete="off"
                 aria-describedby="citation-verification-help"
-                placeholder="License number or vehicle plate (e.g. 123ABC)"
+                placeholder="Optional: license number or vehicle plate (e.g. 123ABC)"
                 className="mt-2 h-12 w-full rounded-xl border border-input bg-background px-4 font-mono text-sm outline-none focus:ring-2 focus:ring-ring/30"
               />
               <span
                 id="citation-verification-help"
                 className="mt-2 block text-xs font-normal text-muted-foreground"
               >
-                Enter either number exactly as printed on the citation. A ticket
-                number alone cannot verify your record. You can also scan the
-                secure QR code on your slip.
+                You can look up your citation using the ticket number alone. If
+                you enter a license or plate number, it must match the printed
+                citation. You can also scan the QR code on your slip.
               </span>
             </label>
           )}
@@ -342,7 +335,7 @@ function PortalPage() {
                   );
                 }}
               >
-                Use license or plate instead
+                Look up by ticket number instead
               </button>
             </div>
           )}

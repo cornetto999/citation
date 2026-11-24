@@ -74,7 +74,7 @@ async function action(user: DbRow, name: string, data: unknown) {
   });
 }
 const filterSchema = z.object({
-  query: z.string().max(200).optional(),
+  query: z.string().trim().max(200).optional(),
   status: z
     .enum([
       "",
@@ -164,11 +164,6 @@ export async function verifyPublicTicket(body: unknown): Promise<Ticket> {
       licenseNo: z.string().trim().max(100).optional(),
     })
     .parse(body);
-  if (!input.accessToken && !input.licenseNo)
-    throw new AccountError(
-      "Enter the license or plate number printed on this citation, or use its secure QR link.",
-      400,
-    );
   // Persistent per-citation limit covers every worker and verification path. Keys contain no raw license/token.
   // Printed 4/6-digit and unpadded aliases must share the same attempt budget.
   const normalizedId = input.ticketId.replace(
@@ -216,9 +211,12 @@ export async function verifyPublicTicket(body: unknown): Promise<Ticket> {
     !/^0+$/.test(license) &&
     (license === ticketLicense || license === plate);
 
-  // A matching printed credential is also available for citations with QR links.
-  // An invalid supplied token must be explicitly cleared before manual lookup.
-  const manualOk = !input.accessToken && matchesCredential;
+  // Ticket-only lookup is available for every citation. If a credential is
+  // provided, it must match; an invalid QR token never silently falls back.
+  const manualOk =
+    Boolean(ticket) &&
+    !input.accessToken &&
+    (!input.licenseNo || matchesCredential);
 
   if (
     !tokenOk &&
@@ -231,7 +229,7 @@ export async function verifyPublicTicket(body: unknown): Promise<Ticket> {
     );
   if (!ticket || (!tokenOk && !manualOk))
     throw new AccountError(
-      "The ticket number and license or plate did not match, or the QR link is invalid. Check the printed citation and try again, or contact Treasury.",
+      "Citation not found, the optional license or plate did not match, or the QR link is invalid. Check the printed citation and try again, or contact Treasury.",
       403,
     );
   return ticket;
@@ -595,7 +593,14 @@ export async function handleWorkflowRequest(
         .order("created_at", { ascending: false })
         .order("id");
       if (f.query) {
-        const value = f.query.replace(/[%_,().]/g, "");
+        // Match displayed action labels ("payment settle") and stored keys
+        // ("payment.settle") alike, without accepting PostgREST filter syntax.
+        const value = (f.query.match(/[\p{L}\p{N}-]+/gu) ?? []).join("%");
+        if (!value)
+          throw new AccountError(
+            "Enter a search containing letters or numbers.",
+            400,
+          );
         q = q.or(
           `ticket_id.ilike.%${value}%,actor_name.ilike.%${value}%,action.ilike.%${value}%,reason.ilike.%${value}%`,
         );

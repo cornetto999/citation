@@ -49,9 +49,11 @@ export function WorkflowTimeline({ events }: { events: WorkflowEvent[] }) {
 export function TicketDetailsDialog({
   ticketId,
   onClose,
+  onCloseAutoFocus,
 }: {
   ticketId: string | null;
   onClose: () => void;
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   const result = useQuery({
     queryKey: ["workflow", "ticket", ticketId],
@@ -71,7 +73,10 @@ export function TicketDetailsDialog({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
+      <DialogContent
+        onCloseAutoFocus={onCloseAutoFocus}
+        className="max-h-[90dvh] max-w-2xl overflow-y-auto"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="size-5" />

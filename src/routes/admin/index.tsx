@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import {
@@ -38,6 +38,7 @@ export const Route = createFileRoute("/admin/")({ component: AdminDashboard });
 function AdminDashboard() {
   const metrics = useDashboardMetrics();
   const [selected, setSelected] = useState<string | null>(null);
+  const detailsTrigger = useRef<HTMLButtonElement | null>(null);
   const known = !metrics.loading && !metrics.error;
   const count = (value: number | null | undefined) =>
     known && value != null ? value.toLocaleString() : "—";
@@ -301,11 +302,24 @@ function AdminDashboard() {
               </thead>
               <tbody className="divide-y divide-border">
                 {metrics.recentTickets.map((ticket) => (
-                  <tr key={ticket.id} className="hover:bg-muted/40">
+                  <tr
+                    key={ticket.id}
+                    onClick={(event) => {
+                      detailsTrigger.current =
+                        event.currentTarget.querySelector<HTMLButtonElement>(
+                          "button",
+                        );
+                      detailsTrigger.current?.focus({ preventScroll: true });
+                      setSelected(ticket.id);
+                    }}
+                    className="cursor-pointer transition-colors hover:bg-muted/40 focus-within:bg-muted/40"
+                  >
                     <td className="px-5 py-3">
                       <button
-                        onClick={() => setSelected(ticket.id)}
-                        className="min-h-11 text-left font-semibold text-primary-text hover:underline"
+                        type="button"
+                        aria-label={`View citation ${ticket.id}`}
+                        aria-haspopup="dialog"
+                        className="min-h-11 rounded-sm text-left font-semibold text-primary-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <span className="block font-mono text-xs">
                           {ticket.id}
@@ -344,6 +358,10 @@ function AdminDashboard() {
       <TicketDetailsDialog
         ticketId={selected}
         onClose={() => setSelected(null)}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          detailsTrigger.current?.focus({ preventScroll: true });
+        }}
       />
     </div>
   );

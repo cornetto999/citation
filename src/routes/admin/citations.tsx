@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createFileRoute,
   type SearchSchemaInput,
@@ -65,6 +65,7 @@ function CitationRegister() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const [draft, setDraft] = useState(search);
+  const detailsTrigger = useRef<HTMLButtonElement | null>(null);
   useEffect(() => setDraft(search), [search]);
   const { citation, ...filters } = search;
   const result = useQuery({
@@ -212,7 +213,7 @@ function CitationRegister() {
       />
       <SectionCard
         title="Matching citations"
-        description="Dates use Philippine time. Select a ticket for details and activity."
+        description="Dates use Philippine time. Tap anywhere on a citation row for details and activity."
       >
         {result.isPending ? (
           <ListSkeleton rows={6} />
@@ -241,12 +242,24 @@ function CitationRegister() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {result.data.tickets.map((ticket) => (
-                    <tr key={ticket.id} className="hover:bg-muted/40">
+                    <tr
+                      key={ticket.id}
+                      onClick={(event) => {
+                        detailsTrigger.current =
+                          event.currentTarget.querySelector<HTMLButtonElement>(
+                            "button",
+                          );
+                        detailsTrigger.current?.focus({ preventScroll: true });
+                        change({ citation: ticket.id });
+                      }}
+                      className="cursor-pointer transition-colors hover:bg-muted/40 focus-within:bg-muted/40"
+                    >
                       <td className="px-5 py-4">
                         <button
                           type="button"
-                          onClick={() => change({ citation: ticket.id })}
-                          className="min-h-11 text-left font-semibold text-primary-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          aria-label={`View citation ${ticket.id}`}
+                          aria-haspopup="dialog"
+                          className="min-h-11 rounded-sm text-left font-semibold text-primary-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           <span className="block font-mono text-xs">
                             {ticket.id}
@@ -313,6 +326,12 @@ function CitationRegister() {
       <TicketDetailsDialog
         ticketId={citation || null}
         onClose={() => change({ citation: "" })}
+        onCloseAutoFocus={(event) => {
+          if (detailsTrigger.current?.isConnected) {
+            event.preventDefault();
+            detailsTrigger.current.focus({ preventScroll: true });
+          }
+        }}
       />
     </div>
   );
