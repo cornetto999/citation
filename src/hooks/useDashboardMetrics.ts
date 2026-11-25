@@ -18,7 +18,8 @@ export function useDashboardMetrics() {
     queryFn: () =>
       workflowRequest<typeof emptySummary>("/api/workflow/summary"),
     enabled: Boolean(user && user.role !== "violator"),
-    refetchInterval: 60000,
+    refetchInterval: user?.role === "admin" ? 15_000 : 60_000,
+    refetchOnWindowFocus: "always",
     staleTime: 15000,
   });
   useEffect(() => {

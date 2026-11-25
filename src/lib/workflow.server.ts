@@ -381,6 +381,9 @@ export async function handleWorkflowRequest(
       return Response.json(
         {
           officeInformation: (await settings())[0]?.["officeInformation"] ?? "",
+          onlinePaymentsAvailable: /^sk_(test|live)_/.test(
+            process.env["PAYMONGO_SECRET_KEY"] ?? "",
+          ),
         },
         { headers },
       );

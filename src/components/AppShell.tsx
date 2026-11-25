@@ -2,6 +2,7 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { useState, useEffect, type ReactNode } from "react";
 import { ShieldCheck, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HeaderClock } from "@/components/HeaderClock";
 
 interface AppShellProps {
   title: string;
@@ -98,6 +99,9 @@ export function AppShell({
             </div>
           </div>
         </div>
+        <div className="relative mx-auto flex max-w-7xl justify-end px-3 pb-2 sm:px-6">
+          <HeaderClock />
+        </div>
       </header>
 
       {/* ── Mobile Drawer ───────────────────────────────────────── */}
@@ -151,7 +155,7 @@ export function AppShell({
         <div className="flex gap-5 lg:gap-8">
           {/* Desktop sidebar */}
           {sidebar && (
-            <aside className="hidden w-52 shrink-0 self-start md:sticky md:top-[4.5rem] md:block lg:w-56 animate-slide-in-left">
+            <aside className="hidden w-52 shrink-0 self-start md:sticky md:top-[6.5rem] md:block lg:w-56 animate-slide-in-left">
               {sidebar}
             </aside>
           )}

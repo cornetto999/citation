@@ -9,6 +9,7 @@ import {
   ReceiptText,
   ArrowLeft,
   AlertTriangle,
+  ChevronDown,
 } from "lucide-react";
 import {
   readPaymentRecovery,
@@ -16,6 +17,7 @@ import {
   clearPaymentRecovery,
 } from "@/lib/public-payment-recovery";
 import { StatusBadge } from "@/components/StatusBadge";
+import { HeaderClock } from "@/components/HeaderClock";
 import { peso, dateTime, shortDate, daysUntil } from "@/lib/format";
 import type { Ticket } from "@/types";
 import { toast } from "sonner";
@@ -78,6 +80,9 @@ async function publicRequest<T>(
 function PortalPage() {
   const [query, setQuery] = useState("");
   const [officeInformation, setOfficeInformation] = useState("");
+  const [paymentUnavailableReason, setPaymentUnavailableReason] = useState(
+    "Checking online payment availability…",
+  );
   const [licenseNo, setLicenseNo] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [ticket, setTicket] = useState<Ticket | null>(null);
@@ -153,6 +158,14 @@ function PortalPage() {
     })
       .then(async (response) => (response.ok ? response.json() : null))
       .then((result) => {
+        if (controller.signal.aborted) return;
+        setPaymentUnavailableReason(
+          result?.onlinePaymentsAvailable === true
+            ? ""
+            : typeof result?.paymentUnavailableReason === "string"
+              ? result.paymentUnavailableReason
+              : "Online payments are currently unavailable. Please contact the Municipal Treasury or refresh this page to try again.",
+        );
         if (
           !controller.signal.aborted &&
           typeof result?.officeInformation === "string"
@@ -160,7 +173,10 @@ function PortalPage() {
           setOfficeInformation(result.officeInformation);
       })
       .catch(() => {
-        /* Standard Treasury guidance remains available while office information is unavailable. */
+        if (!controller.signal.aborted)
+          setPaymentUnavailableReason(
+            "Unable to check online payment availability. Please refresh this page to try again.",
+          );
       });
     return () => controller.abort();
   }, []);
@@ -230,6 +246,9 @@ function PortalPage() {
             Public
           </span>
         </div>
+        <div className="relative mx-auto flex max-w-3xl justify-end px-3 pb-2 sm:px-6">
+          <HeaderClock />
+        </div>
       </header>
 
       <main className="on-brand mx-auto max-w-3xl px-3 py-5 sm:px-6 sm:py-8 print:m-0 print:max-w-none print:p-0">
@@ -283,8 +302,16 @@ function PortalPage() {
             </button>
           </div>
           {!accessToken && (
-            <label className="mt-4 block text-sm font-semibold">
-              License or plate number on citation (optional)
+            <details className="group mt-4 text-sm font-semibold">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                <span id="citation-verification-label">
+                  License or plate number on citation (optional)
+                </span>
+                <ChevronDown
+                  aria-hidden="true"
+                  className="size-5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+                />
+              </summary>
               <input
                 id="citation-verification"
                 value={licenseNo}
@@ -298,6 +325,7 @@ function PortalPage() {
                   setError("");
                 }}
                 autoComplete="off"
+                aria-labelledby="citation-verification-label"
                 aria-describedby="citation-verification-help"
                 placeholder="Optional: license number or vehicle plate (e.g. 123ABC)"
                 className="mt-2 h-12 w-full rounded-xl border border-input bg-background px-4 font-mono text-sm outline-none focus:ring-2 focus:ring-ring/30"
@@ -310,7 +338,7 @@ function PortalPage() {
                 you enter a license or plate number, it must match the printed
                 citation. You can also scan the QR code on your slip.
               </span>
-            </label>
+            </details>
           )}
           {accessToken && (
             <div className="mt-3 space-y-2 text-xs text-muted-foreground">
@@ -362,6 +390,7 @@ function PortalPage() {
             ticket={ticket}
             onPay={() => setStage("pay")}
             onViewReceipt={showReceipt}
+            paymentUnavailableReason={paymentUnavailableReason}
           />
         )}
         {ticket && stage === "pay" && (
@@ -370,6 +399,7 @@ function PortalPage() {
             onBack={() => setStage("lookup")}
             verification={verification}
             onDone={paymentDone}
+            paymentUnavailableReason={paymentUnavailableReason}
           />
         )}
         {ticket && stage === "receipt" && (
@@ -384,10 +414,12 @@ function TicketCard({
   ticket,
   onPay,
   onViewReceipt,
+  paymentUnavailableReason,
 }: {
   ticket: Ticket;
   onPay: () => void;
   onViewReceipt: () => void;
+  paymentUnavailableReason: string;
 }) {
   const days = daysUntil(ticket.dueDate);
   return (
@@ -488,6 +520,13 @@ function TicketCard({
           This citation is under contest. Please appear at the Traffic
           Management Office.
         </p>
+      ) : paymentUnavailableReason ? (
+        <p
+          role="status"
+          className="mt-5 rounded-xl border border-border bg-muted/40 p-4 text-sm text-card-foreground"
+        >
+          {paymentUnavailableReason}
+        </p>
       ) : (
         <button
           onClick={onPay}
@@ -517,11 +556,13 @@ function QrphPayment({
   verification,
   onBack,
   onDone,
+  paymentUnavailableReason,
 }: {
   ticket: Ticket;
   verification: PublicVerification;
   onBack: () => void;
   onDone: () => Promise<void>;
+  paymentUnavailableReason: string;
 }) {
   const [processing, setProcessing] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
@@ -532,6 +573,7 @@ function QrphPayment({
   const linkRequest = useRef<AbortController | null>(null);
   const ready = useRef(false);
   const generateLink = useCallback(async () => {
+    if (paymentUnavailableReason) return;
     linkRequest.current?.abort();
     const controller = new AbortController();
     linkRequest.current = controller;
@@ -567,7 +609,7 @@ function QrphPayment({
     } finally {
       if (!controller.signal.aborted) setProcessing(false);
     }
-  }, [ticket.id, verification]);
+  }, [ticket.id, verification, paymentUnavailableReason]);
 
   useEffect(() => {
     // Recover the existing provider session before considering a new checkout.
@@ -580,7 +622,7 @@ function QrphPayment({
   }, [ticket.id]);
 
   useEffect(() => {
-    if (!linkId) return;
+    if (!linkId || paymentUnavailableReason) return;
     const controller = new AbortController();
     let checking = false;
     let completed = false;
@@ -626,7 +668,14 @@ function QrphPayment({
       controller.abort();
       clearInterval(interval);
     };
-  }, [linkId, ticket.id, verification, onDone, checkVersion]);
+  }, [
+    linkId,
+    ticket.id,
+    verification,
+    onDone,
+    checkVersion,
+    paymentUnavailableReason,
+  ]);
 
   return (
     <section className="mt-6 rounded-2xl border border-border bg-card p-5 text-center shadow-panel sm:p-6">
@@ -647,25 +696,25 @@ function QrphPayment({
         <p className="mt-1 font-mono text-sm text-muted-foreground">
           {ticket.id}
         </p>
-        {error && (
+        {(paymentUnavailableReason || error) && (
           <p
             role="alert"
             className="mt-4 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
           >
-            {error}
+            {paymentUnavailableReason || error}
           </p>
         )}
         {!linkId && (
           <button
             type="button"
             onClick={() => void generateLink()}
-            disabled={processing}
+            disabled={processing || Boolean(paymentUnavailableReason)}
             className="mt-5 min-h-12 w-full rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50"
           >
             {processing ? "Preparing checkout…" : "Continue to secure checkout"}
           </button>
         )}
-        {checkoutUrl && !confirmed && (
+        {checkoutUrl && !confirmed && !paymentUnavailableReason && (
           <a
             href={checkoutUrl}
             target="_blank"

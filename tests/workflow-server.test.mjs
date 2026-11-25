@@ -287,6 +287,32 @@ const auditEvent = (id, values = {}) => ({
 
 test("workflow API enforces roles, scope, authoritative data and public verification", async (t) => {
   await t.test(
+    "public payment availability reports configuration without disclosing secrets",
+    async () => {
+      const original = process.env.PAYMONGO_SECRET_KEY;
+      try {
+        const { state, call } = await setup();
+        state.user = null;
+        for (const key of [undefined, "invalid", "sk_test_synthetic-only"]) {
+          if (key === undefined) delete process.env.PAYMONGO_SECRET_KEY;
+          else process.env.PAYMONGO_SECRET_KEY = key;
+          const response = await call("/api/public/information");
+          assert.equal(response.status, 200);
+          const data = await response.json();
+          assert.equal(
+            data.onlinePaymentsAvailable,
+            key === "sk_test_synthetic-only",
+          );
+          assert.equal(JSON.stringify(data).includes("synthetic-only"), false);
+          assert.equal(response.headers.get("cache-control"), "no-store");
+        }
+      } finally {
+        if (original === undefined) delete process.env.PAYMONGO_SECRET_KEY;
+        else process.env.PAYMONGO_SECRET_KEY = original;
+      }
+    },
+  );
+  await t.test(
     "unsigned requests cannot list, issue, pay or inspect staff records",
     async () => {
       const { state, call } = await setup();

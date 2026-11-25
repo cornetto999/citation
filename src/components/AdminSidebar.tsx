@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +45,11 @@ export function AdminSidebar() {
   const currentPage = pathname.replace(/\/+$/, "") || "/";
   const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
+  const metrics = useDashboardMetrics();
+  const countAvailable = Boolean(metrics.updatedAt) && !metrics.error;
+  const overdueCount = countAvailable
+    ? metrics.overdueCount.toLocaleString("en-PH")
+    : "—";
 
   const handleSignOut = async () => {
     try {
@@ -90,6 +96,26 @@ export function AdminSidebar() {
           >
             <Icon className="size-4" />
             {label}
+            {to === "/admin/overdue" && (
+              <span
+                role="status"
+                aria-label={
+                  countAvailable
+                    ? `${overdueCount} overdue citations`
+                    : metrics.error
+                      ? "Overdue count unavailable"
+                      : "Loading overdue count"
+                }
+                title={
+                  metrics.error
+                    ? "Unable to refresh overdue count. Open Overdue to retry."
+                    : "Overdue citations · updates every 15 seconds"
+                }
+                className="ml-auto min-w-7 rounded-full bg-overdue px-2 py-0.5 text-center text-xs font-bold tabular-nums text-overdue-foreground"
+              >
+                {overdueCount}
+              </span>
+            )}
           </Link>
         ))}
       </div>

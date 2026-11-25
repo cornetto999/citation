@@ -234,7 +234,8 @@ export function OverdueBoard({ role }: { role: OverdueBoardRole }) {
       ),
     enabled: !!user && user.role === role,
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    refetchInterval: role === "admin" ? 15_000 : 30_000,
+    refetchOnWindowFocus: "always",
   });
   const rows = (result.data?.tickets ?? []).map((t) => ({
     t,
@@ -637,7 +638,11 @@ export function OverdueBoard({ role }: { role: OverdueBoardRole }) {
         <StatCard
           label="Overdue citations"
           value={summaryReady ? stats.count : "—"}
-          hint="Past due date, still unpaid"
+          hint={
+            role === "admin"
+              ? "Unpaid past due · updates every 15 seconds"
+              : "Past due date, still unpaid"
+          }
           icon={AlertTriangle}
           tone="danger"
         />

@@ -18,6 +18,10 @@ const source = readFileSync(
   "utf8",
 )
   .replace(
+    'import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";',
+    "const useDashboardMetrics = () => globalThis.__adminSidebarMetrics;",
+  )
+  .replace(
     'import { cn } from "@/lib/utils";',
     "const cn = (...classes) => classes.filter(Boolean).join(' ');",
   )
@@ -69,7 +73,11 @@ const expectedNavigation = [
   ["/admin/settings", "Citation Settings"],
 ];
 
-function renderSidebar(url) {
+function renderSidebar(
+  url,
+  metrics = { overdueCount: 18, updatedAt: 1, error: null },
+) {
+  globalThis.__adminSidebarMetrics = metrics;
   const root = createRootRoute();
   const admin = createRoute({ getParentRoute: () => root, path: "/admin" });
   const children = expectedNavigation.map(([path]) =>
@@ -98,10 +106,36 @@ function readLinks(markup) {
       href: attributes.match(/\bhref="([^"]*)"/)?.[1],
       current: attributes.match(/\baria-current="([^"]*)"/)?.[1],
       classes: attributes.match(/\bclass="([^"]*)"/)?.[1].split(" ") ?? [],
-      label: content.replace(/<[^>]*>/g, "").trim(),
+      label: content
+        .replace(/<span\b[^>]*role="status"[^>]*>[\s\S]*?<\/span>/g, "")
+        .replace(/<[^>]*>/g, "")
+        .trim(),
     }),
   );
 }
+
+test("overdue badge reflects updated totals, including zero, without showing failed loads as zero", () => {
+  for (const count of [18, 17, 0]) {
+    const markup = renderSidebar("/admin", {
+      overdueCount: count,
+      updatedAt: 1,
+      error: null,
+    });
+    assert.match(markup, new RegExp(`aria-label="${count} overdue citations"`));
+    assert.match(
+      markup,
+      new RegExp(`text-overdue-foreground">${count}</span>`),
+    );
+  }
+  for (const metrics of [
+    { overdueCount: 0, updatedAt: 0, error: null },
+    { overdueCount: 18, updatedAt: 1, error: new Error("Offline") },
+  ]) {
+    const markup = renderSidebar("/admin", metrics);
+    assert.match(markup, /text-overdue-foreground">—<\/span>/);
+    assert.doesNotMatch(markup, /aria-label="0 overdue citations"/);
+  }
+});
 
 for (const [url, selected] of expectedNavigation.flatMap(([path, label]) => [
   [path, label],
