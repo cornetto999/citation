@@ -135,6 +135,14 @@ test("citation slip escapes user-entered HTML and portal URL contains no identit
   };
   const url = slip.citationPortalUrl(ticket, "https://citation.example");
   assert.equal(new URL(url).searchParams.get("access"), ticket.accessToken);
+  assert.equal(new URL(url).searchParams.has("ticket"), false);
+  assert.equal(url.includes(ticket.id), false);
+  assert.equal(slip.citationPortalUrl(ticket, "https://citation.example"), url);
+  const legacyUrl = slip.citationPortalUrl(
+    { ...ticket, accessToken: undefined },
+    "https://citation.example",
+  );
+  assert.equal(new URL(legacyUrl).searchParams.get("ticket"), ticket.id);
   assert.equal(url.includes("PRIVATE"), false);
   assert.equal(url.includes("driver"), false);
   const html = slip.buildCitationSlipHtml(ticket, url);

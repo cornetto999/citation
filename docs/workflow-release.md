@@ -49,6 +49,14 @@ The public portal accepts a citation ticket number alone, including citations is
 
 ## Verification and practical limits
 
+Citation slips now generate opaque links in the form `/portal?access=<random-token>`.
+Opening or scanning one automatically loads that citation with the usual masked
+public details. Existing `/portal?ticket=...&access=...` links remain supported.
+Apply `migrations/20261124_portal_links.sql` after the workflow migration to add
+the unique lookup index and give older citations without tokens their own random
+links. Existing tokens are preserved, including when the migration is rerun.
+Until that migration is applied, legacy slips still use ticket-number lookup.
+
 Run:
 
 ```sh

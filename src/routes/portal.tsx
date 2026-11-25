@@ -101,7 +101,7 @@ function PortalPage() {
       try {
         const result = await publicRequest<{ ticket: Ticket }>(
           "/api/public/ticket",
-          { ticketId, ...credentials },
+          { ...(ticketId ? { ticketId } : {}), ...credentials },
           controller.signal,
         );
         if (controller.signal.aborted) return;
@@ -138,10 +138,10 @@ function PortalPage() {
     const ticketId = params.get("ticket")?.trim().toUpperCase() || "";
     const token = params.get("access") || "";
     const recovery = readPaymentRecovery();
-    setQuery(ticketId || recovery?.ticketId || "");
+    setQuery(ticketId || (token ? "" : recovery?.ticketId) || "");
     setAccessToken(token);
     setRecoveryTicket(recovery?.ticketId || "");
-    if (ticketId && token) void lookup(ticketId, { accessToken: token });
+    if (token) void lookup(ticketId, { accessToken: token });
     return () => lookupRequest.current?.abort();
   }, [lookup]);
 
@@ -167,7 +167,7 @@ function PortalPage() {
 
   const search = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!query.trim()) {
+    if (!query.trim() && !accessToken) {
       setError("Enter your citation ticket number.");
       return;
     }
@@ -258,7 +258,7 @@ function PortalPage() {
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
               id="ticket-id"
-              required
+              required={!accessToken}
               value={query}
               onChange={(e) => {
                 lookupRequest.current?.abort();

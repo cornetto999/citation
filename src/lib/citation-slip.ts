@@ -22,8 +22,8 @@ const formatAmount = (value: number) =>
 
 export function citationPortalUrl(ticket: Ticket, origin: string) {
   const url = new URL("/portal", origin);
-  url.searchParams.set("ticket", ticket.id);
   if (ticket.accessToken) url.searchParams.set("access", ticket.accessToken);
+  else url.searchParams.set("ticket", ticket.id);
   return url.href;
 }
 
@@ -41,7 +41,7 @@ export function buildCitationSlipHtml(
   <div class="payment"><strong>Due ${escapeHtml(formatDate(ticket.dueDate))}</strong><p>Settle at the Municipal Treasury or use the secure online payment portal. Keep this slip and request your official receipt after payment.</p><p class="muted">For payment or citation assistance, bring this slip to the Municipal Treasury or Traffic Management Office. Enforcers and PNP officers do not collect cash.</p></div>
   ${qrSvg ? `<div class="qr">${qrSvg}<p>Scan to view this citation and payment status.</p></div>` : ""}
   <p class="url"><a rel="noreferrer" href="${escapeHtml(portalUrl)}">${escapeHtml(portalUrl)}</a></p>
-  <p class="muted">${ticket.accessToken ? "Keep this slip private. Its secure link grants access to this citation." : "Enter the exact license number recorded on the citation to verify access. If no license was recorded, ask Treasury for assistance."}</p>
+  <p class="muted">${ticket.accessToken ? "Keep this slip private. Its secure link grants access to this citation." : "Enter the ticket number printed above to look up this citation. You may also enter your recorded license or plate number."}</p>
   </body></html>`;
 }
 

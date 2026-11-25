@@ -641,6 +641,73 @@ test("workflow API enforces roles, scope, authoritative data and public verifica
     },
   );
   await t.test(
+    "opaque portal links resolve only their citation and return masked public data",
+    async () => {
+      const { state, call } = await setup();
+      state.user = null;
+      state.tables.tickets.push({
+        ...rawTicket,
+        id: "CTN-2026-000002",
+        access_token: "another-high-entropy-fixture-token",
+      });
+      const response = await call("/api/public/ticket", {
+        method: "POST",
+        body: { accessToken },
+      });
+      assert.equal(response.status, 200);
+      const { ticket } = await response.json();
+      assert.equal(ticket.id, ticketId);
+      assert.equal(ticket.violatorName, "M••• S•••");
+      assert.equal(ticket.accessToken, undefined);
+      assert.equal(ticket.remarks, undefined);
+      assert.equal(ticket.photoData, undefined);
+      const mismatch = await call("/api/public/ticket", {
+        method: "POST",
+        body: { ticketId: "CTN-2026-000002", accessToken },
+      });
+      assert.equal(mismatch.status, 403);
+    },
+  );
+  await t.test(
+    "unknown random links fail closed and repeated failures are throttled",
+    async () => {
+      const { state, call } = await setup();
+      const body = { accessToken: "unknown-random-fixture-token" };
+      for (let i = 0; i < 20; i++) {
+        const response = await call("/api/public/ticket", {
+          method: "POST",
+          body,
+        });
+        assert.equal(response.status, 403);
+        assert.equal((await response.json()).ticket, undefined);
+      }
+      assert.equal(
+        (await call("/api/public/ticket", { method: "POST", body })).status,
+        429,
+      );
+      assert.ok(
+        state.calls.every(
+          (call) => !JSON.stringify(call.args).includes(body.accessToken),
+        ),
+      );
+    },
+  );
+  await t.test(
+    "public verification requires a citation number or a valid-length token",
+    async () => {
+      const { call } = await setup();
+      for (const body of [
+        {},
+        { accessToken: "short" },
+        { licenseNo: "ABC123" },
+      ])
+        assert.equal(
+          (await call("/api/public/ticket", { method: "POST", body })).status,
+          400,
+        );
+    },
+  );
+  await t.test(
     "manual lookup accepts a matching license or plate for a citation that also has a QR token",
     async () => {
       const { state, call } = await setup();

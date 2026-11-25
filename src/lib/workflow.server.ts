@@ -159,14 +159,44 @@ export async function ticketDetails(id: string, user?: DbRow): Promise<Ticket> {
 export async function verifyPublicTicket(body: unknown): Promise<Ticket> {
   const input = z
     .object({
-      ticketId,
+      ticketId: ticketId.optional(),
       accessToken: z.string().min(20).max(200).optional(),
       licenseNo: z.string().trim().max(100).optional(),
     })
+    .refine((value) => value.ticketId || value.accessToken, {
+      message: "Enter a citation number or open the secure link on your slip.",
+    })
     .parse(body);
+  let resolvedId = input.ticketId;
+  // Random links identify one citation without exposing its sequential number.
+  // Hash the token before using it as an attempt key; never log/store raw links.
+  if (!resolvedId && input.accessToken) {
+    const tokenKey = createHash("sha256")
+      .update(`portal:${input.accessToken}`)
+      .digest("hex");
+    if (!(await rpc("workflow_lookup_allowed", { p_key: tokenKey })))
+      throw new AccountError(
+        "Too many verification attempts. Wait 15 minutes or contact Treasury.",
+        429,
+      );
+    const { data, error } = await workflowDatabase()
+      .from("tickets")
+      .select("id")
+      .eq("access_token", input.accessToken)
+      .maybeSingle();
+    dbError(error);
+    if (!data) {
+      await rpc("workflow_lookup_limit", { p_key: tokenKey });
+      throw new AccountError(
+        "This citation link is invalid. Use the QR code on your slip or look up your ticket number.",
+        403,
+      );
+    }
+    resolvedId = String(data.id);
+  }
   // Persistent per-citation limit covers every worker and verification path. Keys contain no raw license/token.
   // Printed 4/6-digit and unpadded aliases must share the same attempt budget.
-  const normalizedId = input.ticketId.replace(
+  const normalizedId = resolvedId!.replace(
     /-(\d+)$/,
     (_, number: string) =>
       `-${number.replace(/^0+(?=\d)/, "").padStart(6, "0")}`,
@@ -177,7 +207,7 @@ export async function verifyPublicTicket(body: unknown): Promise<Ticket> {
       "Too many verification attempts. Wait 15 minutes or contact Treasury.",
       429,
     );
-  const ticket = await ticketDetails(input.ticketId).catch((e) => {
+  const ticket = await ticketDetails(resolvedId!).catch((e) => {
     if (e instanceof AccountError && e.status === 404) return null;
     throw e;
   });
