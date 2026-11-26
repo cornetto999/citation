@@ -4,6 +4,8 @@ import test from "node:test";
 import ts from "typescript";
 import { z } from "zod";
 
+const captchaModule = `data:text/javascript;base64,${Buffer.from(ts.transpileModule(readFileSync(new URL("../src/lib/login-challenge.server.ts", import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText).toString("base64")}`;
+
 // Run the actual request handler, replacing only the database and Auth transport.
 // Password hashing, input validation, and signed sessions use their real code.
 const source = readFileSync(
@@ -23,12 +25,18 @@ const source = readFileSync(
     "const supabase = globalThis.__mutationTestDatabase;",
   )
   .replaceAll("import.meta.env", "globalThis.__mutationTestEnvironment");
-const compiled = ts.transpileModule(source, {
-  compilerOptions: {
-    module: ts.ModuleKind.ESNext,
-    target: ts.ScriptTarget.ES2022,
+const compiled = ts.transpileModule(
+  source.replace(
+    'from "./login-challenge.server"',
+    `from ${JSON.stringify(captchaModule)}`,
+  ),
+  {
+    compilerOptions: {
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2022,
+    },
   },
-}).outputText;
+).outputText;
 
 test("administrators can manage accounts without bypassing authentication", async (t) => {
   const environmentKeys = [
@@ -46,6 +54,7 @@ test("administrators can manage accounts without bypassing authentication", asyn
     role: "admin",
     unit: "Administration",
     password: "existing-admin-password",
+    session_version: 0,
     auth_user_id: null,
     email_verification_required: false,
     email_verified_at: null,
@@ -87,7 +96,9 @@ test("administrators can manage accounts without bypassing authentication", asyn
   let authLookupError;
   let authUpdateError;
   let authDeleteError;
+  let consumedChallenges;
   const reset = () => {
+    consumedChallenges = new Set();
     users = [admin, legacy, invited].map((user) => ({ ...user }));
     operations = [];
     authCalls = [];
@@ -111,7 +122,21 @@ test("administrators can manage accounts without bypassing authentication", asyn
   const mutations = () =>
     operations.filter((entry) => entry.operation !== "select");
   const database = {
+    async rpc(name) {
+      assert.equal(name, "workflow_lookup_limit");
+      return { data: true, error: null };
+    },
     from(table) {
+      if (table === "public_lookup_limits")
+        return {
+          async insert({ key }) {
+            assert.match(key, /^[a-f0-9]{64}$/);
+            if (consumedChallenges.has(key))
+              return { error: { code: "23505" } };
+            consumedChallenges.add(key);
+            return { error: null };
+          },
+        };
       // A user deletion must never delete citations, receipts, or payments.
       assert.equal(table, "users");
       let operation = "select";
@@ -225,9 +250,27 @@ test("administrators can manage accounts without bypassing authentication", asyn
   const { handleAccountRequest } = await import(
     `data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`
   );
-  const call = (path, body, { cookie, method = "POST", origin } = {}) =>
-    handleAccountRequest(
-      new Request(`http://localhost:3000${path}`, {
+  const call = async (
+    path,
+    body,
+    { method = "POST", cookie, origin, https, captcha = true } = {},
+  ) => {
+    const base = `${https ? "https" : "http"}://localhost:3000`;
+    if (path === "/api/auth/login" && method === "POST" && captcha) {
+      const challenge = await (
+        await handleAccountRequest(new Request(`${base}/api/auth/captcha`))
+      ).json();
+      const [, left, right] = /What is (\d+) \+ (\d+)\?/.exec(
+        challenge.question,
+      );
+      body = {
+        ...body,
+        captchaToken: challenge.token,
+        captchaAnswer: String(Number(left) + Number(right)),
+      };
+    }
+    return handleAccountRequest(
+      new Request(`${base}${path}`, {
         method,
         headers: {
           "content-type": "application/json",
@@ -237,6 +280,7 @@ test("administrators can manage accounts without bypassing authentication", asyn
         ...(method === "POST" ? { body: JSON.stringify(body) } : {}),
       }),
     );
+  };
   const signIn = (user = admin, password = user.password) =>
     call("/api/auth/login", { credential: user.credential, password });
   const cookieFor = async (user = admin) => {
@@ -255,6 +299,176 @@ test("administrators can manage accounts without bypassing authentication", asyn
     ["/api/admin/users/delete", { userId: legacy.id, confirm: true }],
   ];
   try {
+    await run(
+      "a stale display-name edit cannot restore a concurrently changed role",
+      async () => {
+        const cookie = await cookieFor();
+        queryError = (event) => {
+          if (event.operation === "update") {
+            profile(legacy).role = "pnp";
+            profile(legacy).session_version++;
+          }
+          return null;
+        };
+        const response = await call(
+          "/api/admin/users/update",
+          details(legacy, { name: "New name" }),
+          { cookie },
+        );
+        assert.equal(response.status, 409);
+        assert.equal(profile(legacy).role, "pnp");
+        assert.equal(profile(legacy).name, legacy.name);
+      },
+    );
+    await run(
+      "a concurrent account change cannot be overwritten by a legacy password reset",
+      async () => {
+        const cookie = await cookieFor();
+        queryError = (event) => {
+          if (event.changes?.password) profile(legacy).session_version++;
+          return null;
+        };
+        const response = await call(
+          "/api/admin/users/password",
+          { userId: legacy.id, password: newPassword },
+          { cookie },
+        );
+        assert.equal(response.status, 409);
+        assert.equal(profile(legacy).password, legacy.password);
+        assert.equal(profile(legacy).session_version, 1);
+      },
+    );
+    await run(
+      "Auth session revocation retries a concurrent version change",
+      async () => {
+        const cookie = await cookieFor();
+        let raced = false;
+        queryError = (event) => {
+          if (!raced && event.changes?.session_version) {
+            profile(invited).session_version++;
+            raced = true;
+          }
+          return null;
+        };
+        const response = await call(
+          "/api/admin/users/password",
+          { userId: invited.id, password: newPassword },
+          { cookie },
+        );
+        assert.equal(response.status, 200);
+        assert.equal(profile(invited).session_version, 2);
+      },
+    );
+    for (const target of [legacy, invited]) {
+      await run(
+        `${target.auth_user_id ? "Auth" : "legacy"} password reset invalidates old signed sessions`,
+        async () => {
+          const adminCookie = await cookieFor();
+          const oldCookie = await cookieFor(target);
+          assert.equal(
+            (
+              await call("/api/auth/session", undefined, {
+                cookie: oldCookie,
+                method: "GET",
+              })
+            ).status,
+            200,
+          );
+          const resetResponse = await call(
+            "/api/admin/users/password",
+            { userId: target.id, password: newPassword },
+            { cookie: adminCookie },
+          );
+          assert.equal(resetResponse.status, 200);
+          assert.equal(
+            (
+              await call("/api/auth/session", undefined, {
+                cookie: oldCookie,
+                method: "GET",
+              })
+            ).status,
+            401,
+          );
+          const signedIn = await signIn(target, newPassword);
+          assert.equal(signedIn.status, 200);
+          const newCookie = signedIn.headers.get("set-cookie").split(";")[0];
+          assert.equal(
+            (
+              await call("/api/auth/session", undefined, {
+                cookie: newCookie,
+                method: "GET",
+              })
+            ).status,
+            200,
+          );
+        },
+      );
+    }
+    await run(
+      "role changes revoke sessions but display-name edits preserve them",
+      async () => {
+        const adminCookie = await cookieFor();
+        const oldCookie = await cookieFor(legacy);
+        assert.equal(
+          (
+            await call(
+              "/api/admin/users/update",
+              details(legacy, { name: "Updated Officer" }),
+              { cookie: adminCookie },
+            )
+          ).status,
+          200,
+        );
+        assert.equal(
+          (
+            await call("/api/auth/session", undefined, {
+              cookie: oldCookie,
+              method: "GET",
+            })
+          ).status,
+          200,
+        );
+        assert.equal(
+          (
+            await call(
+              "/api/admin/users/update",
+              details(legacy, { role: "pnp" }),
+              { cookie: adminCookie },
+            )
+          ).status,
+          200,
+        );
+        assert.equal(
+          (
+            await call("/api/auth/session", undefined, {
+              cookie: oldCookie,
+              method: "GET",
+            })
+          ).status,
+          401,
+        );
+      },
+    );
+    await run(
+      "Auth reset reports incomplete session revocation instead of claiming success",
+      async () => {
+        const cookie = await cookieFor();
+        queryError = (event) =>
+          event.changes?.session_version
+            ? { code: "database_unavailable" }
+            : null;
+        const response = await call(
+          "/api/admin/users/password",
+          { userId: invited.id, password: newPassword },
+          { cookie },
+        );
+        assert.equal(response.status, 503);
+        assert.match(
+          (await response.json()).error,
+          /password changed.*sessions could not be ended/i,
+        );
+      },
+    );
     await run(
       "all account mutations reject absent and forged sessions",
       async () => {
@@ -370,6 +584,7 @@ test("administrators can manage accounts without bypassing authentication", asyn
               credential: "officer-02",
               role: "treasury",
               unit: "Collections",
+              session_version: 1,
             },
           ],
         );
@@ -564,7 +779,10 @@ test("administrators can manage accounts without bypassing authentication", asyn
           },
         ]);
         assert.equal(profile(invited).password, invited.password);
-        assert.deepEqual(mutations(), []);
+        assert.deepEqual(
+          mutations().map((event) => event.changes),
+          [{ session_version: 1 }],
+        );
         assert.equal(
           JSON.stringify(await response.json()).includes(newPassword),
           false,

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
-import { ShieldCheck, Radio, Landmark, LogIn, Eye, EyeOff } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { ShieldCheck, LogIn, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { Role } from "@/types";
@@ -20,8 +20,7 @@ export const Route = createFileRoute("/login")({
       },
       {
         property: "og:description",
-        content:
-          "Role-based sign-in for the citation ticket and payment system demo.",
+        content: "Staff sign-in for the citation ticket and payment system.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -29,65 +28,6 @@ export const Route = createFileRoute("/login")({
   }),
   component: LoginPage,
 });
-
-interface DemoAccount {
-  key: string;
-  credential: string;
-  password: string;
-  label: string;
-  icon: typeof Radio;
-  destination: string;
-  name: string;
-  role: Role;
-  unit: string;
-}
-
-const ACCOUNTS: DemoAccount[] = [
-  {
-    key: "enforcer",
-    credential: "jakeroaya@gmail.com",
-    password: "jake123",
-    label: "Traffic Enforcer",
-    icon: Radio,
-    destination: "/enforcer",
-    name: "Jake Roaya",
-    role: "enforcer",
-    unit: "Gitagum Traffic Management Office",
-  },
-  {
-    key: "pnp",
-    credential: "roayajake@gmail.com",
-    password: "roaya123",
-    label: "PNP / Police",
-    icon: ShieldCheck,
-    destination: "/pnp",
-    name: "Roaya Jake",
-    role: "pnp",
-    unit: "Gitagum Municipal Police Station",
-  },
-  {
-    key: "treasury",
-    credential: "francisjake@gmail.com",
-    password: "koy123@",
-    label: "Municipal Treasury",
-    icon: Landmark,
-    destination: "/treasury",
-    name: "Francis Jake",
-    role: "treasury",
-    unit: "Municipal Treasurer's Office",
-  },
-  {
-    key: "admin",
-    credential: "admin@gitagum.gov.ph",
-    password: "admin",
-    label: "System Admin",
-    icon: ShieldCheck,
-    destination: "/admin",
-    name: "System Admin",
-    role: "admin",
-    unit: "System Administration",
-  },
-];
 
 function roleDestination(role: Role): string {
   if (role === "enforcer") return "/enforcer";
@@ -105,25 +45,89 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [challenge, setChallenge] = useState<{
+    token: string;
+    question: string;
+    expiresInSeconds: number;
+  } | null>(null);
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
+  const [captchaError, setCaptchaError] = useState("");
+  const [challengeVersion, setChallengeVersion] = useState(0);
+
+  const refreshChallenge = () => {
+    setChallenge(null);
+    setCaptchaAnswer("");
+    setChallengeVersion((version) => version + 1);
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setChallenge(null);
+    setCaptchaAnswer("");
+    setCaptchaError("");
+    const timeout = window.setTimeout(() => {
+      setCaptchaError("Security question took too long to load. Please retry.");
+      controller.abort();
+    }, 10_000);
+    void fetch("/api/auth/captcha", {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok)
+          throw new Error(result.error || "Unable to load security question.");
+        if (
+          typeof result.token !== "string" ||
+          !result.token ||
+          typeof result.question !== "string" ||
+          result.expiresInSeconds !== 300
+        )
+          throw new Error("Unable to load security question.");
+        if (!controller.signal.aborted) setChallenge(result);
+      })
+      .catch((failure) => {
+        if (!controller.signal.aborted)
+          setCaptchaError(
+            failure instanceof Error
+              ? failure.message
+              : "Unable to load security question.",
+          );
+      })
+      .finally(() => window.clearTimeout(timeout));
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [challengeVersion]);
+
+  useEffect(() => {
+    if (!challenge) return;
+    const timeout = window.setTimeout(() => {
+      setChallenge(null);
+      setCaptchaAnswer("");
+      setCaptchaError("Security question expired. Please load a new question.");
+    }, challenge.expiresInSeconds * 1000);
+    return () => window.clearTimeout(timeout);
+  }, [challenge]);
 
   const showError = (message: string) => {
     setError(message);
     toast.error(message);
   };
 
-  const fillAccount = (account: DemoAccount) => {
-    setCredential(account.credential);
-    setPassword(account.password);
-    setError("");
-  };
-
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (submitting) return;
+    if (!challenge || captchaError) return;
     setError("");
-    if (!credential.trim() || !password) {
+    if (!credential.trim() || !password.trim()) {
       showError("Enter your badge number or email and password.");
+      return;
+    }
+    if (!captchaAnswer.trim()) {
+      showError("Answer the security question before signing in.");
       return;
     }
     setSubmitting(true);
@@ -132,7 +136,12 @@ function LoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ credential: normalizedCredential, password }),
+        body: JSON.stringify({
+          credential: normalizedCredential,
+          password,
+          captchaToken: challenge.token,
+          captchaAnswer,
+        }),
       });
       const result = await response.json();
       if (!response.ok || !result.user) {
@@ -153,6 +162,7 @@ function LoginPage() {
     } catch {
       showError("Unable to sign in. Check your connection and try again.");
     } finally {
+      refreshChallenge();
       setSubmitting(false);
     }
   };
@@ -228,6 +238,63 @@ function LoginPage() {
             </button>
           </div>
 
+          {challenge && (
+            <div className="mt-5 rounded-xl border border-white/15 bg-white/5 p-4">
+              <label
+                htmlFor="login-security-answer"
+                className="block text-sm font-semibold text-foreground"
+              >
+                Security question: {challenge.question}
+              </label>
+              <input
+                id="login-security-answer"
+                required
+                inputMode="numeric"
+                pattern="[0-9]{1,2}"
+                maxLength={2}
+                autoComplete="off"
+                value={captchaAnswer}
+                onChange={(event) => setCaptchaAnswer(event.target.value)}
+                placeholder="Enter the answer"
+                aria-describedby="login-security-help"
+                className="mt-2 w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-sm text-foreground placeholder:text-foreground/80 outline-none focus:ring-2 focus:ring-sidebar-primary/50"
+              />
+              <p
+                id="login-security-help"
+                className="mt-2 text-xs text-foreground/80"
+              >
+                Answer this quick question to continue. Valid for 5 minutes.
+              </p>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={refreshChallenge}
+                className="min-h-11 text-sm font-semibold text-sidebar-primary underline underline-offset-4"
+              >
+                New question
+              </button>
+            </div>
+          )}
+          {!challenge && !captchaError && (
+            <p role="status" className="mt-4 text-xs text-foreground/80">
+              Loading security question…
+            </p>
+          )}
+          {captchaError && (
+            <div className="mt-4 text-sm">
+              <p role="alert" className="text-destructive">
+                {captchaError}
+              </p>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={refreshChallenge}
+                className="min-h-11 font-semibold text-sidebar-primary underline underline-offset-4"
+              >
+                Load new question
+              </button>
+            </div>
+          )}
           {error && (
             <p
               role="alert"
@@ -239,9 +306,16 @@ function LoginPage() {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={
+              submitting ||
+              !challenge ||
+              Boolean(captchaError) ||
+              !credential.trim() ||
+              !password.trim() ||
+              !/^[0-9]{1,2}$/.test(captchaAnswer)
+            }
             aria-busy={submitting}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-sidebar-primary px-4 py-3.5 text-sm font-bold text-sidebar-primary-foreground shadow-glow transition-all hover:brightness-110 hover:shadow-lg active:scale-[0.98]"
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-sidebar-primary px-4 py-3.5 text-sm font-bold text-sidebar-primary-foreground shadow-glow transition-all enabled:hover:brightness-110 enabled:hover:shadow-lg enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-foreground/80 disabled:shadow-none"
           >
             <LogIn className="size-4" />
             {submitting ? "Signing in…" : "Sign in"}
@@ -249,31 +323,6 @@ function LoginPage() {
         </form>
 
         <div className="mt-7">
-          <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/80">
-            Demo accounts — tap to autofill
-          </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 stagger-children">
-            {ACCOUNTS.map((a) => (
-              <button
-                key={a.key}
-                type="button"
-                onClick={() => fillAccount(a)}
-                className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-3 text-left backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-white/[0.15] hover:bg-white/[0.08]"
-              >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-foreground/70">
-                  <a.icon className="size-4" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-foreground">
-                    {a.label}
-                  </span>
-                  <span className="block truncate text-xs text-foreground/80">
-                    {a.credential}
-                  </span>
-                </span>
-              </button>
-            ))}
-          </div>
           <div className="mt-4">
             <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/80">
               Public access

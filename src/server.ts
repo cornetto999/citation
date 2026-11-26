@@ -5,6 +5,7 @@ import { renderErrorPage } from "./lib/error-page";
 import { handlePaymentRequest } from "./lib/paymongo.server";
 import { handleWorkflowRequest } from "./lib/workflow.server";
 import { handleAccountRequest } from "./lib/accounts.server";
+import { withSecurityHeaders } from "./lib/security-headers";
 
 type ServerEntry = {
   fetch: (
@@ -58,13 +59,14 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
-export default {
+const application = {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     if (
       [
         "/api/auth/login",
         "/api/auth/logout",
         "/api/auth/session",
+        "/api/auth/captcha",
         "/api/admin/users/status",
         "/api/admin/users",
         "/api/admin/users/resend",
@@ -101,5 +103,14 @@ export default {
         headers: { "content-type": "text/html; charset=utf-8" },
       });
     }
+  },
+};
+
+export default {
+  async fetch(request: Request, env: unknown, ctx: unknown) {
+    return withSecurityHeaders(
+      request,
+      await application.fetch(request, env, ctx),
+    );
   },
 };

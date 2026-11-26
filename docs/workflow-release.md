@@ -49,6 +49,57 @@ The public portal accepts a citation ticket number alone, including citations is
 
 ## Verification and practical limits
 
+### Key-free login verification
+
+Staff sign-in includes a built-in addition question. No Google account, CAPTCHA
+keys, or external scripts are needed. It uses the application's existing session
+signing secret and server-only database connection. Questions expire after five
+minutes, are bound to the request origin, and are consumed atomically on the first
+answer, including incorrect answers. The server rejects missing, modified, expired,
+or reused tokens; storage failures cannot create a session. Only a hashed nonce
+is stored in the existing `public_lookup_limits` table. Its normal cleanup removes
+old entries after one day. No schema migration is required.
+
+The login page offers a new question and retries loading after network failures,
+without clearing the entered credentials. The existing sign-in rate limit remains
+in force. This is a lightweight automated-submission check, not Google reCAPTCHA:
+arithmetic can be solved by bots and does not prove a visitor is human. The public
+payment portal does not require this staff login check.
+
+### Security controls added November 26, 2026
+
+- Removed hard-coded demo account/password autofill from the login page and
+  production client bundle. Administrators must reset any account still using a
+  previously published demo password; removing the code does not revoke a leaked
+  password or erase Git history.
+- Sign-in allows at most 20 attempts per normalized email/badge in a 15-minute
+  window, shared across server workers. It reserves each attempt atomically with
+  the existing `workflow_lookup_limit` RPC before verifying credentials; successful
+  attempts also count. Only a SHA-256 key is stored, never the credential or
+  password. A blocked request returns HTTP 429 and `Retry-After: 900`; a database
+  failure returns 503 without issuing a session. This is an account limit, not an
+  IP or global abuse limit.
+- Admin password resets and email/badge or role changes invalidate old application
+  sessions using the existing `session_version` column. Legacy password changes
+  and session invalidation are one conditional database write. Auth-managed
+  resets also revoke application sessions after the provider accepts the password.
+  Partial provider/database failures are reported explicitly. Concurrent edits
+  cannot restore an older session version or overwrite a newly changed role.
+  Display-name and unit-only edits do not force a new sign-in.
+- Pages and API responses include anti-framing, MIME-sniffing and referrer
+  protections. HTML/API responses are not cached. HTTPS responses enable HSTS;
+  camera and location remain available to same-origin enforcer workflows. The
+  baseline CSP restricts framing, object embedding, base URLs and form submissions;
+  it does not yet enforce a script nonce policy.
+
+These controls use the existing workflow database schema; no new migration is
+required. Password changes performed outside the application must also increment
+`session_version` to revoke the application's signed cookies. Existing password
+requirements and ticket-number-only masked public lookup remain in place.
+MFA, IP-level rate limits, and a full external security audit are separate work.
+References: [OWASP authentication](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
+and [OWASP response headers](https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html).
+
 Citation slips now generate opaque links in the form `/portal?access=<random-token>`.
 Opening or scanning one automatically loads that citation with the usual masked
 public details. Existing `/portal?ticket=...&access=...` links remain supported.

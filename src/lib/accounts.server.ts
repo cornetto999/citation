@@ -1,7 +1,18 @@
-import { createHmac, randomBytes, timingSafeEqual, scrypt } from "node:crypto";
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+  scrypt,
+} from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { supabase } from "./supabase";
+import {
+  issueLoginChallenge,
+  LoginChallengeError,
+  verifyLoginChallenge,
+} from "./login-challenge.server";
 
 export class AccountError extends Error {
   constructor(
@@ -204,7 +215,7 @@ async function passwordMatches(password: string, stored: unknown) {
   return expected.length === actual.length && timingSafeEqual(actual, expected);
 }
 
-async function login(body: Record<string, unknown>) {
+async function login(body: Record<string, unknown>, request: Request) {
   if (
     typeof body["credential"] !== "string" ||
     typeof body["password"] !== "string" ||
@@ -215,6 +226,42 @@ async function login(body: Record<string, unknown>) {
   ) {
     throw new AccountError("Enter your email or badge number and password.");
   }
+  // One atomic, durable budget per normalized account across all app workers.
+  // Count attempts before checking credentials so parallel guesses cannot bypass it.
+  const lookupKey = createHash("sha256")
+    .update(`login:${body["credential"].trim().toLowerCase()}`)
+    .digest("hex");
+  const { data: allowed, error: limitError } = await workflowDatabase().rpc(
+    "workflow_lookup_limit",
+    { p_key: lookupKey },
+  );
+  if (limitError)
+    throw new AccountError(
+      "Unable to securely sign in. Please try again.",
+      503,
+    );
+  if (allowed !== true)
+    throw new AccountError(
+      "Too many sign-in attempts. Wait 15 minutes before trying again.",
+      429,
+    );
+  await verifyLoginChallenge(
+    request,
+    body["captchaToken"],
+    body["captchaAnswer"],
+    sessionSecret(),
+    async (nonce) => {
+      const key = createHash("sha256")
+        .update(`captcha-used:${nonce}`)
+        .digest("hex");
+      const { error } = await workflowDatabase()
+        .from("public_lookup_limits")
+        .insert({ key, attempts: 1, window_start: new Date().toISOString() });
+      if (error?.code === "23505") return false;
+      if (error) throw error;
+      return true;
+    },
+  );
   // Escape wildcard characters so a badge or email is always an exact lookup.
   const credential = body["credential"].trim().replace(/[\\%_]/g, "\\$&");
   const { data: user, error } = await database()
@@ -450,12 +497,19 @@ async function editUser(body: unknown, adminId: string) {
         409,
       );
   }
-  const { data, error } = await database()
+  const securityChanged =
+    changes.role !== user.role ||
+    changes.credential !== user.credential.toLowerCase();
+  const version = Number(user.session_version ?? 0);
+  const update = database()
     .from("users")
-    .update(changes)
+    .update({
+      ...changes,
+      ...(securityChanged ? { session_version: version + 1 } : {}),
+    })
     .eq("id", userId)
-    .select("*")
-    .maybeSingle();
+    .eq("session_version", version);
+  const { data, error } = await update.select("*").maybeSingle();
   if (error?.code === "23505")
     throw new AccountError(
       "Another user already has this email or badge number.",
@@ -466,8 +520,30 @@ async function editUser(body: unknown, adminId: string) {
       "Unable to save user details. Please try again.",
       503,
     );
-  if (!data) throw new AccountError("This user no longer exists.", 404);
+  if (!data)
+    throw new AccountError(
+      "This account changed. Refresh the user details and try again.",
+      409,
+    );
   return publicProfile(data);
+}
+
+// Compare-and-swap keeps concurrent resets from restoring an older session version.
+async function revokeSessions(userId: string) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const user = await userById(userId);
+    const version = Number(user.session_version ?? 0);
+    const { data, error } = await database()
+      .from("users")
+      .update({ session_version: version + 1 })
+      .eq("id", userId)
+      .eq("session_version", version)
+      .select("id")
+      .maybeSingle();
+    if (error) throw new AccountError("Unable to end existing sessions.", 503);
+    if (data) return;
+  }
+  throw new AccountError("The account changed during session revocation.", 409);
 }
 
 async function updatePassword(body: unknown) {
@@ -520,13 +596,25 @@ async function updatePassword(body: unknown) {
         "The authentication service could not update the password. Please try again.",
         502,
       );
+    try {
+      await revokeSessions(user.id);
+    } catch {
+      throw new AccountError(
+        "The password changed, but existing sessions could not be ended. Retry the password reset to finish securing the account.",
+        503,
+      );
+    }
   } else {
     const salt = randomBytes(16).toString("hex");
     const password = `$scrypt$${salt}$${(await derivePassword(input.data.password, salt)).toString("hex")}`;
     const { data, error } = await database()
       .from("users")
-      .update({ password })
+      .update({
+        password,
+        session_version: Number(user.session_version ?? 0) + 1,
+      })
       .eq("id", user.id)
+      .eq("session_version", Number(user.session_version ?? 0))
       .select("id")
       .maybeSingle();
     if (error)
@@ -534,9 +622,13 @@ async function updatePassword(body: unknown) {
         "Unable to update the password. Please try again.",
         503,
       );
-    if (!data) throw new AccountError("This user no longer exists.", 404);
+    if (!data)
+      throw new AccountError(
+        "This account changed. Refresh the user details and try again.",
+        409,
+      );
   }
-  return "Password updated. The user can sign in with the new password.";
+  return "Password updated. Existing sessions have ended. Sign in with the new password.";
 }
 
 async function deleteUser(body: unknown, adminId: string) {
@@ -586,7 +678,9 @@ export async function handleAccountRequest(
   try {
     const path = new URL(request.url).pathname;
     const method =
-      (path === "/api/admin/users" || path === "/api/auth/session") &&
+      (path === "/api/admin/users" ||
+        path === "/api/auth/session" ||
+        path === "/api/auth/captcha") &&
       request.method === "GET"
         ? "GET"
         : "POST";
@@ -601,6 +695,10 @@ export async function handleAccountRequest(
       request.headers.get("sec-fetch-site") === "cross-site"
     )
       throw new AccountError("Invalid request origin.", 403);
+    if (path === "/api/auth/captcha")
+      return Response.json(issueLoginChallenge(request, sessionSecret()), {
+        headers,
+      });
     if (path === "/api/auth/session") {
       return Response.json(
         { user: publicProfile(await requireWorkflowUser(request)) },
@@ -721,7 +819,7 @@ export async function handleAccountRequest(
     const body = await request.json().catch(() => null);
     if (!body) throw new AccountError("Invalid request.");
     if (path === "/api/auth/login") {
-      const user = await login(body);
+      const user = await login(body, request);
       headers["set-cookie"] = sessionCookie(
         request,
         user.id,
@@ -731,14 +829,22 @@ export async function handleAccountRequest(
     }
     throw new AccountError("Not found.", 404);
   } catch (error) {
+    if (error instanceof AccountError && error.status === 429)
+      headers["retry-after"] = "900";
     return Response.json(
       {
         error:
-          error instanceof AccountError
+          error instanceof AccountError || error instanceof LoginChallengeError
             ? error.message
             : "Unable to complete account setup. Please try again.",
       },
-      { status: error instanceof AccountError ? error.status : 500, headers },
+      {
+        status:
+          error instanceof AccountError || error instanceof LoginChallengeError
+            ? error.status
+            : 500,
+        headers,
+      },
     );
   }
 }

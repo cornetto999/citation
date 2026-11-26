@@ -4,6 +4,8 @@ import test from "node:test";
 import ts from "typescript";
 import { z } from "zod";
 
+const captchaModule = `data:text/javascript;base64,${Buffer.from(ts.transpileModule(readFileSync(new URL("../src/lib/login-challenge.server.ts", import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText).toString("base64")}`;
+
 // Exercise the server handler without database access or sending real email.
 const source = readFileSync(
   new URL("../src/lib/accounts.server.ts", import.meta.url),
@@ -19,12 +21,18 @@ const source = readFileSync(
     "const supabase = globalThis.__accountTestDatabase;",
   )
   .replaceAll("import.meta.env", "globalThis.__accountTestEnvironment");
-const compiled = ts.transpileModule(source, {
-  compilerOptions: {
-    module: ts.ModuleKind.ESNext,
-    target: ts.ScriptTarget.ES2022,
+const compiled = ts.transpileModule(
+  source.replace(
+    'from "./login-challenge.server"',
+    `from ${JSON.stringify(captchaModule)}`,
+  ),
+  {
+    compilerOptions: {
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2022,
+    },
   },
-}).outputText;
+).outputText;
 
 test("account invitations require verified email and authenticated administration", async (t) => {
   const environmentKeys = [
@@ -78,7 +86,11 @@ test("account invitations require verified email and authenticated administratio
   let invitationResult;
   let listError;
   let lookupError;
+  let loginAttempts;
+  let loginLimitError;
+  let consumedChallenges;
   const reset = () => {
+    consumedChallenges = new Set();
     users = [admin, staff, invited].map((user) => ({ ...user }));
     queries = [];
     writes = [];
@@ -109,12 +121,31 @@ test("account invitations require verified email and authenticated administratio
     };
     listError = null;
     lookupError = null;
+    loginAttempts = new Map();
+    loginLimitError = null;
     process.env.SUPABASE_SERVICE_ROLE_KEY = "server-only-admin-test-key";
     delete process.env.SUPABASE_SECRET_KEY;
     process.env.AUTH_SESSION_SECRET = "isolated-session-signing-test-secret";
   };
   const database = {
+    async rpc(name, { p_key }) {
+      assert.equal(name, "workflow_lookup_limit");
+      assert.match(p_key, /^[a-f0-9]{64}$/);
+      const attempts = (loginAttempts.get(p_key) ?? 0) + 1;
+      loginAttempts.set(p_key, attempts);
+      return { data: attempts <= 20, error: loginLimitError };
+    },
     from(table) {
+      if (table === "public_lookup_limits")
+        return {
+          async insert({ key }) {
+            assert.match(key, /^[a-f0-9]{64}$/);
+            if (consumedChallenges.has(key))
+              return { error: { code: "23505" } };
+            consumedChallenges.add(key);
+            return { error: null };
+          },
+        };
       assert.equal(table, "users");
       let columns;
       let field;
@@ -239,9 +270,27 @@ test("account invitations require verified email and authenticated administratio
   const { handleAccountRequest } = await import(
     `data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`
   );
-  const call = (path, body, { method = "POST", cookie, origin, https } = {}) =>
-    handleAccountRequest(
-      new Request(`${https ? "https" : "http"}://localhost:3000${path}`, {
+  const call = async (
+    path,
+    body,
+    { method = "POST", cookie, origin, https, captcha = true } = {},
+  ) => {
+    const base = `${https ? "https" : "http"}://localhost:3000`;
+    if (path === "/api/auth/login" && method === "POST" && captcha) {
+      const challenge = await (
+        await handleAccountRequest(new Request(`${base}/api/auth/captcha`))
+      ).json();
+      const [, left, right] = /What is (\d+) \+ (\d+)\?/.exec(
+        challenge.question,
+      );
+      body = {
+        ...body,
+        captchaToken: challenge.token,
+        captchaAnswer: String(Number(left) + Number(right)),
+      };
+    }
+    return handleAccountRequest(
+      new Request(`${base}${path}`, {
         method,
         headers: {
           "content-type": "application/json",
@@ -251,6 +300,7 @@ test("account invitations require verified email and authenticated administratio
         ...(method === "POST" ? { body: JSON.stringify(body) } : {}),
       }),
     );
+  };
   const signIn = (user = admin, password = user.password, options) =>
     call("/api/auth/login", { credential: user.credential, password }, options);
   const cookieFor = async (user = admin) => {
@@ -264,6 +314,80 @@ test("account invitations require verified email and authenticated administratio
       await task();
     });
   try {
+    await run(
+      "key-free verification is mandatory, single use, and precedes account lookup",
+      async () => {
+        const credentials = {
+          credential: admin.credential,
+          password: admin.password,
+        };
+        const missing = await call("/api/auth/login", credentials, {
+          captcha: false,
+        });
+        assert.equal(missing.status, 403);
+        assert.equal(missing.headers.get("set-cookie"), null);
+        assert.equal(queries.length, 0);
+        const response = await call("/api/auth/captcha", undefined, {
+          method: "GET",
+        });
+        assert.equal(response.status, 200);
+        assert.equal(response.headers.get("cache-control"), "no-store");
+        const challenge = await response.json();
+        const [, left, right] = /What is (\d+) \+ (\d+)\?/.exec(
+          challenge.question,
+        );
+        const body = {
+          ...credentials,
+          captchaToken: challenge.token,
+          captchaAnswer: String(Number(left) + Number(right)),
+        };
+        const accepted = await call("/api/auth/login", body, {
+          captcha: false,
+        });
+        assert.equal(accepted.status, 200);
+        assert.ok(accepted.headers.get("set-cookie"));
+        const replay = await call("/api/auth/login", body, { captcha: false });
+        assert.equal(replay.status, 403);
+        assert.equal(replay.headers.get("set-cookie"), null);
+      },
+    );
+    await run(
+      "parallel login guesses and normalized account aliases share a durable attempt budget",
+      async () => {
+        const responses = await Promise.all(
+          Array.from({ length: 21 }, (_, index) =>
+            signIn(
+              {
+                ...admin,
+                credential:
+                  index % 2
+                    ? `  ${admin.credential.toUpperCase()}  `
+                    : admin.credential,
+              },
+              "incorrect",
+            ),
+          ),
+        );
+        assert.equal(responses.filter((r) => r.status === 401).length, 20);
+        const limited = responses.find((r) => r.status === 429);
+        assert.ok(limited);
+        assert.equal(limited.headers.get("retry-after"), "900");
+        assert.equal(limited.headers.get("set-cookie"), null);
+        assert.equal(loginAttempts.size, 1);
+        assert.equal((await signIn()).status, 429);
+        assert.equal((await signIn(staff)).status, 200);
+      },
+    );
+    await run(
+      "login fails closed when persistent throttling is unavailable",
+      async () => {
+        loginLimitError = { code: "database_unavailable" };
+        const response = await signIn();
+        assert.equal(response.status, 503);
+        assert.equal(response.headers.get("set-cookie"), null);
+        assert.equal(queries.length, 0);
+      },
+    );
     await run(
       "legacy accounts accept only their correct password",
       async () => {
